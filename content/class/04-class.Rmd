@@ -3,6 +3,7 @@ title: "Day 4: Convolutional Neural Networks, images"
 # linktitle: "1. Introduction to RStudio and Images"
 date: "2020-06-11"
 class_date: "2020-06-11"
+draft: true
 output:
   blogdown::html_page:
     toc: false

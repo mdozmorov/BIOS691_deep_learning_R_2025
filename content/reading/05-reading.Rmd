@@ -3,6 +3,7 @@ title: "Day 5: Generative Adversarial Networks, Autoencoders, Recurrent Neural N
 # linktitle: "1: Introduction to R/RStudio and Images"
 date: "2020-06-12"
 read_date: "2020-06-12"
+draft: true
 menu:
   reading:
     parent: Readings

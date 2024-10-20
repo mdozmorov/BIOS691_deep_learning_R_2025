@@ -16,7 +16,7 @@ class: center, middle, inverse, title-slide
 # Mathematical Foundations
 ]
 .subtitle[
-## Data representations for neural network
+## Introduction to Keras
 ]
 .author[
 ### Mikhail Dozmorov
@@ -27,6 +27,50 @@ class: center, middle, inverse, title-slide
 
 ---
 
+
+
+
+## Keras: A Modular and User-Friendly Framework
+
+- Keras is a high-level, user-friendly deep learning framework that simplifies the process of defining and training various types of deep learning models. 
+
+Keras distinguishes itself through several key features:
+
+* **Modularity and Backend Agnosticism:** Keras operates as a model-level library, meaning it handles high-level aspects of model development but relies on a separate, optimized tensor library for low-level operations like tensor manipulation and differentiation.  It's designed to work with different backend engines, providing flexibility and allowing users to switch between them. Currently supported backends include Tensorflow, Jax, Numpy, or Torch.
+
+.small[ https://keras3.posit.co ]
+
+## Keras: A Modular and User-Friendly Framework
+
+* **User-friendliness and Ease of Use:** The user-friendly API, which enables rapid prototyping of deep learning models, making it accessible to a wider range of users, including beginners. 
+
+* **Versatility and Architectural Flexibility:** Keras supports a wide range of network architectures, including convolutional networks for computer vision, recurrent networks for sequence processing, and combinations of both. Its flexibility extends to building models with multiple inputs and outputs, layer sharing, and more complex topologies.
+
+* **Seamless CPU and GPU Execution:** Keras, through its backend engines, can execute code seamlessly on both CPUs and GPUs. This adaptability ensures that users can leverage available hardware resources for optimal performance.
+
+.small[ https://keras3.posit.co ]
+
+---
+## Installation and Development Workflow
+
+
+``` r
+install.packages("keras3")
+keras3::install_keras(backend = "tensorflow") # "jax" or "torch"
+```
+
+If GPU is available, it will be detected and configured. May use `gpu = TRUE` to force GPU installation.
+
+.small[ https://keras3.posit.co/articles/getting_started.html ]
+
+---
+## Developing with Keras
+
+- Define your training data, input and target tensors.
+- Define a model, a network of layers that maps inputs to targets.
+  - Two ways to define a model:  using the `keras_model_sequential()` function for linear stacks of layers, or the functional API for more complex, directed acyclic graphs of layers.
+- Set the learning process by choosing a loss function and an optimizer.
+- Iterate on your training data
 
 
     </textarea>

@@ -1,59 +1,45 @@
 ---
-title: Syllabus
-slug: syllabus
-citeproc: true
+title: "BIOS691, Spring 2025"
 output:
-  blogdown::html_page:
-    toc: true
-    fig_caption: false
+  word_document: default
+  html_document: default
+# date: "2024-09-17"
 ---
 
-<script src="/rmarkdown-libs/header-attrs/header-attrs.js"></script>
 
-<div id="TOC">
-<ul>
-<li><a href="#course-description">Course Description</a></li>
-<li><a href="#prerequisites">Prerequisites</a></li>
-<li><a href="#learning-objectives">Learning Objectives</a></li>
-<li><a href="#about-the-class">About the class</a>
-<ul>
-<li><a href="#final-project">Final project</a></li>
-<li><a href="#class-evaluation">Class evaluation</a></li>
-<li><a href="#grading-policy">Grading Policy</a></li>
-</ul></li>
-<li><a href="#copyright">Copyright</a></li>
-<li><a href="#diversity-and-inclusivity">Diversity and inclusivity</a></li>
-<li><a href="#other-policies">Other policies</a></li>
-</ul>
-</div>
 
-{{% courseinfo %}}
-<div id="course-description" class="section level2">
-<h2>Course Description</h2>
+<div id="course-title-deep-learning-with-r" class="section level1">
+<h1>Course Title: Deep Learning with R</h1>
+<p>Instructor: Mikhail Dozmorov<br />
+Department: Biostatistics, VCU<br />
+Credits: 3<br />
+Duration: 15 weeks (2 lectures per week, 1 hour 20 minutes each)</p>
+<div id="course-overview" class="section level2">
+<h2>Course Overview</h2>
+<!-- This course introduces deep learning concepts using R, with hands-on exercises. The focus will be on implementing deep learning models and exploring various architectures using the "Deep Learning with R" textbook by François Chollet and J. J. Allaire. The course will cover both foundational and advanced topics in deep learning, including computer vision, natural language processing, and generative models. -->
 <p>Deep learning is an actively growing machine learning field for many research and application areas, such as computer vision, speech recognition, time series forecasting. It is becoming the state-of-the-art approach among machine learning methods, especially suitable for extracting useful information from large, unstructured datasets.</p>
 <p>This course is an introduction to deep learning theory and practice. It will cover the basics of neural network architectures, main statistical concepts behind training neural networks, and implementation aspects. The main focus will be on programming deep neural networks using TensorFlow and its Keras front-end in R, although the knowledge will also be useful for Python practitioners. The goal of this course is to build a foundation for general understanding of deep learning and hands-on implementation of main types of neural network architectures, and provide material for further development.</p>
+<p>The class will be conducted in person and include lecture and coding parts. Course material will be publicly available. The syllabus is subject to change. Observe the <a href="https://students.vcu.edu/studentconduct/vcu-honor-system/academic-misconduct-/honor-pledge/">VCU Honor Pledge</a> in any class- and homework activities.</p>
 </div>
 <div id="prerequisites" class="section level2">
 <h2>Prerequisites</h2>
 <ul>
-<li>Suggested reading
+<li>Book
 <ul>
-<li><a href="https://www.manning.com/books/deep-learning-with-r"><strong>Deep learning with R</strong></a> by François Chollet (the creator of Keras) with J. J. Allaire (the founder of RStudio and the author of the R interfaces to Keras and TensorFlow)</li>
-<li><a href="https://www.deeplearningbook.org/">The Deep Learning textbook</a> by Ian Goodfellow, Yoshua Bengio and Aaron Courville</li>
-<li><a href="https://www.youtube.com/watch?v=njKP3FqW3Sk&amp;list=PLtBw6njQRU-rwp5__7C0oIVt26ZgjG9NI">MIT Introduction to Deep Learning | 6.S191</a> - MIT video course by Alexander Amini, Ava Soleimani, and guests. Dense and informative ~45min lectures covering various topics of deep learning. <a href="http://introtodeeplearning.com/">introtodeeplearning.com</a> - course web site with slides, video, and other material</li>
-<li><a href="https://github.com/mdozmorov/MachineLearning_notes">Machine learning and deep learning resources</a> - a collection of references for further studies</li>
+<li><a href="https://www.manning.com/books/deep-learning-with-r-second-edition"><strong>Deep learning with R</strong></a> by François Chollet (the creator of Keras) with J. J. Allaire (the founder of RStudio and the author of the R interfaces to Keras and TensorFlow)</li>
 </ul></li>
-<li>Code
+</ul>
+<!--    - [The Deep Learning textbook](https://www.deeplearningbook.org/) by Ian Goodfellow, Yoshua Bengio and Aaron Courville
+    - [MIT Introduction to Deep Learning | 6.S191](https://www.youtube.com/watch?v=njKP3FqW3Sk&list=PLtBw6njQRU-rwp5__7C0oIVt26ZgjG9NI) - MIT video course by Alexander Amini, Ava Soleimani, and guests. Dense and informative ~45min lectures covering various topics of deep learning. [introtodeeplearning.com](http://introtodeeplearning.com/) - course web site with slides, video, and other material
+    - [Machine learning and deep learning resources](https://github.com/mdozmorov/MachineLearning_notes) - a collection of references for further studies
+- Code
+    - [**R notebooks for the code samples of the book "Deep Learning with R"**](https://github.com/jjallaire/deep-learning-with-r-notebooks) and the [second edition code](https://github.com/t-kalinowski/deep-learning-with-R-2nd-edition-code)
+    - [Deep Learning with Keras and TensorFlow in R Workflow](https://github.com/rstudio-conf-2020/dl-keras-tf) - RStudio Conference 2020 workshop by Brad Boehmke
+-->
 <ul>
-<li><a href="https://github.com/jjallaire/deep-learning-with-r-notebooks"><strong>R notebooks for the code samples of the book “Deep Learning with R”</strong></a></li>
-<li><a href="https://github.com/rstudio-conf-2020/dl-keras-tf">Deep Learning with Keras and TensorFlow in R Workflow</a> - RStudio Conference 2020 workshop by Brad Boehmke</li>
-</ul></li>
 <li>Skills
 <ul>
-<li>Working knowledge of R, familiarity with RStudio programming environment, command line, GitHub</li>
-</ul></li>
-<li>No formal course requirements, but basic knowledge of the following will help
-<ul>
+<li>Working knowledge of R, familiarity with RStudio programming environment, command line, GitHub (BIOS524)</li>
 <li>Basic linear algebra: vectors, matrices, determinants</li>
 <li>Simple calculus: derivatives, integrals, gradients</li>
 <li>Some probability theory: probability, random variables, distributions</li>
@@ -68,54 +54,285 @@ output:
 <ul>
 <li>R for <a href="http://cran.r-project.org/bin/windows/base/"><strong>Windows</strong></a> or <a href="http://cran.r-project.org/bin/macosx/"><strong>Mac</strong></a>. Review <a href="https://ismayc.github.io/rbasics-book/"><strong>Getting Used to R, RStudio, and RMarkdown</strong></a> book, if necessary</li>
 <li><a href="https://www.rstudio.com/products/rstudio/download/"><strong>RStudio Desktop</strong></a></li>
-<li><a href="https://git-scm.com/downloads"><strong>Git</strong></a></li>
-<li>A text editor (<a href="https://notepad-plus-plus.org/"><strong>Notepad++</strong></a> on Windows, or <a href="https://www.sublimetext.com/"><strong>Sublime text</strong></a> on any platform)</li>
-<li>Optional: Docker for <a href="https://hub.docker.com/editions/community/docker-ce-desktop-windows/"><strong>Windows</strong></a> or <a href="https://hub.docker.com/editions/community/docker-ce-desktop-mac/"><strong>Mac</strong></a> is recommended</li>
-<li>Windows only: <a href="https://git-for-windows.github.io/"><strong>Git Bash</strong></a> or <a href="http://www.cygwin.com/"><strong>Cygwin</strong></a></li>
-<li>Windows only: <a href="https://cran.r-project.org/bin/windows/Rtools/"><strong>Rtools</strong></a>
-<!-- - [**Windows-specific instructions on installing Keras and TensorFlow**](tensorflow.html) --></li>
 </ul></li>
 </ul>
-</div>
-<div id="learning-objectives" class="section level2">
-<h2>Learning Objectives</h2>
-<ol style="list-style-type: decimal">
-<li><strong>Learn</strong> the basic concepts of deep learning and various types of neural networks</li>
-<li><strong>Understand</strong> principles of training neural networks</li>
-<li><strong>Implement</strong> basic types of neural networks using Keras/TensorFlow R interface</li>
-</ol>
-</div>
-<div id="about-the-class" class="section level2">
-<h2>About the class</h2>
-<p>This is a 1 credit hour course. Both undergraduates and graduate students are welcome to take the course. The class will be conducted via Zoom and include lecture and coding parts. Classes will not be recorded. Course material will be publicly available. The syllabus is subject to change. Observe the <a href="https://students.vcu.edu/studentconduct/vcu-honor-system/academic-misconduct-/honor-pledge/">VCU Honor Pledge</a> in any class- and homework activities</p>
+<!--    - [**Git**](https://git-scm.com/downloads)
+    - A text editor ([**Notepad++**](https://notepad-plus-plus.org/) on Windows, or [**Sublime text**](https://www.sublimetext.com/) on any platform)
+    - Optional: Docker for [**Windows**](https://hub.docker.com/editions/community/docker-ce-desktop-windows/) or [**Mac**](https://hub.docker.com/editions/community/docker-ce-desktop-mac/) is recommended
+    - Windows only: [**Git Bash**](https://git-for-windows.github.io/) or [**Cygwin**](http://www.cygwin.com/)
+    - Windows only: [**Rtools**](https://cran.r-project.org/bin/windows/Rtools/)
+    - [**Windows-specific instructions on installing Keras and TensorFlow**](tensorflow.html)
+-->
+<div id="course-objectives" class="section level3">
+<h3>Course Objectives</h3>
 <ul>
-<li><p>Course Website: <a href="https://bios691-deep-learning-r.netlify.com" class="uri">https://bios691-deep-learning-r.netlify.com</a></p></li>
-<li><p>Office Hours: contact the Instructor with questions and on-demand Zoom meeting requests</p></li>
-</ul>
-<div id="final-project" class="section level3">
-<h3>Final project</h3>
-<ul>
-<li>A take-home final project (teams of two are encouraged)</li>
-<li>Final project should be submitted as a fully reproducible GitHub repository</li>
-<li>The due date is one month following the course end. <a href="../class/final_project">Final project page</a></li>
+<li>Understand the fundamental concepts of deep learning and its applications</li>
+<li>Implement deep learning models in R using Keras and TensorFlow</li>
+<li>Explore key architectures like convolutional and recurrent neural networks</li>
+<li>Apply deep learning techniques to text, sequences, and images</li>
+<li>Work with generative models such as variational autoencoders and GANs</li>
 </ul>
 </div>
-<div id="class-evaluation" class="section level3">
-<h3>Class evaluation</h3>
-<p>Please, evaluate the course Friday afternoon, June 12, 2020. All evaluations are anonymous</p>
-<ul>
-<li><a href="https://courseeval.vcu.edu/Blue/svg.aspx?pid=05df79ed-c934-48ae-aa39-72d70fdfd940&amp;sid=62affb957f6d70bbd79f9c2865d00a8bf1e232837e630381dc1095289ecfcd37&amp;tid=f796bf54e5287c0376fde9485d74a0d8&amp;uid=e9c5910f23ceae63a3abaa9bc1f1b34b96eebb7ae0b9c163efc27fccff992a1d&amp;regl=en-us">Student Course evaluation</a></li>
-<li><a href="https://docs.google.com/forms/d/1aiSdoZoDKki6N5J0bvjI7duG-WAG7C1Oq-X4WoKyDTs/prefill">Guest Course evaluation</a></li>
-</ul>
+<div id="tentative-schedule" class="section level3">
+<h3>Tentative schedule</h3>
+<div id="week-1-introduction-to-deep-learning" class="section level4">
+<h4>Week 1: Introduction to Deep Learning</h4>
+<!-- - Lecture 1: What is Deep Learning? (Ch. 1) -->
+<!-- AI, machine learning, deep learning concepts -->
+<!-- Achievements and current limitations -->
+<!-- - Lecture 2: Brief History of Machine Learning (Ch. 1.2) -->
+<!-- Evolution of neural networks and the ML landscape -->
 </div>
-<div id="grading-policy" class="section level3">
-<h3>Grading Policy</h3>
-<ul>
-<li>Online attendance: 10% per class (50% total)</li>
-<li>Final Project: 0-50%</li>
-</ul>
-<p>This course will be graded on a Pass/Fail basis. Pass is defined as a grade of at least 70%</p>
+<div id="week-2-mathematical-foundations" class="section level4">
+<h4>Week 2: Mathematical Foundations</h4>
+<!-- - Lecture 3: First Look at Neural Networks (Ch. 2.1) -->
+<!-- - Lecture 4: Data Representations for Neural Networks (Ch. 2.2) -->
+<!-- Tensors, data structures, and real-world examples -->
 </div>
+<div id="week-3-neural-network-mechanics" class="section level4">
+<h4>Week 3: Neural Network Mechanics</h4>
+<!-- - Lecture 5: Tensor Operations (Ch. 2.3) -->
+<!-- Element-wise operations, tensor reshaping -->
+<!-- - Lecture 6: Gradient-Based Optimization (Ch. 2.4) -->
+<!-- Backpropagation and stochastic gradient descent -->
+</div>
+<div id="week-4-neural-networks-in-practice" class="section level4">
+<h4>Week 4: Neural Networks in Practice</h4>
+<!-- - Lecture 7: Introduction to Keras (Ch. 3.2) -->
+<!-- Setting up a deep learning workstation -->
+<!-- - Lecture 8: Binary Classification (Ch. 3.4) -->
+<!-- Classifying movie reviews with neural networks -->
+</div>
+<div id="week-5-advanced-classification-and-regression" class="section level4">
+<h4>Week 5: Advanced Classification and Regression</h4>
+<!-- - Lecture 9: Multiclass Classification (Ch. 3.5) -->
+<!-- Classifying newswires with neural networks -->
+<!-- - Lecture 10: Regression with Neural Networks (Ch. 3.6) -->
+<!-- Predicting house prices with K-fold validation -->
+</div>
+<div id="week-6-machine-learning-fundamentals" class="section level4">
+<h4>Week 6: Machine Learning Fundamentals</h4>
+<!-- - Lecture 11: Overview of Machine Learning (Ch. 4.1) -->
+<!-- Supervised, unsupervised, reinforcement learning -->
+<!-- - Lecture 12: Evaluating Machine-Learning Models (Ch. 4.2) -->
+<!-- Train/test splits, validation strategies -->
+</div>
+<div id="week-7-data-preprocessing-overfitting" class="section level4">
+<h4>Week 7: Data Preprocessing &amp; Overfitting</h4>
+<!-- - Lecture 13: Preprocessing and Feature Engineering (Ch. 4.3) -->
+<!-- Preparing data for neural networks -->
+<!-- - Lecture 14: Overfitting and Underfitting (Ch. 4.4) -->
+<!-- Regularization techniques: dropout, weight decay -->
+</div>
+<div id="week-8-convolutional-neural-networks-cnns" class="section level4">
+<h4>Week 8: Convolutional Neural Networks (CNNs)</h4>
+<!-- - Lecture 15: Introduction to Convnets (Ch. 5.1) -->
+<!-- Convolution and max-pooling operations -->
+<!-- - Lecture 16: Training CNNs from Scratch (Ch. 5.2) -->
+<!-- Hands-on with a small dataset -->
+</div>
+<div id="week-9-transfer-learning-and-visualization" class="section level4">
+<h4>Week 9: Transfer Learning and Visualization</h4>
+<!-- - Lecture 17: Using Pretrained Convnets (Ch. 5.3) -->
+<!-- Fine-tuning and feature extraction -->
+<!-- - Lecture 18: Visualizing Convnets (Ch. 5.4) -->
+<!-- Filter visualization, heatmaps -->
+</div>
+<div id="week-10-text-and-sequence-data" class="section level4">
+<h4>Week 10: Text and Sequence Data</h4>
+<!-- - Lecture 19: Working with Text Data (Ch. 6.1) -->
+<!-- Embeddings, one-hot encoding -->
+<!-- - Lecture 20: Recurrent Neural Networks (RNNs) (Ch. 6.2) -->
+<!-- LSTM, GRU layers -->
+</div>
+<div id="week-11-advanced-rnns-and-sequence-processing" class="section level4">
+<h4>Week 11: Advanced RNNs and Sequence Processing</h4>
+<!-- - Lecture 21: Advanced Use of RNNs (Ch. 6.3) -->
+<!-- Stacking layers, recurrent dropout -->
+<!-- - Lecture 22: Sequence Processing with Convnets (Ch. 6.4) -->
+<!-- Combining CNNs and RNNs -->
+</div>
+<div id="week-12-advanced-architectures" class="section level4">
+<h4>Week 12: Advanced Architectures</h4>
+<!-- - Lecture 23: The Functional API in Keras (Ch. 7.1) -->
+<!-- Multi-input/output models, layer sharing -->
+<!-- - Lecture 24: Model Inspection and Monitoring (Ch. 7.2) -->
+<!-- Keras callbacks and TensorBoard -->
+</div>
+<div id="week-13-best-practices-and-hyperparameter-tuning" class="section level4">
+<h4>Week 13: Best Practices and Hyperparameter Tuning</h4>
+<!-- - Lecture 25: Advanced Architecture Patterns (Ch. 7.3) -->
+<!-- Hyperparameter optimization and ensembling -->
+<!-- - Lecture 26: Model Ensembling and Best Practices (Ch. 7.3) -->
+</div>
+<div id="week-14-generative-models" class="section level4">
+<h4>Week 14: Generative Models</h4>
+<!-- - Lecture 27: Text Generation with LSTM (Ch. 8.1) -->
+<!-- Character-level LSTM, sampling strategies -->
+<!-- - Lecture 28: Neural Style Transfer (Ch. 8.3) -->
+<!-- Implementing style transfer in Keras -->
+</div>
+<div id="week-15-variational-autoencoders-and-gans" class="section level4">
+<h4>Week 15: Variational Autoencoders and GANs</h4>
+<!-- - Lecture 29: Variational Autoencoders (Ch. 8.4) -->
+<!-- Concept vectors, latent spaces -->
+<!-- - Lecture 30: Generative Adversarial Networks (Ch. 8.5) -->
+<!-- DCGAN and adversarial training -->
+</div>
+</div>
+</div>
+<div id="grading" class="section level2">
+<h2>Grading</h2>
+<ul>
+<li>Assignments (60%): Regular homework assignments based on the book and additional datasets</li>
+<li>Participation (40%): Attendance and active participation in class discussions and labs</li>
+</ul>
+<!--
+1 What is deep learning?
+
+1.1 Artificial intelligence, machine learning, and deep learning
+Artificial intelligence, Machine learning, Learning representations from data, The “deep” in deep learning 8 Understanding how deep learning works, in three figures 9 What deep learning has achieved so far, Don’t believe the short-term hype, The promise of AI 
+
+1.2 Before deep learning: a brief history of machine learning
+Probabilistic modeling, Early neural networks, Kernel methods, Decision trees, random forests, and gradient boosting machines, Back to neural networks, What makes deep learning different, The modern machine-learning landscape
+
+1.3 Why deep learning? Why now?
+Hardware investment Will it last?, Data, Algorithms, A new wave of investment, The democratization of deep learning,
+
+2 Before we begin: the mathematical building blocks of neural networks
+
+2.1 A first look at a neural network
+
+2.2 Data representations for neural networks
+Scalars (0D tensors), Vectors (1D tensors), Matrices (2D tensors), 3D tensors and higher-dimensional tensors, Key attributes, Manipulating tensors in R, The notion of data batches, Real-world examples of data tensors, Vector data, Timeseries data or sequence data, Image data, Video data
+
+2.3 The gears of neural networks: tensor operations
+Element-wise operations, Operations involving tensors of different dimensions, Tensor dot, Tensor reshaping, Geometric interpretation of tensor operations, A geometric interpretation of deep learning
+
+2.4 `The engine of neural networks: gradient-based optimization
+What’s a derivative?, Derivative of a tensor operation: the gradient, Stochastic gradient descent, Chaining derivatives: the Backpropagation algorithm`
+
+2.5 Looking back at our first example
+
+2.6 Summary
+
+3 Getting started with neural networks
+
+3.1 Anatomy of a neural network, Chaining
+Layers: the building blocks of deep learning, Models: networks of layers, Loss functions and optimizers: keys to configuring the learning process
+
+3.2 Introduction to Keras
+Keras, TensorFlow, Theano, and CNTK, Installing Keras, Developing with Keras: a quick overview
+
+3.3 Setting up a deep-learning workstation
+Getting Keras running: two options, Running deep-learning jobs in the cloud: pros and cons, What is the best GPU for deep learning?
+
+3.4 Classifying movie reviews: a binary classification example
+The IMDB dataset, Preparing the data, Building your network, Validating your approach, Using a trained network to generate predictions on new data, experiments, Wrapping up
+
+3.5 Classifying newswires: a multiclass classification example
+The Reuters dataset, Preparing the data, Building your network, Validating your approach 73 Generating predictions on new data, A different way to handle the labels and the loss, The importance of having sufficiently large intermediate layers, Further experiments, Wrapping up
+
+3.6 Predicting house prices: a regression example, The Boston Housing Price dataset, Preparing the data 77 Building your network, Validating your approach using K-fold validation, Wrapping up
+
+3.7 Summary
+
+4 Fundamentals of machine learning
+
+4.1 Four branches of machine learning
+Supervised learning, Unsupervised learning, Self-supervised learning, Reinforcement learning
+
+4.2 Evaluating machine-learning models
+Training, validation, and test sets, Things to keep in mind
+
+4.3 Data preprocessing, feature engineering, and feature learning
+Data preprocessing for neural networks, Feature engineering
+
+4.4 Overfitting and underfitting
+Reducing the network’s size, Adding weight regularization, Adding dropout
+
+4.5 The universal workflow of machine learning
+Defining the problem and assembling a dataset, Choosing a measure of success, Deciding on an evaluation protocol, Preparing your data, Developing a model that does better than a baseline, Scaling up: developing a model that overfits, Regularizing your model and tuning your hyperparameters
+
+4.6 Summary
+
+5 Deep learning for computer vision
+
+5.1 Introduction to convnets
+The convolution operation, The max-pooling operation
+
+5.2 Training a convnet from scratch on a small dataset
+The relevance of deep learning for small-data problems, Downloading the data, Building your network, Data preprocessing, Using data augmentation
+
+5.3 Using a pretrained convnet
+Feature extraction, Fine-tuning, Wrapping up
+
+5.4 Visualizing what convnets learn
+Visualizing intermediate activations, Visualizing convnet filters, Visualizing heatmaps of class activation
+
+5.5 Summary
+
+6 Deep learning for text and sequences
+
+6.1 Working with text data
+One-hot encoding of words and characters, Using word embeddings, Putting it all together: from raw text to word embeddings, Wrapping up
+
+6.2 Understanding recurrent neural networks
+A recurrent layer in Keras, Understanding the LSTM and GRU layers, A concrete LSTM example in Keras, Wrapping up
+
+6.3 Advanced use of recurrent neural networks, A temperature-forecasting problem, Preparing the data, A common-sense, non-machine-learning baseline, A basic machine-learning approach, A first recurrent baseline 199 Using recurrent dropout to fight overfitting, Stacking recurrent layers, Using bidirectional RNNs, Going even further, Wrapping up
+
+6.4 Sequence processing with convnets
+Understanding 1D convolution for sequence data, 1D pooling for sequence data, Implementing a 1D convnet, Combining CNNs and RNNs to process long sequences, Wrapping up
+
+6.5 Summary
+
+7 Advanced deep-learning best practices
+
+7.1 Going beyond the sequential model: the Keras functional API
+Introduction to the functional API, Multi-input models, Multi-output models, Directed acyclic graphs of layers, Layer weight sharing, Models as layers, Wrapping up
+
+7.2 Inspecting and monitoring deep-learning models using Keras callbacks and TensorBoard
+Using callbacks to act on a model during training 233 Introduction to TensorBoard: the TensorFlow visualization framework, Wrapping up
+
+7.3 Getting the most out of your models
+Advanced architecture patterns, Hyperparameteroptimization, Model ensembling, Wrapping up
+
+7.4 Summary
+
+8 Generative deep learning
+
+8.1 Text generation with LSTM
+A brief history of generative recurrent networks, How do you generate sequence data?, The importance of the sampling strategy, Implementing character-level LSTM text generation, Wrapping up
+
+8.2 DeepDream
+Implementing DeepDream in Keras, Wrapping up
+
+8.3 Neural style transfer
+The content loss, The style loss, Neural style transfer in Keras, Wrapping up
+
+8.4 Generating images with variational autoencoders
+Sampling from latent spaces of images, Concept vectors for image editing, Variational autoencoders, Wrapping up
+
+8.5 Introduction to generative adversarial networks
+A schematic GAN implementation, A bag of tricks, The generator, The discriminator, The adversarial network, DCGAN, Wrapping up
+
+8.6 Summary
+
+9 Conclusions
+
+9.1 Key concepts in review
+Various approaches to AI, What makes deep learning special within the field of machine learning, How to think about deep learning, Key enabling technologies, The universal machine-learning workflow, Key network architectures, The space of possibilities
+
+9.2 The limitations of deep learning
+The risk of anthropomorphizing machine-learning models, Local generalization vs. extreme generalization, Wrapping up
+
+9.3 The future of deep learning
+Models as programs, Beyond backpropagation and differentiable layers, Automated machine learning, Lifelong learning and modular subroutine reuse, The long- term vision
+
+9.4 Staying up to date in a fast-moving field
+Practice on real-world problems using Kaggle, Read about the latest developments on arXiv, Explore the Keras ecosystem, Final words
+-->
 </div>
 <div id="copyright" class="section level2">
 <h2>Copyright</h2>
@@ -127,7 +344,7 @@ output:
 </div>
 <div id="other-policies" class="section level2">
 <h2>Other policies</h2>
-<p><a href="http://www.provost.vcu.edu/academic-affairs/operations/syllabus-statements/"><strong>University-wide policies</strong></a></p>
+<p><a href="https://president.vcu.edu/policies/"><strong>University-wide policies</strong></a></p>
 <!--
 ### Late Policy
 
@@ -149,4 +366,5 @@ Class grades are due to the Registrar by the Friday following the week of finals
     are run by Graduate Studies.*
 
 -->
+</div>
 </div>

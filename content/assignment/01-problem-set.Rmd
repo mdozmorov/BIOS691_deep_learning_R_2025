@@ -3,6 +3,7 @@ title: "Code 1"
 date: "2020-06-08"
 due_date: "2020-06-08"
 due_time: "11:59 PM"
+draft: true
 menu:
   assignment:
     parent: Code

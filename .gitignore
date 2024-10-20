@@ -37,7 +37,7 @@ resources/
 
 # Netlify (if you are deploying using Netlify)
 .netlify/
-netlify.toml
+# netlify.toml
 
 # Build or temp directories
 dist/

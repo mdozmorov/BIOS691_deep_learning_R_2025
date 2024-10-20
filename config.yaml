@@ -1,4 +1,4 @@
-baseurl: https://bios691-deep-learning-r.netlify.app/
+baseurl: https://bios691-deep-learning-r-2025.netlify.app/
 defaultContentLanguage: en
 title: "Deep Learning with R"
 theme: hugo-academic
@@ -30,7 +30,7 @@ imaging:
   anchor: smart
 
 
-copyright: ''
+copyright: 'MGD'
 enableGitInfo: true
 hasCJKLanguage: false
 defaultContentLanguageInSubdir: false

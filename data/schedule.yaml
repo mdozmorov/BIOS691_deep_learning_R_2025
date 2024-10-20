@@ -2,35 +2,35 @@ lessons:
   - title: '<span class="fake-header-table">Introduction to Deep Learning with R</span>'
     header: True
 
-  - title: '**Day 1: Fundamentals of Deep Learning I**'
-    date: "June 8"
-    reading: "01-reading"
-    assignment: "01-problem-set"
-    class: "01-class"
-
-  - title: '**Day 2: Fundamentals of Deep Learning II**'
-    date: "June 9"
-    reading: "02-reading"
-    assignment: "02-problem-set"
-    class: "02-class"
-
-  - title: '**Day 3: Overfitting, regularization, dropout, pretrained models, word embedding**'
-    date: "June 10"
-    reading: "03-reading"
-    assignment: "03-problem-set"
-    class: "03-class"
-
-  - title: '**Day 4: Convolutional Neural Networks, images**'
-    date: "June 11"
-    reading: "04-reading"
-    assignment: "04-problem-set"
-    class: "04-class"
-
-  - title: "**Day 5: Generative Adversarial Networks, Autoencoders, Recurrent Neural Networks, LSTM, GRU, sequence learning**"
-    date: "June 12"
-    reading: "05-reading"
-    assignment: "05-problem-set"
-    class: "05-class"
+  # - title: '**Day 1: Fundamentals of Deep Learning I**'
+  #   date: "June 8"
+  #   reading: "01-reading"
+  #   assignment: "01-problem-set"
+  #   class: "01-class"
+  # 
+  # - title: '**Day 2: Fundamentals of Deep Learning II**'
+  #   date: "June 9"
+  #   reading: "02-reading"
+  #   assignment: "02-problem-set"
+  #   class: "02-class"
+  # 
+  # - title: '**Day 3: Overfitting, regularization, dropout, pretrained models, word embedding**'
+  #   date: "June 10"
+  #   reading: "03-reading"
+  #   assignment: "03-problem-set"
+  #   class: "03-class"
+  # 
+  # - title: '**Day 4: Convolutional Neural Networks, images**'
+  #   date: "June 11"
+  #   reading: "04-reading"
+  #   assignment: "04-problem-set"
+  #   class: "04-class"
+  # 
+  # - title: "**Day 5: Generative Adversarial Networks, Autoencoders, Recurrent Neural Networks, LSTM, GRU, sequence learning**"
+  #   date: "June 12"
+  #   reading: "05-reading"
+  #   assignment: "05-problem-set"
+  #   class: "05-class"
 
 #  - title: "**Notebook 2 due**"
 #    date: "April 16"

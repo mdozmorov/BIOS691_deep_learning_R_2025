@@ -3,6 +3,7 @@ title: "Final project"
 # linktitle: "1. Introduction to RStudio and Images"
 date: "2020-07-11"
 class_date: "2020-07-11"
+draft: true
 output:
   blogdown::html_page:
     toc: false
