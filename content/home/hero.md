@@ -21,5 +21,5 @@ design:
     text_color_light: true
 
 cta_note:
-  label: Summer 2020<br>Biostatistics<br>Virginia Commonwealth University
+  label: Spring 2025<br>Biostatistics<br>Virginia Commonwealth University
 ---
