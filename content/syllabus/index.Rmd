@@ -1,0 +1,116 @@
+---
+title: Syllabus
+slug: syllabus
+citeproc: true
+output:
+  blogdown::html_page:
+    toc: true
+    fig_caption: false
+---
+
+`r blogdown::shortcode("courseinfo")`
+
+## Course Description
+
+Deep learning is an actively growing machine learning field for many research and application areas, such as computer vision, speech recognition, time series forecasting. It is becoming the state-of-the-art approach among machine learning methods, especially suitable for extracting useful information from large, unstructured datasets.
+
+This course is an introduction to deep learning theory and practice. It will cover the basics of neural network architectures, main statistical concepts behind training neural networks, and implementation aspects. The main focus will be on programming deep neural networks using TensorFlow and its Keras front-end in R, although the knowledge will also be useful for Python practitioners. The goal of this course is to build a foundation for general understanding of deep learning and hands-on implementation of main types of neural network architectures, and provide material for further development.
+
+## Prerequisites
+
+- Suggested reading
+    - [**Deep learning with R**](https://www.manning.com/books/deep-learning-with-r) by François Chollet (the creator of Keras) with J. J. Allaire (the founder of RStudio and the author of the R interfaces to Keras and TensorFlow)
+    - [The Deep Learning textbook](https://www.deeplearningbook.org/) by Ian Goodfellow, Yoshua Bengio and Aaron Courville
+    - [MIT Introduction to Deep Learning | 6.S191](https://www.youtube.com/watch?v=njKP3FqW3Sk&list=PLtBw6njQRU-rwp5__7C0oIVt26ZgjG9NI) - MIT video course by Alexander Amini, Ava Soleimani, and guests. Dense and informative ~45min lectures covering various topics of deep learning. [introtodeeplearning.com](http://introtodeeplearning.com/) - course web site with slides, video, and other material
+    - [Machine learning and deep learning resources](https://github.com/mdozmorov/MachineLearning_notes) - a collection of references for further studies
+- Code
+    - [**R notebooks for the code samples of the book "Deep Learning with R"**](https://github.com/jjallaire/deep-learning-with-r-notebooks)
+    - [Deep Learning with Keras and TensorFlow in R Workflow](https://github.com/rstudio-conf-2020/dl-keras-tf) - RStudio Conference 2020 workshop by Brad Boehmke
+- Skills
+    - Working knowledge of R, familiarity with RStudio programming environment, command line, GitHub
+- No formal course requirements, but basic knowledge of the following will help
+    - Basic linear algebra: vectors, matrices, determinants
+    - Simple calculus: derivatives, integrals, gradients
+    - Some probability theory: probability, random variables, distributions
+    - Basic statistics knowledge: descriptive statistics, estimators.
+    - (Linear) modeling
+- Hardware
+    - A laptop, Mac or Linux OSs are recommended. GPU (graphics processing unit) is not required
+- Software
+    - R for [**Windows**](http://cran.r-project.org/bin/windows/base/) or [**Mac**](http://cran.r-project.org/bin/macosx/). Review [**Getting Used to R, RStudio, and RMarkdown**](https://ismayc.github.io/rbasics-book/) book, if necessary
+    - [**RStudio Desktop**](https://www.rstudio.com/products/rstudio/download/)
+    - [**Git**](https://git-scm.com/downloads)
+    - A text editor ([**Notepad++**](https://notepad-plus-plus.org/) on Windows, or [**Sublime text**](https://www.sublimetext.com/) on any platform)
+    - Optional: Docker for [**Windows**](https://hub.docker.com/editions/community/docker-ce-desktop-windows/) or [**Mac**](https://hub.docker.com/editions/community/docker-ce-desktop-mac/) is recommended
+    - Windows only: [**Git Bash**](https://git-for-windows.github.io/) or [**Cygwin**](http://www.cygwin.com/)
+    - Windows only: [**Rtools**](https://cran.r-project.org/bin/windows/Rtools/)
+    <!-- - [**Windows-specific instructions on installing Keras and TensorFlow**](tensorflow.html) -->
+
+## Learning Objectives
+
+1.  **Learn** the basic concepts of deep learning and various types of neural networks
+2.  **Understand** principles of training neural networks 
+3.  **Implement** basic types of neural networks using Keras/TensorFlow R interface
+
+## About the class
+
+This is a 1 credit hour course. Both undergraduates and graduate students are welcome to take the course. The class will be conducted via Zoom and include lecture and coding parts. Classes will not be recorded. Course material will be publicly available. The syllabus is subject to change. Observe the [VCU Honor Pledge](https://students.vcu.edu/studentconduct/vcu-honor-system/academic-misconduct-/honor-pledge/) in any class- and homework activities
+
+- Course Website:  https://bios691-deep-learning-r.netlify.com
+
+- Office Hours: contact the Instructor with questions and on-demand Zoom meeting requests
+
+### Final project
+
+- A take-home final project (teams of two are encouraged)
+- Final project should be submitted as a fully reproducible GitHub repository
+- The due date is one month following the course end. [Final project page](../class/final_project)
+
+### Class evaluation
+
+Please, evaluate the course Friday afternoon, June 12, 2020. All evaluations are anonymous
+
+- [Student Course evaluation](https://courseeval.vcu.edu/Blue/svg.aspx?pid=05df79ed-c934-48ae-aa39-72d70fdfd940&sid=62affb957f6d70bbd79f9c2865d00a8bf1e232837e630381dc1095289ecfcd37&tid=f796bf54e5287c0376fde9485d74a0d8&uid=e9c5910f23ceae63a3abaa9bc1f1b34b96eebb7ae0b9c163efc27fccff992a1d&regl=en-us)
+- [Guest Course evaluation](https://docs.google.com/forms/d/1aiSdoZoDKki6N5J0bvjI7duG-WAG7C1Oq-X4WoKyDTs/prefill) 
+
+
+### Grading Policy
+
+- Online attendance: 10% per class (50% total)
+- Final Project: 0-50% 
+
+This course will be graded on a Pass/Fail basis. Pass is defined as a grade of at least 70%
+
+## Copyright
+
+Every reasonable effort has been made to protect the copyright requirements of materials used in this course by referring to the original sources. 
+
+## Diversity and inclusivity
+
+A primary goal of this course is to be inclusive and of value to the largest number of contributors, with the most varied and diverse backgrounds possible. All participants in this course are encouraged to help to provide a friendly, safe and welcoming environment for all, regardless of age, gender, gender identity or expression, culture, ethnicity, language, national origin, political beliefs, profession, race, religion, sexual orientation, socioeconomic status, and technical ability.
+
+## Other policies
+
+[**University-wide policies**](http://www.provost.vcu.edu/academic-affairs/operations/syllabus-statements/)
+
+<!--
+### Late Policy
+
+Students get 1 free assignment to submit late without penalties. Please email us through Sakai that you need more time. If you need accommodation, please email us so we can figure out a way to help you.
+
+Graduate Studies in the OHSU School of Medicine is committed to providing grades to students in a timely manner. Course instructors will provide students with information in writing at the beginning of each course that describes the grading policies and procedures, including but not limited to evaluation criteria, expected time needed to grade individual student examinations and type of feedback they will provide.
+
+Class grades are due to the Registrar by the Friday following the week of finals. However, on those occasions when a grade has not been submitted by the deadline, the following procedure shall be followed:
+
+1)  The Department/Program Coordinator will immediately contact the Instructor requesting the missing grade, with a copy to the Program Director and Registrar.
+
+2)  If the grade is still overdue by the end of next week, the Department/Program Coordinator will email the Department Chair directly, with a copy to the Instructor and Program Director requesting resolution of the missing grade.
+
+3)  If, after an additional week the grade is still outstanding, the student or Department/Program Coordinator may petition the Office of Graduate students for final resolution.
+
+1.  *For courses that are run by a specific department.*
+
+2.  *For the conjoined courses (course number is preceded by CON\_ that
+    are run by Graduate Studies.*
+
+-->
