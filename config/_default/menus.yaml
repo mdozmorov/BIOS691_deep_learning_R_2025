@@ -14,6 +14,15 @@ main:
   - name: Classes
     url: /class/
     weight: 5
+
+reading:
+  - name: "Reading and references"
+    url: /reading/
+
+class:
+  - name: "Class details"
+    url: /class/
+#    weight: 1
 #   - name: RStudio.cloud
 #     url: https://rstudio.cloud/
 #     weight: 7
