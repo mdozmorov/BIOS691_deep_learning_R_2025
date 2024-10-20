@@ -1,0 +1,137 @@
+---
+title: "Mathematical Foundations"
+subtitle: "The Engine of Neural Networks: Gradient-Based Optimization"
+author: "Mikhail Dozmorov"
+institute: "Virginia Commonwealth University"
+# date: "`r Sys.Date()`"
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    css: ["xaringan-themer.css", "xaringan-my.css"]
+    nature:
+      ratio: '16:9'
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+```{r xaringan-themer, include = FALSE}
+library(xaringanthemer)
+mono_light(
+  base_color = "midnightblue",
+  header_font_google = google_font("Josefin Sans"),
+  text_font_google   = google_font("Montserrat", "500", "500i"),
+  code_font_google   = google_font("Droid Mono"),
+  link_color = "#8B1A1A", #firebrick4, "deepskyblue1"
+  text_font_size = "28px"
+)
+```
+
+## Introduction to Gradient-Based Optimization
+
+- Each layer transforms its input, e.g. $output = ReLU(dot(W, input) + b)$
+
+- Weights $W$ and biases $b$ are trainable parameters.
+
+- Initially, $W$ and $b$ are random. Using them as is won't produce any useful representation of the data.
+
+- The role of gradient-based optimization is to gradually adjust these weights, based on a feedback signal.
+  - Forward pass - obtain predicted output $y_{pred}$ with the current weights.
+  - Compute the loss of the network, the mismatch between $y_{pred}$ and $y$.
+  - Adjust all weights to reduce the loss.
+
+## Introduction to Gradient-Based Optimization
+
+- All operations in the network are differentiable - we can compute the gradient of the loss with regard to the network's coefficients and move coefficients in the opposite direction from the gradient, thus decreasing the loss.
+
+- Derivative - Measures the rate of change of a function concerning its input. 
+
+- Geometric interpretation: Slope of the tangent line at any point on a curve.
+
+- Example: $f(x) = x^2$ has derivative $f'(x) = 2x$
+
+---
+## Derivative of a Tensor Operation: The Gradient
+
+- Gradient - The multi-dimensional generalization of a derivative.
+
+- For a function of many variables, the gradient points in the direction of the steepest ascent.
+
+- In neural networks, gradients indicate how to adjust each weight to reduce the loss.
+
+- Example: If $\mathbf{w} = (w_1, w_2)$, then the gradient of the loss function $\mathcal{L}(\mathbf{w})$ is:  
+
+$$\nabla_{\mathbf{w}} \mathcal{L} = \left( \frac{\partial \mathcal{L}}{\partial w_1}, \frac{\partial \mathcal{L}}{\partial w_2} \right)$$
+
+---
+## Stochastic Gradient Descent (SGD)
+
+- What is SGD? A variant of gradient descent where updates are performed on a small batch of training data (instead of the whole dataset).
+
+- Advantage: Reduces computation time and introduces noise, helping avoid local minima.
+
+SGD Update Rule:
+
+$$\mathbf{w}_{t+1} = \mathbf{w}_t - \eta \cdot \nabla_{\mathbf{w}} \mathcal{L}(\mathbf{w})$$
+where $\eta$ is the learning rate.
+
+---
+## Learning Rate and Its Impact
+
+Learning Rate $\eta$:
+
+- Controls the step size in gradient descent.
+
+- Too high: Overshoots the minimum.
+
+- Too low: Takes too long to converge.
+
+- Finding an optimal learning rate is crucial for efficient training.
+
+---
+## Chaining Derivatives: The Backpropagation Algorithm
+
+- Backpropagation - Key algorithm for computing the gradients of all parameters in a network.
+
+- Uses the chain rule to propagate errors backward from the output to the input layers.
+
+Chain Rule:
+
+If $f(x)$ and $g(x)$ are two functions, the derivative of their composition is:  
+
+$$\frac{d}{dx} [f(g(x))] = f'(g(x)) \cdot g'(x)$$
+Backprop applies this to compute gradients layer by layer.
+
+---
+## Backpropagation in Action
+
+- Forward Pass:
+  - Compute the output of the network for a given input.
+  - Store intermediate results (activations).
+
+- Backward Pass:
+  - Start from the loss at the output and propagate the gradient backward using the chain rule.
+  - Update the weights after calculating gradients for each layer.
+
+---
+## Example of Backpropagation
+
+- Two-layer network:
+  - Forward Pass: Input $x \rightarrow$ Hidden Layer $h = W_1 x + b_1 \rightarrow$ Output $o = W_2 h + b_2$
+  - Backward Pass: 
+    - Compute gradient $\nabla L$ with respect to weights $W_1$, $W_2$, biases $b_1$, $b_2$ and update them accordingly.
+    - Use the chain rule to handle each layer's gradients.
+
+---
+## Visualizing Gradient Descent
+
+- Loss Surface
+  - Picture a mountain range representing the loss function.
+  - Gradient descent helps find the lowest point.
+  - Gradient Steps: Move downhill, with each step reducing the loss.
+
+- Challenges
+  - Local minima, saddle points, and plateaus can slow convergence.
+
+
+
