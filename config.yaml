@@ -10,6 +10,10 @@ theme: hugo-academic
 permalinks:
   post: "/:year/:month/:day/:slug/"
 buildFuture: True
+build:
+  writeStats: true
+  ignoreFiles:
+    - "static/slides/*_code\\.Rmd"
 
 # No taxonomy
 disableKinds:
