@@ -1,9 +1,9 @@
 ---
 title: "Day 1: Fundamentals of Deep Learning I"
 # linktitle: "1. Introduction to RStudio and Images"
-date: "2020-06-08"
-class_date: "2020-06-08"
-draft: true
+date: "2025-01-13"
+class_date: "2025-01-13"
+draft: false
 output:
   blogdown::html_page:
     toc: false
@@ -21,32 +21,12 @@ editor_options:
 
 ## Slides
 
-### Class Introduction
+### AI, Machine Learning, Deep Learning concepts
 
-<a href="../../slides/00_Introduction.html#1" target="_blank">Lecture slides in HTML format</a>
+<a href="../../slides/01a_What_is_DL.html#1" target="_blank">Lecture slides in HTML format</a>
 
-<a href="../../slides/00_Introduction.pdf" target="_blank">Lecture handouts in PDF format</a>
-
-```{r echo=FALSE}
-knitr::include_url('../../slides/00_Introduction.html#1')
-```
-
-### Getting started
-
-<a href="../../slides/00_Getting_started.html#1" target="_blank">Lecture slides in HTML format</a>
-
-<a href="../../slides/00_Getting_started.pdf" target="_blank">Lecture handouts in PDF format</a>
+<a href="../../slides/01a_What_is_DL.pdf" target="_blank">Lecture handouts in PDF format</a>
 
 ```{r echo=FALSE}
-knitr::include_url('../../slides/00_Getting_started.html#1')
-```
-
-### Neural network fundamentals
-
-<a href="../../slides/01_Neural_network.html#1" target="_blank">Lecture slides in HTML format</a>
-
-<a href="../../slides/01_Neural_network.pdf" target="_blank">Lecture handouts in PDF format</a>
-
-```{r echo=FALSE}
-knitr::include_url('../../slides/01_Neural_network.html#1')
+knitr::include_url('../../slides/01a_What_is_DL.html#1')
 ```
