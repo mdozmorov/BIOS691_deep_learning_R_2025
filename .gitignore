@@ -1,3 +1,9 @@
+glove*
+aclImdb*
+binary*
+*.keras
+pets_dataset
+
 .Rproj.user
 .Rhistory
 .RData
