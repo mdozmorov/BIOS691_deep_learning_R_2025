@@ -86,6 +86,7 @@ Duration: 15 weeks (2 lectures per week, 1 hour 20 minutes each)</p>
 <div id="week-2-mathematical-foundations" class="section level4">
 <h4>Week 2: Mathematical Foundations</h4>
 <!-- - Lecture 3: First Look at Neural Networks (Ch. 2.1) -->
+<!-- /Users/mdozmorov/Documents/Data/MachineLearning/deep-learning-with-r-notebooks/notebooks/2.1-a-first-look-at-a-neural-network.Rmd -->
 <!-- - Lecture 4: Data Representations for Neural Networks (Ch. 2.2) -->
 <!-- Tensors, data structures, and real-world examples -->
 </div>
@@ -187,184 +188,440 @@ Duration: 15 weeks (2 lectures per week, 1 hour 20 minutes each)</p>
 <li>Assignments (60%): Regular homework assignments based on the book and additional datasets</li>
 <li>Participation (40%): Attendance and active participation in class discussions and labs</li>
 </ul>
-<!--
-1 What is deep learning?
-
+</div>
+</div>
+<div id="chapters" class="section level1">
+<h1>Chapters</h1>
+<ul>
+<li>Chapter 1: What is deep learning?</li>
+<li>Chapter 2: The mathematical building blocks of neural networks</li>
+<li>Chapter 3: Introduction to Keras and TensorFlow</li>
+<li>Chapter 4: Getting started with neural networks: Classification and regression</li>
+<li>Chapter 5: Fundamentals of machine learning</li>
+<li>Chapter 6: The universal workflow of machine learning</li>
+<li>Chapter 7: Working with Keras: A deep dive</li>
+<li>Chapter 8: Introduction to deep learning for computer vision</li>
+<li>Chapter 9: Advanced deep learning for computer vision</li>
+<li>Chapter 10: Deep learning for time series</li>
+<li>Chapter 11: Deep learning for text</li>
+<li>Chapter 12: Generative deep learning</li>
+<li>Chapter 13: Best practices and advanced techniques</li>
+<li>Chapter 14: Conclusions</li>
+<li>Appendix: Python primer for R users</li>
+</ul>
+</div>
+<div id="lecture-schedule-deep-learning-with-r" class="section level1">
+<h1>Lecture Schedule: Deep Learning with R</h1>
+<div id="unit-1-foundations-of-deep-learning-lectures-17" class="section level2">
+<h2>Unit 1: Foundations of Deep Learning (Lectures 1–7)</h2>
+<div id="lecture-1" class="section level3">
+<h3>Lecture 1:</h3>
+<p>Overview: What is Deep Learning?
+AI, Machine Learning, and Deep Learning
+History of Machine Learning
+What Makes Deep Learning Unique</p>
+</div>
+<div id="lecture-2" class="section level3">
+<h3>Lecture 2:</h3>
+<p>Why Deep Learning?
+Hardware, Data, and Algorithms
+Investment Trends and Democratization
+Limitations and Future Promise</p>
+</div>
+<div id="lecture-3" class="section level3">
+<h3>Lecture 3:</h3>
+<p>Mathematical Building Blocks of Neural Networks: Scalars, Vectors, and Tensors
+Data Representations (Rank 0-3 Tensors)
+Real-World Examples (Vector, Time-Series, Image, Video Data)
+Lecture 4:</p>
+<p>Tensor Operations and Their Geometric Interpretation
+Broadcasting, Reshaping, Tensor Products
+Lecture 5:</p>
+<p>Neural Network Optimization: Gradient Descent and Backpropagation
+Derivatives and Gradients
+Stochastic Gradient Descent
+Lecture 6:</p>
+<p>TensorFlow and Keras: Introduction and Installation
+Setting Up the Workspace
+First Steps with TensorFlow Tensors
+Lecture 7:</p>
+<p>Anatomy of Neural Networks in Keras
+Layers, Models, and the Compile Step
+Monitoring Metrics and Using Trained Models
+Unit 2: Core Applications of Deep Learning (Lectures 8–15)
+Lecture 8:</p>
+<p>Binary Classification with Neural Networks
+IMDB Dataset: Preparing Data and Building a Model
+Lecture 9:</p>
+<p>Multiclass Classification
+Reuters Dataset: Handling Multiple Classes
+Lecture 10:</p>
+<p>Regression with Neural Networks
+Boston Housing Prices: K-Fold Validation
+Lecture 11:</p>
+<p>Generalization and Overfitting
+Training, Validation, and Test Sets
+Evaluating Machine Learning Models
+Lecture 12:</p>
+<p>Improving Model Fit
+Hyperparameter Tuning
+Model Regularization Techniques
+Lecture 13:</p>
+<p>Universal Workflow of Machine Learning (Part 1)
+Framing Problems and Dataset Curation
+Lecture 14:</p>
+<p>Universal Workflow of Machine Learning (Part 2)
+Model Development and Deployment
+Lecture 15:</p>
+<p>Writing Custom Training Loops and Callbacks in Keras
+Unit 3: Advanced Architectures and Techniques (Lectures 16–24)
+Lecture 16:</p>
+<p>Introduction to Convolutional Neural Networks
+The Convolution and Max-Pooling Operations
+Lecture 17:</p>
+<p>Training a CNN from Scratch
+Data Augmentation and Small Dataset Training
+Lecture 18:</p>
+<p>Leveraging Pretrained Models
+Feature Extraction and Fine-Tuning
+Lecture 19:</p>
+<p>Modern CNN Architectures
+Residual Connections and Batch Normalization
+Lecture 20:</p>
+<p>Introduction to Recurrent Neural Networks (RNNs)
+Temperature Forecasting Example
+Lecture 21:</p>
+<p>Advanced RNN Techniques
+Bidirectional Layers and Recurrent Dropout
+Lecture 22:</p>
+<p>Deep Learning for Text Data
+Preparing Text Data and Tokenization
+Lecture 23:</p>
+<p>The Transformer Architecture
+Understanding Self-Attention
+Lecture 24:</p>
+<p>Sequence-to-Sequence Models
+Machine Translation Example
+Unit 4: Generative Models and Real-World Applications (Lectures 25–30)
+Lecture 25:</p>
+<p>Introduction to Generative Deep Learning
+Text Generation with RNNs
+Lecture 26:</p>
+<p>Neural Style Transfer
+Implementing Style and Content Loss
+Lecture 27:</p>
+<p>Variational Autoencoders (VAEs)
+Concept Vectors and Latent Space Sampling
+Lecture 28:</p>
+<p>Generative Adversarial Networks (GANs)
+Implementing a Basic GAN
+Lecture 29:</p>
+<p>Best Practices for Model Training and Optimization
+Hyperparameter Search and Mixed Precision
+Lecture 30:</p>
+<p>Deep Learning Frontiers
+Lifelong Learning, Modular Architectures, and Staying Updated</p>
+</div>
+</div>
+<div id="table-of-content" class="section level2">
+<h2>Table of content</h2>
+<p>1 What is deep learning?
 1.1 Artificial intelligence, machine learning, and deep learning
-Artificial intelligence, Machine learning, Learning representations from data, The “deep” in deep learning 8 Understanding how deep learning works, in three figures 9 What deep learning has achieved so far, Don’t believe the short-term hype, The promise of AI 
-
-1.2 Before deep learning: a brief history of machine learning
-Probabilistic modeling, Early neural networks, Kernel methods, Decision trees, random forests, and gradient boosting machines, Back to neural networks, What makes deep learning different, The modern machine-learning landscape
-
-1.3 Why deep learning? Why now?
-Hardware investment Will it last?, Data, Algorithms, A new wave of investment, The democratization of deep learning,
-
-2 Before we begin: the mathematical building blocks of neural networks
-
+Artificial intelligence
+Machine learning
+Learning rules and representations from data
+The “deep” in “deep learning”
+Understanding how deep learning works, in three figures
+What deep learning has achieved so far
+Don’t believe the short-term hype
+The promise of AI</p>
+<p>1.2 Before deep learning: A brief history of machine learning Probabilistic modeling
+Early neural networks
+Kernel methods
+Decision trees, random forests, and gradient-boosting machines
+Back to neural networks
+What makes deep learning different?
+The modern machine learning landscape</p>
+<p>1.3 Why deep learning? Why now?
+Hardware
+Data
+Algorithms
+A new wave of investment
+The democratization of deep learning
+Will it last?</p>
+<p>2 The mathematical building blocks of neural networks
 2.1 A first look at a neural network
-
 2.2 Data representations for neural networks
-Scalars (0D tensors), Vectors (1D tensors), Matrices (2D tensors), 3D tensors and higher-dimensional tensors, Key attributes, Manipulating tensors in R, The notion of data batches, Real-world examples of data tensors, Vector data, Timeseries data or sequence data, Image data, Video data
-
-2.3 The gears of neural networks: tensor operations
-Element-wise operations, Operations involving tensors of different dimensions, Tensor dot, Tensor reshaping, Geometric interpretation of tensor operations, A geometric interpretation of deep learning
-
-2.4 `The engine of neural networks: gradient-based optimization
-What’s a derivative?, Derivative of a tensor operation: the gradient, Stochastic gradient descent, Chaining derivatives: the Backpropagation algorithm`
-
+Scalars (rank 0 tensors)
+Vectors (rank 1 tensors)
+Matrices (rank 2 tensors)
+Rank 3 and higher-rank tensors
+Key attributes
+Manipulating tensors in R
+The notion of data batches
+Real-world examples of data tensors
+Vector data
+Time-series data or sequence data
+Image data
+Video data
+2.3 The gears of neural networks: Tensor operations
+Element-wise operations
+Broadcasting
+Tensor product
+Tensor reshaping
+Geometric interpretation of tensor operations
+A geometric interpretation of deep learning
+2.4 The engine of neural networks: Gradient-based optimization
+What’s a derivative?
+Derivative of a tensor operation: The gradient
+Stochastic gradient descent
+Chaining derivatives: The backpropagation algorithm
 2.5 Looking back at our first example
-
-2.6 Summary
-
-3 Getting started with neural networks
-
-3.1 Anatomy of a neural network, Chaining
-Layers: the building blocks of deep learning, Models: networks of layers, Loss functions and optimizers: keys to configuring the learning process
-
-3.2 Introduction to Keras
-Keras, TensorFlow, Theano, and CNTK, Installing Keras, Developing with Keras: a quick overview
-
-3.3 Setting up a deep-learning workstation
-Getting Keras running: two options, Running deep-learning jobs in the cloud: pros and cons, What is the best GPU for deep learning?
-
-3.4 Classifying movie reviews: a binary classification example
-The IMDB dataset, Preparing the data, Building your network, Validating your approach, Using a trained network to generate predictions on new data, experiments, Wrapping up
-
-3.5 Classifying newswires: a multiclass classification example
-The Reuters dataset, Preparing the data, Building your network, Validating your approach 73 Generating predictions on new data, A different way to handle the labels and the loss, The importance of having sufficiently large intermediate layers, Further experiments, Wrapping up
-
-3.6 Predicting house prices: a regression example, The Boston Housing Price dataset, Preparing the data 77 Building your network, Validating your approach using K-fold validation, Wrapping up
-
-3.7 Summary
-
-4 Fundamentals of machine learning
-
-4.1 Four branches of machine learning
-Supervised learning, Unsupervised learning, Self-supervised learning, Reinforcement learning
-
-4.2 Evaluating machine-learning models
-Training, validation, and test sets, Things to keep in mind
-
-4.3 Data preprocessing, feature engineering, and feature learning
-Data preprocessing for neural networks, Feature engineering
-
-4.4 Overfitting and underfitting
-Reducing the network’s size, Adding weight regularization, Adding dropout
-
-4.5 The universal workflow of machine learning
-Defining the problem and assembling a dataset, Choosing a measure of success, Deciding on an evaluation protocol, Preparing your data, Developing a model that does better than a baseline, Scaling up: developing a model that overfits, Regularizing your model and tuning your hyperparameters
-
-4.6 Summary
-
-5 Deep learning for computer vision
-
-5.1 Introduction to convnets
-The convolution operation, The max-pooling operation
-
-5.2 Training a convnet from scratch on a small dataset
-The relevance of deep learning for small-data problems, Downloading the data, Building your network, Data preprocessing, Using data augmentation
-
-5.3 Using a pretrained convnet
-Feature extraction, Fine-tuning, Wrapping up
-
-5.4 Visualizing what convnets learn
-Visualizing intermediate activations, Visualizing convnet filters, Visualizing heatmaps of class activation
-
-5.5 Summary
-
-6 Deep learning for text and sequences
-
-6.1 Working with text data
-One-hot encoding of words and characters, Using word embeddings, Putting it all together: from raw text to word embeddings, Wrapping up
-
-6.2 Understanding recurrent neural networks
-A recurrent layer in Keras, Understanding the LSTM and GRU layers, A concrete LSTM example in Keras, Wrapping up
-
-6.3 Advanced use of recurrent neural networks, A temperature-forecasting problem, Preparing the data, A common-sense, non-machine-learning baseline, A basic machine-learning approach, A first recurrent baseline 199 Using recurrent dropout to fight overfitting, Stacking recurrent layers, Using bidirectional RNNs, Going even further, Wrapping up
-
-6.4 Sequence processing with convnets
-Understanding 1D convolution for sequence data, 1D pooling for sequence data, Implementing a 1D convnet, Combining CNNs and RNNs to process long sequences, Wrapping up
-
-6.5 Summary
-
-7 Advanced deep-learning best practices
-
-7.1 Going beyond the sequential model: the Keras functional API
-Introduction to the functional API, Multi-input models, Multi-output models, Directed acyclic graphs of layers, Layer weight sharing, Models as layers, Wrapping up
-
-7.2 Inspecting and monitoring deep-learning models using Keras callbacks and TensorBoard
-Using callbacks to act on a model during training 233 Introduction to TensorBoard: the TensorFlow visualization framework, Wrapping up
-
-7.3 Getting the most out of your models
-Advanced architecture patterns, Hyperparameteroptimization, Model ensembling, Wrapping up
-
-7.4 Summary
-
-8 Generative deep learning
-
-8.1 Text generation with LSTM
-A brief history of generative recurrent networks, How do you generate sequence data?, The importance of the sampling strategy, Implementing character-level LSTM text generation, Wrapping up
-
-8.2 DeepDream
-Implementing DeepDream in Keras, Wrapping up
-
-8.3 Neural style transfer
-The content loss, The style loss, Neural style transfer in Keras, Wrapping up
-
-8.4 Generating images with variational autoencoders
-Sampling from latent spaces of images, Concept vectors for image editing, Variational autoencoders, Wrapping up
-
-8.5 Introduction to generative adversarial networks
-A schematic GAN implementation, A bag of tricks, The generator, The discriminator, The adversarial network, DCGAN, Wrapping up
-
-8.6 Summary
-
-9 Conclusions
-
-9.1 Key concepts in review
-Various approaches to AI, What makes deep learning special within the field of machine learning, How to think about deep learning, Key enabling technologies, The universal machine-learning workflow, Key network architectures, The space of possibilities
-
-9.2 The limitations of deep learning
-The risk of anthropomorphizing machine-learning models, Local generalization vs. extreme generalization, Wrapping up
-
-9.3 The future of deep learning
-Models as programs, Beyond backpropagation and differentiable layers, Automated machine learning, Lifelong learning and modular subroutine reuse, The long- term vision
-
-9.4 Staying up to date in a fast-moving field
-Practice on real-world problems using Kaggle, Read about the latest developments on arXiv, Explore the Keras ecosystem, Final words
--->
-</div>
-<div id="copyright" class="section level2">
-<h2>Copyright</h2>
-<p>Every reasonable effort has been made to protect the copyright requirements of materials used in this course by referring to the original sources.</p>
-</div>
-<div id="diversity-and-inclusivity" class="section level2">
-<h2>Diversity and inclusivity</h2>
-<p>A primary goal of this course is to be inclusive and of value to the largest number of contributors, with the most varied and diverse backgrounds possible. All participants in this course are encouraged to help to provide a friendly, safe and welcoming environment for all, regardless of age, gender, gender identity or expression, culture, ethnicity, language, national origin, political beliefs, profession, race, religion, sexual orientation, socioeconomic status, and technical ability.</p>
-</div>
-<div id="other-policies" class="section level2">
-<h2>Other policies</h2>
-<p><a href="https://president.vcu.edu/policies/"><strong>University-wide policies</strong></a></p>
-<!--
-### Late Policy
-
-Students get 1 free assignment to submit late without penalties. Please email us through Sakai that you need more time. If you need accommodation, please email us so we can figure out a way to help you.
-
-Graduate Studies in the OHSU School of Medicine is committed to providing grades to students in a timely manner. Course instructors will provide students with information in writing at the beginning of each course that describes the grading policies and procedures, including but not limited to evaluation criteria, expected time needed to grade individual student examinations and type of feedback they will provide.
-
-Class grades are due to the Registrar by the Friday following the week of finals. However, on those occasions when a grade has not been submitted by the deadline, the following procedure shall be followed:
-
-1)  The Department/Program Coordinator will immediately contact the Instructor requesting the missing grade, with a copy to the Program Director and Registrar.
-
-2)  If the grade is still overdue by the end of next week, the Department/Program Coordinator will email the Department Chair directly, with a copy to the Instructor and Program Director requesting resolution of the missing grade.
-
-3)  If, after an additional week the grade is still outstanding, the student or Department/Program Coordinator may petition the Office of Graduate students for final resolution.
-
-1.  *For courses that are run by a specific department.*
-
-2.  *For the conjoined courses (course number is preceded by CON\_ that
-    are run by Graduate Studies.*
-
--->
+Reimplementing our first example from scratch in TensorFlow
+Running one training step
+The full training loop
+Evaluating the model</p>
+<p>3 Introduction to Keras and TensorFlow
+3.1 What’s TensorFlow?
+3.2 What’s Keras?
+3.3 Keras and TensorFlow: A brief history
+3.4 Python and R interfaces: A brief history
+3.5 Setting up a deep learning workspace
+Installing Keras and TensorFlow
+3.6 First steps with TensorFlow
+TensorFlow tensors
+3.7 Tensor attributes
+Tensor shape and reshaping
+Tensor slicing
+Tensor broadcasting
+The tf module
+Constant tensors and variables
+Tensor operations: Doing math in TensorFlow
+A second look at the GradientTape API
+An end-to-end example: A linear classifier in pure TensorFlow
+3.8 Anatomy of a neural network: Understanding core Keras APIs
+Layers: The building blocks of deep learning
+From layers to models
+The “compile” step: Configuring the learning process
+Picking a loss function
+Understanding the fit() method
+Monitoring loss and metrics on validation data
+Inference: Using a model after training</p>
+<p>4 Getting started with neural networks: Classification and regression
+4.1 Classifying movie reviews: A binary classification example
+The IMDB dataset
+Preparing the data
+Building your model
+Validating your approach
+Using a trained model to generate predictions on new data
+Further experiments
+Wrapping up
+4.2 Classifying newswires: A multiclass classification example
+The Reuters dataset
+Preparing the data
+Building your model
+Validating your approach
+Generating predictions on new data
+A different way to handle the labels and the loss
+The importance of having sufficiently large intermediate layers
+Further experiments
+Wrapping up
+4.3 Predicting house prices: A regression example
+The Boston housing price dataset
+Preparing the data
+Building your model
+Validating your approach using K-fold
+validation
+Generating predictions on new data
+Wrapping up</p>
+<p>5 Fundamentals of machine learning
+5.1 Generalization: The goal of machine learning
+Underfitting and overfitting
+The nature of generalization in deep learning
+5.2 Evaluating machine learning models
+Training, validation, and test sets
+Beating a common-sense baseline
+Things to keep in mind about model evaluation
+5.3 Improving model fit
+Tuning key gradient descent parameters
+Leveraging better architecture priors
+Increasing model capacity
+5.4 Improving generalization
+Dataset curation
+Feature engineering
+Using early stopping
+Regularizing your model</p>
+<p>6 The universal workflow of machine learning
+6.1 Define the task
+Frame the problem
+Collect a dataset
+Understand your data
+Choose a measure of success
+6.2 Develop a model
+Prepare the data
+Choose an evaluation protocol
+Beat a baseline
+Scale up: Develop a model that overfits
+Regularize and tune your model
+6.3 Deploy the model
+Explain your work to stakeholders and set expectations
+Ship an inference model
+Monitor your model in the wild
+Maintain your model</p>
+<p>7 Working with Keras: A deep dive
+7.1 A spectrum of workflows
+7.2 Different ways to build Keras models
+The Sequential model
+The Functional API
+Subclassing the Model class
+Mixing and matching different components
+Remember: Use the right tool for the job
+7.3 Using built-in training and evaluation loops
+Writing your own metrics
+Using callbacks
+Writing your own callbacks
+Monitoring and visualization with
+TensorBoard
+7.4 Writing your own training and evaluation loops
+Training vs. inference
+Low-level usage of metrics
+A complete training and evaluation loop
+Make it fast with tf_function()
+Leveraging fit() with a custom training loop</p>
+<p>8 Introduction to deep learning for computer vision
+8.1 Introduction to convnets
+The convolution operation
+The max-pooling operation
+8.2 Training a convnet from scratch on a small dataset
+The relevance of deep learning for small data problems
+Downloading the data
+Building the model
+Data preprocessing
+Using data augmentation
+8.3 Leveraging a pretrained model
+Feature extraction with a pretrained model
+Fine-tuning a pretrained model</p>
+<p>9 Advanced deep learning for computer vision
+9.1 Three essential computer vision tasks
+9.2 An image segmentation example
+9.3 Modern convnet architecture patterns
+Modularity, hierarchy, and reuse
+Residual connections
+Batch normalization
+Depthwise separable convolutions
+Putting it together: A mini Xception-like model
+9.4 Interpreting what convnets learn
+Visualizing intermediate activations
+Visualizing convnet filters
+Visualizing heatmaps of class activation</p>
+<p>10 Deep learning for time series
+10.1 Different kinds of time-series tasks
+10.2 A temperature-forecasting example
+Preparing the data
+A common-sense, non–machine learning baseline
+Let’s try a basic machine learning model
+Let’s try a 1D convolutional model
+A first recurrent baseline
+10.3 Understanding recurrent neural networks
+A recurrent layer in Keras
+10.4 Advanced use of recurrent neural networks
+Using recurrent dropout to fight overfitting
+Stacking recurrent layers
+Using bidirectional RNNs
+Going even further</p>
+<p>11 Deep learning for text
+11.1 Natural language processing: The bird’s-eye view
+11.2 Preparing text data
+Text standardization
+Text splitting (tokenization)
+Vocabulary indexing
+Using layer_text_vectorization
+11.3 Two approaches for representing groups of words:
+Sets and sequences
+Preparing the IMDB movie reviews data
+Processing words as a set: The bag-of-words approach
+Processing words as a sequence: The sequence model approach
+11.4 The Transformer architecture
+Understanding self-attention
+Multi-head attention
+The Transformer encoder
+When to use sequence models over bag-of-words models
+11.5 Beyond text classification: Sequence-to-sequence learning
+A machine translation example
+Sequence-to-sequence
+learning with RNNs
+Sequence-to-sequence learning with
+Transformer</p>
+<p>12 Generative deep learning
+12.1 Text generation
+A brief history of generative deep learning for sequence generation
+How do you generate sequence data?
+The importance of the sampling strategy
+Implementing text generation with Keras
+A text-generation callback with variable-temperature sampling
+Wrapping up
+12.2 DeepDream
+Implementing DeepDream in Keras
+Wrapping up
+12.3 Neural style transfer
+The content loss
+The style loss
+Neural style transfer in Keras
+Wrapping up
+12.4 Generating images with variational autoencoders
+Sampling from latent spaces of images
+Concept vectors for image editing
+Variational autoencoders
+Implementing a VAE with Keras
+Wrapping up
+12.5 Introduction to generative adversarial networks
+A schematic GAN implementation
+A bag of tricks
+Getting our hands on the CelebA dataset
+The discriminator
+The generator
+The adversarial network
+Wrapping up</p>
+<p>13 Best practices for the real world
+13.1 Getting the most out of your models
+Hyperparameter optimization
+Model ensembling
+13.2 Scaling-up model training
+Speeding up training on GPU with mixed precision Multi-GPU training
+TPU training</p>
+<p>14 Conclusions
+14.1 Key concepts in review
+Various approaches to AI
+What makes deep learning special within the field of machine learning
+How to think about deep learning
+Key enabling technologies
+The universal machine learning workflow
+Key network architectures
+The space of possibilities
+14.2 The limitations of deep learning
+The risk of anthropomorphizing machine learning models
+Automatons vs. intelligent agents
+Local generalization vs. extreme generalization
+The purpose of intelligence
+Climbing the spectrum of generalization
+14.3 Setting the course toward greater generality in AI
+On the importance of setting the right objective: The shortcut rule
+A new target
+14.4 Implementing intelligence: The missing ingredients
+Intelligence as sensitivity to abstract analogies
+The two poles of abstraction
+The two poles of abstraction
+The missing half of the picture
+14.5 The future of deep learning
+Models as programs
+Machine learning vs. program synthesis
+Blending together deep learning and program synthesis
+Lifelong learning and modular subroutine reuse
+The long-term vision
+14.6 Staying up-to-date in a fast-moving field
+Practice on real-world problems using Kaggle
+Read about the latest developments on arXiv
+Explore the Keras ecosystem
+14.7 Final words</p>
 </div>
 </div>
