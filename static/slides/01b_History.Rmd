@@ -3,7 +3,7 @@ title: "Introduction to Deep Learning"
 subtitle: "Brief History of Machine Learning"
 author: "Mikhail Dozmorov"
 institute: "Virginia Commonwealth University"
-# date: "`r Sys.Date()`"
+date: 2025-01-15 # "`r Sys.Date()`"
 output:
   xaringan::moon_reader:
     lib_dir: libs
