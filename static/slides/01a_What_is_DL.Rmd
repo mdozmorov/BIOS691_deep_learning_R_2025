@@ -25,6 +25,7 @@ mono_light(
   link_color = "#8B1A1A", #firebrick4, "deepskyblue1"
   text_font_size = "28px"
 )
+
 ```
 
 # Welcome: Class format
@@ -390,7 +391,7 @@ https://towardsdatascience.com/bert-explained-state-of-the-art-language-model-fo
 
 **Learning curves** plot training and validation metrics (loss, accuracy) against epochs, helping visualize model convergence and identify overfitting.
 
-.center[<img src="img/overunderfitting1.png" height=300>]
+.center[<img src="img/overunderfitting2.png" height=300>]
 * **Early stopping** is a technique that halts training when validation metrics stop improving, preventing overfitting.  
 .small[ **Angermueller et al., “Deep Learning for Computational Biology.”** https://doi.org/10.15252/msb.20156651 ]
 
