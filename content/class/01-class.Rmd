@@ -25,8 +25,14 @@ editor_options:
 
 <a href="../../slides/01a_What_is_DL.html#1" target="_blank">Lecture slides in HTML format</a>
 
-<a href="../../slides/01a_What_is_DL.pdf" target="_blank">Lecture handouts in PDF format</a>
-
 ```{r echo=FALSE}
 knitr::include_url('../../slides/01a_What_is_DL.html#1')
+```
+
+### Brief History of Machine Learning
+
+<a href="../../slides/01b_History.html#1" target="_blank">Lecture slides in HTML format</a>
+
+```{r echo=FALSE}
+knitr::include_url('../../slides/01b_History.html#1')
 ```
