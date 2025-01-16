@@ -226,6 +226,7 @@ The class will be conducted in person and include lecture and coding parts. Cour
 - Assignments (60%): Regular homework assignments based on the book and additional datasets
 - Participation (40%): Attendance and active participation in class discussions and labs
 
+<!--
 # Chapters
 
 - Chapter 1: What is deep learning?
@@ -700,3 +701,4 @@ Practice on real-world problems using Kaggle
 Read about the latest developments on arXiv
 Explore the Keras ecosystem
 14.7 Final words
+-->
