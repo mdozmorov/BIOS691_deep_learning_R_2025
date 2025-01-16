@@ -5,7 +5,7 @@ lessons:
   - title: '**Day 1: Fundamentals of Deep Learning I**'
     date: "January 13"
     # reading: "01-reading"
-    # assignment: "01-problem-set"
+    assignment: "01-problem-set"
     class: "01-class"
   # 
   # - title: '**Day 2: Fundamentals of Deep Learning II**'
