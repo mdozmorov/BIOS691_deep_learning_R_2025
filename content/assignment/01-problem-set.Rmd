@@ -27,7 +27,7 @@ Neural network introduction, main ingredients, activation function, gradient des
 
 - Follow installation instructions in [installation_code.R](../../slides/code/installation_code.R). Note we are installing the [keras3](https://keras3.posit.co/) package.
 - Download [01-main-ingredients_code.Rmd](../../slides/code/01-main-ingredients_code.Rmd). Modified from [dl-keras-tf](https://github.com/rstudio-conf-2020/dl-keras-tf).
-- Download [images.zip](../../slides/code/images.zip). Extract the `images` folder in the same directory as the `01-main-ingredients_code.Rmd` file.
+- Download [01-main-ingredients_images.zip](../../slides/code/01-main-ingredients_images.zip). Extract the `images` folder in the same directory as the `01-main-ingredients_code.Rmd` file.
 - Read and run the code in the `01-main-ingredients_code.Rmd` file. Consult ChatGPT in case of errors.
 - Answer questions in the code chunks currently set to `eval=FALSE`.
 - Knit the document into an HTML format and submit the knitted document.
