@@ -3,7 +3,7 @@ title: "Mathematical Foundations"
 subtitle: "First Look at Neural Networks"
 author: "Mikhail Dozmorov"
 institute: "Virginia Commonwealth University"
-# date: "`r Sys.Date()`"
+date: 2025-01-22 # "`r Sys.Date()`"
 output:
   xaringan::moon_reader:
     lib_dir: libs
@@ -27,28 +27,6 @@ mono_light(
 )
 ```
 
-## Deep Learning Prerequisites
-
-To build and train machine learning and deep learning models, the following key components are essential:
-
-- **Input Data** - Numerical representation of the raw data samples, such as images represented by pixel values, text converted to word embeddings, or other feature representations.
-
-- **Labeled Data (Expected Output)** - Ground-truth labels or annotations for the input data, which serve as the target the model is trying to predict. For example, image labels like "cat" or "dog" in an image classification task.
-
-- **Evaluation Metrics** - Quantitative measures used to assess the model's performance, such as accuracy, precision, recall, or loss functions. These metrics provide feedback to guide model adjustments during the learning process.
-
----
-## How deep learning learns
-
-- **Hierarchical Learning** - Deep learning models learn layer-by-layer representations of the input data. Each layer captures increasingly abstract and complex patterns, starting from simple features (like edges in images) to high-level concepts (like object recognition).
-
-- **Joint Learning of Layers** - Each layer's parameters are continuously updated based on feedback from both earlier and later layers, ensuring that all layers work together to improve the model’s overall accuracy.
-
-- **End-to-End Learning** - Deep learning models learn directly from raw input to output predictions without the need for manual feature engineering, relying on data-driven learning to optimize performance.
-
-- **Backpropagation** - A technique to adjust the layer's weights. The algorithm calculates the error at the output and propagates it back through the network, updating each weight to minimize the error.
-
----
 ## The beginning of Deep Learning
 
 .pull-left[
@@ -130,11 +108,26 @@ $\hat{y} = g(w_0 + X^TW)$
 .small[ https://www.datasciencecentral.com/profiles/blogs/how-to-configure-the-number-of-layers-and-nodes-in-a-neural ]
 
 ---
-## Layers
+## Deep Learning Prerequisites
 
-- Deep learning models are composed of multiple layers, each performing specific transformations on the data.
+To build and train machine learning and deep learning models, the following key components are essential:
 
-- A Multi-Layer Perceptron (MLP) with more than 2 hidden layers qualifies as a deep model, capable of learning complex patterns.
+- **Input Data** - Numerical representation of the raw data samples, such as images represented by pixel values, text converted to word embeddings, or other feature representations.
+
+- **Labeled Data (Expected Output)** - Ground-truth labels or annotations for the input data, which serve as the target the model is trying to predict. For example, image labels like "cat" or "dog" in an image classification task.
+
+- **Evaluation Metrics** - Quantitative measures used to assess the model's performance, such as accuracy, precision, recall, or loss functions. These metrics provide feedback to guide model adjustments during the learning process.
+
+---
+## How deep learning learns
+
+- **Hierarchical Learning** - Deep learning models learn layer-by-layer representations of the input data. Each layer captures increasingly abstract and complex patterns, starting from simple features (like edges in images) to high-level concepts (like object recognition).
+
+- **Joint Learning of Layers** - Each layer's parameters are continuously updated based on feedback from both earlier and later layers, ensuring that all layers work together to improve the model’s overall accuracy.
+
+- **End-to-End Learning** - Deep learning models learn directly from raw input to output predictions without the need for manual feature engineering, relying on data-driven learning to optimize performance.
+
+- **Backpropagation** - A technique to adjust the layer's weights. The algorithm calculates the error at the output and propagates it back through the network, updating each weight to minimize the error. 
 
 ---
 ## Commonly Used Layers
@@ -257,17 +250,29 @@ where $W=\{W^{(0)},W^{(1)},...\}$
 Richards, Blake A. et al. “[A Deep Learning Framework for Neuroscience](https://doi.org/10.1038/s41593-019-0520-2).” Nature Neuroscience 2019 - Box 1, Learning and the credit assignment problem ]
 
 ---
-## Gradient descent algorithm
+## Gradient Descent Algorithm
 
-- Initialize weights randomly $\sim N(0, \sigma^2)$
+1. **Define the loss function**: Let $J(W)$ be the loss function that quantifies the error between predictions and the target values. The goal is to minimize $J(W)$ with respect to the weights $W$.
 
-- Loop until convergence
-    - Compute gradient, $\frac{\partial J(W)}{\partial W}$
-    - Update weights, $W \leftarrow W - \eta \frac{\partial J(W)}{\partial W}$
+2. **Initialize weights**:  Initialize the weights $W$ randomly, typically from a normal distribution $W \sim \mathcal{N}(0, \sigma^2)$.
 
-- Return weights
+3. **Iterate until convergence**:
+    - Compute the gradient of the loss function with respect to the weights:  $\frac{\partial J(W)}{\partial W}$.
+      This gradient indicates the direction and magnitude of change needed to minimize the loss.
+    - Update the weights using a learning rate $\eta$:  $W \gets W - \eta \frac{\partial J(W)}{\partial W}$.
 
-where $\eta$ is a learning rate. Right selection is critical - too small may lead to local minima, too large may miss minima entirely. Adaptive implementations exist
+4. **Return optimized weights** $W$, which minimize the loss function $J(W)$.
+
+---
+## Gradient Descent Considerations
+
+- **Loss Function**: $J(W)$ could represent various objectives depending on the task, e.g., mean squared error for regression or cross-entropy for classification.  
+
+- **Learning Rate $\eta$**: A hyperparameter that controls the step size:  
+  - If $\eta$ is too small, convergence may be slow.  
+  - If $\eta$ is too large, the algorithm may overshoot the minimum or diverge.  
+
+- **Adaptive Methods**: Algorithms like **Adam**, **RMSProp**, and **AdaGrad** modify $\eta$ during training to enhance stability and performance. 
 
 ---
 ## Gradient descent algorithms
@@ -373,9 +378,9 @@ Analytics Vidhya tutorial: Step-by-step forward and backpropagation, implemented
 ## Vanishing gradient
 
 - Typical deep NNs suffer from the problem of vanishing or exploding gradients.
-    - The gradient descent tries to minimize the error by taking small steps towards the minimum value. These steps are used to update the weights and biases in a neural network
-    - On the course of backpropagation, the steps may become too small, resulting in negligible updates to weights and bias terms. Thus, a network will be trained with nearly unchanging weights. This is the **vanishing gradient** problem
-    - Weights of early layers (latest to be updated) suffer the most
+    - The gradient descent tries to minimize the error by taking small steps towards the minimum value. These steps are used to update the weights and biases in a neural network.
+    - On the course of backpropagation, the steps may become too small, resulting in negligible updates to weights and bias terms. Thus, a network will be trained with nearly unchanging weights. This is the **vanishing gradient** problem.
+    - Weights of early layers (latest to be updated) suffer the most.
 
 .small[ https://en.wikipedia.org/wiki/Vanishing_gradient_problem  
 [Vanishing & Exploding Gradient Explained | A Problem Resulting From Backpropagation](https://deeplizard.com/learn/video/qO_NLVjD6zE)  
@@ -385,9 +390,9 @@ https://www.analyticsvidhya.com/blog/2020/04/comprehensive-popular-deep-learning
 ## Exploding gradient
 
 - Typical deep NNs suffer from the problem of vanishing or exploding gradients.
-    - The gradient descent tries to minimize the error by taking small steps towards the minimum value. These steps are used to update the weights and biases in a neural network
-    - The steps may become too large, resulting in large updates to weights and bias terms and potential numerical overflow. This is the **exploding gradient** problem
-    - Various solutions exist, typically by propagating a feedback signal from previous layers (residual connections)
+    - The gradient descent tries to minimize the error by taking small steps towards the minimum value. These steps are used to update the weights and biases in a neural network.
+    - The steps may become too large, resulting in large updates to weights and bias terms and potential numerical overflow. This is the **exploding gradient** problem.
+    - Various solutions exist, typically by propagating a feedback signal from previous layers (residual connections).
 
 .small[ https://en.wikipedia.org/wiki/Vanishing_gradient_problem  
 [Vanishing & Exploding Gradient Explained | A Problem Resulting From Backpropagation](https://deeplizard.com/learn/video/qO_NLVjD6zE)

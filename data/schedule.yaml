@@ -2,18 +2,18 @@ lessons:
   - title: '<span class="fake-header-table">Introduction to Deep Learning with R</span>'
     header: True
 
-  - title: '**Day 1: Fundamentals of Deep Learning I**'
+  - title: '**Week 1: Fundamentals of Deep Learning I**'
     date: "January 13"
     # reading: "01-reading"
     assignment: "01-problem-set"
     class: "01-class"
-  # 
-  # - title: '**Day 2: Fundamentals of Deep Learning II**'
-  #   date: "June 9"
-  #   reading: "02-reading"
-  #   assignment: "02-problem-set"
-  #   class: "02-class"
-  # 
+
+  - title: '**Week 2: Fundamentals of Deep Learning II**'
+    date: "January 22"
+    # reading: "02-reading"
+    # assignment: "02-problem-set"
+    class: "02-class"
+
   # - title: '**Day 3: Overfitting, regularization, dropout, pretrained models, word embedding**'
   #   date: "June 10"
   #   reading: "03-reading"

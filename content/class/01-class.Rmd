@@ -19,7 +19,7 @@ editor_options:
   chunk_output_type: console
 ---
 
-## Slides
+## Slides 
 
 ### AI, Machine Learning, Deep Learning concepts
 

@@ -1,9 +1,9 @@
 ---
-title: "Day 2: Fundamentals of Deep Learning II"
+title: "Week 2: Fundamentals of Deep Learning II"
 # linktitle: "1. Introduction to RStudio and Images"
-date: "2020-06-09"
-class_date: "2020-06-09"
-draft: true
+date: "2025-01-22"
+class_date: "2025-01-22"
+draft: false
 output:
   blogdown::html_page:
     toc: false
@@ -21,18 +21,14 @@ editor_options:
 
 ## Slides
 
-### Neural network fundamentals
+### Mathematical Foundations
 
-<a href="../../slides/01_Neural_network.html#1" target="_blank">Lecture slides in HTML format</a>
-
-<a href="../../slides/01_Neural_network.pdf" target="_blank">Lecture handouts in PDF format</a>
+<a href="../../slides/02a_first_neural_network.html#1" target="_blank">Lecture slides in HTML format</a>
 
 ```{r echo=FALSE}
-knitr::include_url('../../slides/01_Neural_network.html#1')
+knitr::include_url('../../slides/02a_first_neural_network.html#1')
 ```
 
-### Hello [Deep Learning] World
+### Hello [Deep Learning] World 
 
-Brad Boehmke's lecture for the [Deep Learning with Keras and TensorFlow in R Workflow](https://community.rstudio.com/t/deep-learning-with-keras-and-tensorflow-in-r-workflow-rstudio-conf-2020/49099)
-
-<a href="https://rstudio-conf-2020.github.io/dl-keras-tf/02-hello-dl-world.html#1" target="_blank">Lecture slides in HTML format</a>
+MNIST classification example, [RMarkdown](../../slides/code/ch02_MNIST_code.Rmd)
