@@ -12,7 +12,7 @@ type: docs
 weight: 1
 output:
   blogdown::html_page:
-    toc: true
+    toc: false
 editor_options: 
   chunk_output_type: console
 ---
