@@ -11,7 +11,7 @@ lessons:
   - title: '**Week 2: Fundamentals of Deep Learning II**'
     date: "January 22"
     # reading: "02-reading"
-    # assignment: "02-problem-set"
+    assignment: "02-problem-set"
     class: "02-class"
 
   # - title: '**Day 3: Overfitting, regularization, dropout, pretrained models, word embedding**'
