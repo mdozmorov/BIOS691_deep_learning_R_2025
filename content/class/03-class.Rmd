@@ -1,9 +1,9 @@
 ---
-title: "Day 3: Overfitting, regularization, dropout, pretrained models, word embedding"
+title: "Week 3: Data representations for neural network, Keras, Tensorflow"
 # linktitle: "1. Introduction to RStudio and Images"
-date: "2020-06-10"
-class_date: "2020-06-10"
-draft: true
+date: "2025-01-27"
+class_date: "2025-01-27"
+draft: false
 output:
   blogdown::html_page:
     toc: false
@@ -21,23 +21,15 @@ editor_options:
 
 ## Slides
 
-### Overfitting
+### Mathematical foundations, Data representations for neural network
 
-<a href="../../slides/10_Overfitting.html#1" target="_blank">Lecture slides in HTML format</a>
-
-<a href="../../slides/10_Overfitting.pdf" target="_blank">Lecture handouts in PDF format</a>
+<a href="../../slides/02b_data_tensorflow_radient.html#1" target="_blank">Lecture slides in HTML format</a>
 
 ```{r echo=FALSE}
-knitr::include_url('../../slides/10_Overfitting.html#1')
+knitr::include_url('../../slides/02b_data_tensorflow_radient.html#1')
 ```
 
-### Text
+###  Introduction to Keras and Tensorflow
 
-<a href="../../slides/11_Text.html#1" target="_blank">Lecture slides in HTML format</a>
-
-<a href="../../slides/11_Text.pdf" target="_blank">Lecture handouts in PDF format</a>
-
-```{r echo=FALSE}
-knitr::include_url('../../slides/11_Text.html#1')
-```
+Tensor data types, Keras API, [RMarkdown](../../slides/code/ch03_Tensorflow_Introduction_code.Rmd)
 

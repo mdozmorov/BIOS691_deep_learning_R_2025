@@ -1,0 +1,618 @@
+---
+title: "Introduction to Keras and TensorFlow"
+output: 
+  html_notebook: 
+    theme: cerulean
+    highlight: textmate
+editor_options: 
+  chunk_output_type: console
+---
+
+## 3.5. Setting up a deep learning workspace
+### 3.5.1. Installing Keras and TensorFlow
+
+This code represents the initial setup required for using TensorFlow and Keras in R, including verification of the installation.
+
+
+```{r}
+# Installation instructions (commented out)
+# install.packages("keras")                    # Install keras from CRAN
+#
+# library(reticulate)                          # Load Python interface
+# virtualenv_create("r-reticulate",            # Create virtual environment
+#                  python = install_python())   # Install Python
+#
+# library(keras)                               # Load keras
+# install_keras(envname = "r-reticulate")      # Install keras in virtual env
+
+# Load required libraries
+library(tensorflow)
+library(keras3)
+
+# Check TensorFlow configuration
+tensorflow::tf_config()                        # Display TF settings
+
+# Test TensorFlow functionality with a simple function
+tf_function(function(x) x+1)(as_tensor(1))    # Creates and runs a TF function
+```
+
+## 3.6. First steps with TensorFlow
+### 3.6.1. TensorFlow tensors
+
+This code shows the fundamental operations for working with tensors in TensorFlow, including creation, basic manipulation, and method discovery.
+
+```{r}
+# Create R array and convert to TensorFlow tensor
+r_array <- array(1:6, c(2, 3))      # Create 2x3 R array with values 1-6
+tf_tensor <- as_tensor(r_array)      # Convert to TensorFlow tensor
+tf_tensor                            # Display tensor
+
+# Basic tensor operations
+dim(tf_tensor)                       # Get tensor dimensions
+tf_tensor + tf_tensor               # Element-wise addition
+
+# List available methods for tensor objects
+methods(class = "tensorflow.tensor") # Show all operations available for tensors
+```
+
+## 3.7. Tensor attributes
+
+This code demonstrates how to inspect and manipulate tensor properties, including dimensions, shapes, and data types in TensorFlow.
+
+
+```{r}
+# Get number of dimensions (rank) of tensor
+tf_tensor$ndim                           # Shows tensor rank
+
+# Compare dimensions of different tensors
+as_tensor(1)$ndim                        # Scalar tensor (0 dimensions)
+as_tensor(1:2)$ndim                      # Vector tensor (1 dimension)
+
+# Get tensor shape
+tf_tensor$shape                          # Shows dimensions of tensor
+
+# Explore shape object methods
+methods(class = class(shape())[1])       # List available shape operations
+
+# Create shape object
+shape(2, 3)                              # Creates a 2x3 shape specification
+
+# Get tensor data type
+tf_tensor$dtype                          # Shows tensor's data type
+
+# Compare R and TensorFlow data types
+r_array <- array(1)                      # Create R array
+typeof(r_array)                          # Show R data type
+as_tensor(r_array)$dtype                 # Show tensor data type
+
+# Specify tensor data type explicitly
+as_tensor(r_array, dtype = "float32")    # Convert to float32 tensor
+```
+
+### 3.7.1 Tensor shape and reshaping
+
+This code shows various methods for creating and reshaping tensors, including different memory layouts and automatic dimension inference.
+
+```{r}
+# Create tensor filled with zeros of specified shape
+as_tensor(0, shape = c(2, 3))           # 2x3 tensor of zeros
+
+# Create tensor from sequence with specified shape
+as_tensor(1:6, shape = c(2, 3))         # 2x3 tensor from values 1-6
+
+# Create R array with specified dimensions
+array(1:6, dim = c(2, 3))              # 2x3 array from values 1-6
+
+# Reshape array with different ordering
+array_reshape(1:6, c(2, 3), order = "C")  # C-style (row-major) ordering
+array_reshape(1:6, c(2, 3), order = "F")  # Fortran-style (column-major) ordering
+
+# Auto-infer dimension size
+array_reshape(1:6, c(-1, 3))            # Auto-compute first dimension (-1)
+as_tensor(1:6, shape = c(NA, 3))        # Same with NA for unknown dimension
+```
+
+### 3.7.2. Tensor slicing
+
+This code demonstrates various tensor slicing techniques in TensorFlow, useful for data preprocessing and feature extraction.
+
+```{r}
+# Load MNIST training images as tensor
+train_images <- as_tensor(dataset_mnist()$train$x)
+
+# Method 1: Slice using NA for remaining dimensions
+my_slice <- train_images[, 15:NA, 15:NA]    # Keep from index 15 to end
+
+# Method 2: Slice using negative indices
+my_slice <- train_images[, 8:-8, 8:-8]      # Remove 8 pixels from edges
+
+# Method 3: Use all_dims() helper function
+my_slice <- train_images[1:100, all_dims()] # First 100 images, all dimensions
+
+# Method 4: Use empty indices for all dimensions
+my_slice <- train_images[1:100, , ]         # Same as above, more concise
+```
+
+### 3.7.3. Tensor broadcasting
+
+This code shows how to handle operations between tensors of different dimensions using broadcasting in TensorFlow.
+
+```{r}
+# Create tensors with different shapes
+x <- as_tensor(1, shape = c(64, 3, 32, 10))  # 4D tensor filled with 1s
+y <- as_tensor(2, shape = c(32, 10))         # 2D tensor filled with 2s
+
+# Method 1: Automatic broadcasting (may raise error)
+z <- x + y                                    # Attempts to broadcast shapes
+
+# Method 2: Explicit broadcasting using newaxis
+z <- x + y[tf$newaxis, tf$newaxis, , ]       # Adds dimensions to match x's shape
+# Transforms y from (32, 10) to (1, 1, 32, 10)
+```
+
+### 3.7.4 The tf module
+
+This code demonstrates various ways to create tensors and perform reduction operations in TensorFlow.
+- Tensor Creation Functions:
+  - tf$ones(): Create tensor of ones
+  - tf$zeros(): Create tensor of zeros
+  - tf$random$normal(): Normal distribution
+  - tf$random$uniform(): Uniform distribution
+- Dimension Specification:
+  - Using shape() function
+  - Using integer vectors (2L, 1L)
+  - Importance of integer dimensions
+- Reduction Operations:
+  - tf$reduce_mean(): Compute mean
+  - axis parameter for reduction direction
+  - keepdims to preserve dimensions
+
+```{r}
+# Load TensorFlow
+library(tensorflow)
+
+# Create tensors with specific values
+tf$ones(shape(1, 3))                    # 1x3 tensor of ones
+tf$zeros(shape(1, 3))                   # 1x3 tensor of zeros
+
+# Create random tensors
+tf$random$normal(shape(1, 3),           # 1x3 tensor with normal distribution
+                mean = 0, stddev = 1)    # mean=0, standard deviation=1
+tf$random$uniform(shape(1, 3))          # 1x3 tensor with uniform distribution
+
+# Error example: using non-integer dimensions
+# tf$ones(c(2, 1))                      # Error: dimensions must be integers
+
+# Correct usage with integer dimensions
+tf$ones(c(2L, 1L))                      # 2x1 tensor of ones using integer dims
+
+# Reduction operations
+m <- as_tensor(1:12, shape = c(3, 4))   # Create 3x4 tensor
+# Compute mean along axis 0 (columns)
+tf$reduce_mean(m, axis = 0L,            # Reduce along first dimension
+              keepdims = TRUE)           # Keep dimensions in result
+
+# Alternative mean computation
+mean(m, axis = 1, keepdims = TRUE)      # Mean along axis 1 (rows)
+```
+
+### 3.7.5 Constant tensors and variables
+
+This code shows how to work with mutable TensorFlow Variables, which are essential for model parameters that need to be updated during training.
+- Tensor vs Variable:
+  - Regular tensors are immutable
+  - Variables allow value modification
+- Variable Operations:
+  - Creation with tf$Variable()
+  - Full assignment with assign()
+  - Element assignment with indexing
+  - Incremental update with assign_add()
+- Common Patterns:
+  - Initializing with random values
+  - Replacing all values
+  - Modifying specific elements
+  - Adding to existing values
+
+```{r}
+# Attempt to modify tensor directly (will cause an error)
+x <- as_tensor(1, shape = c(2, 2))
+x[1, 1] <- 0                            # Error: tensors are immutable
+
+# Create a TensorFlow Variable
+v <- tf$Variable(
+    initial_value = tf$random$normal(shape(3, 1))  # Initialize with random values
+)
+v                                       # Display variable
+
+# Assign new values to variable
+v$assign(tf$ones(shape(3, 1)))         # Replace all values with ones
+
+# Assign value to specific element
+v[1, 1]$assign(3)                      # Set first element to 3
+
+# Add values to existing variable
+v$assign_add(tf$ones(shape(3, 1)))     # Add 1 to all elements
+```
+
+### 3.7.6. Tensor operations: Doing math in TensorFlow
+
+This code demonstrates how to chain multiple tensor operations, combining both element-wise and matrix operations in TensorFlow.
+
+```{r}
+# Create initial tensor
+a <- tf$ones(c(2L, 2L))                # 2x2 tensor of ones
+
+# Element-wise operations
+b <- tf$square(a)                      # Square each element
+c <- tf$sqrt(a)                        # Square root of each element
+d <- b + c                             # Add results element-wise
+
+# Matrix operations
+e <- tf$matmul(a, b)                   # Matrix multiplication
+e <- e * d                             # Element-wise multiplication with d
+```
+
+### 3.3.7. A second look at the GradientTape API
+
+This code demonstrates the flexibility of TensorFlow's automatic differentiation system for various computational needs.
+
+```{r}
+# Example 1: Computing gradient with respect to a Variable
+# Create a TensorFlow Variable with initial value 3
+input_var <- tf$Variable(initial_value = 3)
+
+# Record operations for automatic differentiation
+with(tf$GradientTape() %as% tape, {
+  result <- tf$square(input_var)    # Compute y = x^2 where x = 3
+})
+# Compute dy/dx = 2x = 6
+gradient <- tape$gradient(result, input_var)
+
+# Example 2: Computing gradient with respect to a Constant
+# Create a constant tensor with value 3
+input_const <- as_tensor(3)
+
+# Record operations, explicitly watching the constant
+with(tf$GradientTape() %as% tape, {
+   tape$watch(input_const)          # Must explicitly watch constants
+   result = tf$square(input_const)  # Compute y = x^2 where x = 3
+})
+# Compute dy/dx = 2x = 6
+gradient <- tape$gradient(result, input_const)
+
+# Example 3: Computing second-order derivatives (acceleration)
+# Create a Variable for time, starting at 0
+time <- tf$Variable(0)
+
+# Use nested GradientTape for second derivative
+with(tf$GradientTape() %as% outer_tape, {
+  with(tf$GradientTape() %as% inner_tape, {
+    position <- 4.9 * time ^ 2      # Position equation: s = 4.9t^2
+  })
+  speed <- inner_tape$gradient(position, time)  # First derivative: v = ds/dt = 9.8t
+})
+# Second derivative: a = dv/dt = 9.8
+acceleration <- outer_tape$gradient(speed, time)
+acceleration
+```
+
+### 3.7.8. An end-to-end example: A linear classifier in pure TensorFlow
+
+This code demonstrates a complete machine learning workflow from data generation to model training and visualization.
+- Data Generation: Creates synthetic binary classification dataset
+- Model Definition: Implements linear classifier (y = Wx + b)
+- Loss Function: Uses mean squared error
+- Training Loop: Implements gradient descent optimization
+- Visualization: Shows data distribution and decision boundary
+
+```{r}
+# Generate synthetic dataset
+num_samples_per_class <- 1000
+# Define covariance matrix for multivariate normal distribution
+Sigma <- rbind(c(1, 0.5),
+               c(0.5, 1))
+# Generate negative samples (class 0)
+negative_samples <- MASS::mvrnorm(n = num_samples_per_class,
+                                mu = c(0, 3),
+                                Sigma = Sigma)
+# Generate positive samples (class 1)
+positive_samples <- MASS::mvrnorm(n = num_samples_per_class,
+                                mu = c(3, 0),
+                                Sigma = Sigma)
+
+# Combine samples into input matrix
+inputs <- rbind(negative_samples, positive_samples)
+
+# Create target labels (0 for negative, 1 for positive)
+targets <- rbind(array(0, dim = c(num_samples_per_class, 1)),
+                array(1, dim = c(num_samples_per_class, 1)))
+
+# Visualize the data
+plot(x = inputs[, 1], y = inputs[, 2],
+     col = ifelse(targets[,1] == 0, "purple", "green"))
+
+# Initialize model parameters
+input_dim <- 2
+output_dim <- 1
+# Initialize weights randomly
+W <- tf$Variable(initial_value = tf$random$uniform(shape(input_dim, output_dim)))
+# Initialize bias with zeros
+b <- tf$Variable(initial_value = tf$zeros(shape(output_dim)))
+
+# Define model function (linear classifier)
+model <- function(inputs)
+  tf$matmul(inputs, W) + b
+
+# Define loss function (mean squared error)
+square_loss <- function(targets, predictions) {
+  per_sample_losses <- tf$square(targets - predictions)
+  tf$reduce_mean(per_sample_losses)
+}
+
+# Define training step function
+learning_rate <- 0.1
+training_step <- function(inputs, targets) {
+  # Record operations for gradient computation
+  with(tf$GradientTape() %as% tape, {
+    predictions <- model(inputs)
+    loss <- square_loss(predictions, targets)
+  })
+  # Compute gradients
+  grad_loss_wrt <- tape$gradient(loss, list(W = W, b = b))
+  # Update parameters using gradient descent
+  W$assign_sub(grad_loss_wrt$W * learning_rate)
+  b$assign_sub(grad_loss_wrt$b * learning_rate)
+  loss
+}
+
+# Training loop
+inputs <- as_tensor(inputs, dtype = "float32")
+for (step in seq(40)) {
+  loss <- training_step(inputs, targets)
+  cat(sprintf("Loss at step %s: %.4f\n", step, loss))
+}
+
+# Make predictions and visualize results
+predictions <- model(inputs)
+
+# Convert to R arrays for plotting
+inputs <- as.array(inputs)
+predictions <- as.array(predictions)
+# Plot predictions
+plot(inputs[, 1], inputs[, 2],
+     col = ifelse(predictions[, 1] <= 0.5, "purple", "green"))
+
+# Plot decision boundary
+plot(x = inputs[, 1], y = inputs[, 2],
+     col = ifelse(predictions[, 1] <= 0.5, "purple", "green"))
+# Calculate and plot decision boundary line
+slope <- -W[1, ] / W[2, ]
+intercept <- (0.5 - b) / W[2, ]
+abline(as.array(intercept), as.array(slope), col = "red")
+```
+
+## 3.8 Anatomy of a neural network: Understanding core Keras APIs
+### 3.8.1. Layers: The building blocks of deep learning
+
+This code shows different approaches to building neural networks using both custom and standard Keras layers.
+- Custom Layer Definition:
+  - Initialization of layer parameters
+  - Weight creation in build method
+  - Forward pass implementation in call method
+- Model Building Methods:
+  - List-based construction
+  - Sequential addition
+  - Pipe operator syntax
+- Layer Features:
+  - Configurable units (neurons)
+  - Optional activation function
+  - Automatic weight initialization
+  - Shape inference
+
+```{r}
+library(keras3)
+library(tensorflow)
+
+layer_simple_dense <- new_layer_class(
+  classname = "SimpleDense",
+  
+  # Initialize layer parameters
+  initialize = function(units, activation = NULL) {
+    super$initialize()
+    self$units <- as.integer(units)  # Ensure integer
+    self$activation <- activation
+  },
+  
+  # Build layer weights when input shape is known
+  build = function(input_shape) {
+    # Use keras$layers$Layer method for creating weights
+    input_dim <- input_shape[[length(input_shape)]]
+    
+    self$kernel <- self$add_weight(
+      shape = list(input_dim, self$units),
+      initializer = "random_normal",
+      trainable = TRUE
+    )
+    
+    self$bias <- self$add_weight(
+      shape = list(self$units),
+      initializer = "zeros",
+      trainable = TRUE
+    )
+  },
+  
+  # Define forward pass
+  call = function(inputs) {
+    # Use matrix multiplication and add bias
+    y <- tf$matmul(inputs, self$kernel) + self$bias
+    
+    # Apply activation if specified
+    if (!is.null(self$activation)) {
+      y <- self$activation(y)
+    }
+    
+    return(y)
+  }
+)
+
+# Create the layer
+my_dense <- layer_simple_dense(units = 32L, activation = tf$nn$relu)
+
+# Create input tensor
+input_tensor <- tf$ones(shape = shape(2L, 784L))
+
+# Build the layer (important step)
+output_tensor <- my_dense(input_tensor)
+
+output_tensor$shape
+
+# Create standard Keras dense layer
+layer <- layer_dense(units = 32, activation = "relu")
+
+# Create sequential model with standard layers
+model <- keras_model_sequential(layers = list(
+    layer_dense(units = 32, activation = "relu"),
+    layer_dense(units = 32)
+))
+
+# Layer forward pass function
+layer <- function(inputs) {
+  if(!self$built) {
+    self$build(inputs$shape)
+    self$built <- TRUE
+  }
+  self$call(inputs)
+}
+
+# Create model using custom layers (list method)
+model <- keras_model_sequential(layers = list(
+  layer_simple_dense(units = 32, activation = "relu"),
+  layer_simple_dense(units = 64, activation = "relu"),
+  layer_simple_dense(units = 32, activation = "relu"),
+  layer_simple_dense(units = 10, activation = "softmax")
+))
+
+# Check number of layers
+length(model$layers)
+
+# Create model using pipe operator
+model <- keras_model_sequential() %>%
+  layer_simple_dense(32, activation = "relu") %>%
+  layer_simple_dense(64, activation = "relu") %>%
+  layer_simple_dense(32, activation = "relu") %>%
+  layer_simple_dense(10, activation = "softmax")
+```
+
+### 3.8.2. From layers to models
+### 3.8.3. The “compile” step: Configuring the learning process
+
+This code demonstrates the flexibility of Keras model compilation, from simple string-based configuration to complex custom implementations.
+
+```{r}
+# Method 1: Simple compilation using string identifiers
+model <- keras_model_sequential() %>% layer_dense(1)
+model %>% compile(optimizer = "rmsprop",           # Optimizer as string
+                 loss = "mean_squared_error",      # Loss function as string
+                 metrics = "accuracy")             # Metric as string
+
+# Method 2: Compilation using function calls
+model %>% compile(
+  optimizer = optimizer_rmsprop(),                # Optimizer as function
+  loss = loss_mean_squared_error(),              # Loss function as function
+  metrics = metric_binary_accuracy()             # Metric as function
+)
+
+# Method 3: Advanced compilation with custom components (example)
+# model %>% compile(
+#   optimizer = optimizer_rmsprop(learning_rate = 1e-4),  # Custom learning rate
+#   loss = my_custom_loss,                                # Custom loss function
+#   metrics = c(my_custom_metric_1, my_custom_metric_2)   # Multiple custom metrics
+# )
+
+# List available optimizers in keras package
+ls(pattern = "^optimizer_", "package:keras3")
+
+# List available loss functions in keras package
+ls(pattern = "^loss_", "package:keras3")
+
+# List available metrics in keras package
+ls(pattern = "^metric_", "package:keras3")
+
+# List available layers
+ls(pattern = "^layer_", "package:keras3")
+```
+
+### 3.8.4. Picking a loss function
+### 3.8.5. Understanding the fit() method
+
+This code demonstrates basic model training and how to access the training history for analysis of model performance over time.
+
+```{r}
+# Train the model and store training history
+history <- model %>%
+  fit(inputs,                # Input data
+      targets,              # Target values
+      epochs = 5,           # Number of training epochs
+      batch_size = 128)     # Number of samples per batch
+
+# Inspect the training metrics history
+str(history$metrics)        # Shows structure of recorded metrics
+```
+
+### 3.8.6. Monitoring loss and metrics on validation data
+
+This code demonstrates a complete workflow for training and validating a model, following best practices for data splitting and validation.
+
+```{r}
+# Create a simple sequential model with one dense layer
+model <- keras_model_sequential() %>%
+  layer_dense(1)
+
+# Compile model with specific optimizer settings
+model %>% compile(
+  optimizer_rmsprop(learning_rate = 0.1),    # RMSprop optimizer with custom learning rate
+  loss = loss_mean_squared_error(),          # Mean squared error loss
+  metrics = metric_binary_accuracy()         # Binary accuracy metric
+)
+
+# Create train/validation split
+n_cases <- dim(inputs)[1]                    # Total number of samples
+num_validation_samples <- round(0.3 * n_cases)  # 30% for validation
+val_indices <- sample.int(n_cases, num_validation_samples)  # Random indices
+
+# Split data into training and validation sets
+val_inputs <- inputs[val_indices, ]          # Validation inputs
+val_targets <- targets[val_indices, , drop = FALSE]  # Validation targets
+training_inputs <- inputs[-val_indices, ]    # Training inputs
+training_targets <- targets[-val_indices, , drop = FALSE]  # Training targets
+
+# Train model with validation
+model %>% fit(
+  training_inputs,
+  training_targets,
+  epochs = 5,                                # Number of training epochs
+  batch_size = 16,                           # Samples per batch
+  validation_data = list(val_inputs, val_targets)  # Validation data
+)
+
+# Evaluate model on validation set
+loss_and_metrics <- evaluate(model, 
+                           val_inputs, 
+                           val_targets,
+                           batch_size = 128)  # Batch size for evaluation
+```
+
+### 3.8.7 Inference: Using a model after training
+
+This code shows the standard approaches to generating predictions from a trained Keras model, with consideration for memory efficiency through batch processing.
+
+```{r}
+# Making predictions on validation data
+predictions <- model %>%
+  predict(
+    val_inputs,              # Validation input data
+    batch_size=128          # Number of samples per batch
+  )
+head(predictions, 10)       # View first 10 predictions
+```
+

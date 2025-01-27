@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Mathematical Foundations</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Mikhail Dozmorov" />
+    <meta name="date" content="2025-01-27" />
+    <script src="libs/header-attrs-2.29/header-attrs.js"></script>
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+    <link rel="stylesheet" href="xaringan-my.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+.title[
+# Mathematical Foundations
+]
+.subtitle[
+## Data representations for neural network
+]
+.author[
+### Mikhail Dozmorov
+]
+.institute[
+### Virginia Commonwealth University
+]
+.date[
+### 2025-01-27
+]
+
+---
+
+
+
+
+## Data representation in R 
+
+Scalars (0D), Vectors (1D), Matrices (2D), Higher-Dimensional arrays
+
+
+``` r
+pi
+```
+
+```
+## [1] 3.141593
+```
+
+``` r
+month.abb
+```
+
+```
+##  [1] "Jan" "Feb" "Mar" "Apr" "May" "Jun" "Jul" "Aug" "Sep" "Oct" "Nov" "Dec"
+```
+
+``` r
+head(mtcars)
+```
+
+```
+##                    mpg cyl disp  hp drat    wt  qsec vs am gear carb
+## Mazda RX4         21.0   6  160 110 3.90 2.620 16.46  0  1    4    4
+## Mazda RX4 Wag     21.0   6  160 110 3.90 2.875 17.02  0  1    4    4
+## Datsun 710        22.8   4  108  93 3.85 2.320 18.61  1  1    4    1
+## Hornet 4 Drive    21.4   6  258 110 3.08 3.215 19.44  1  0    3    1
+## Hornet Sportabout 18.7   8  360 175 3.15 3.440 17.02  0  0    3    2
+## Valiant           18.1   6  225 105 2.76 3.460 20.22  1  0    3    1
+```
+
+---
+## Data Representations for Neural Networks
+
+- Neural networks process and learn from data in the form of tensors - the fundamental data structures in deep learning, analogous to multidimensional arrays in R.
+
+- Tensors have dimensions: Scalars (0D), Vectors (1D), Matrices (2D), Higher-Dimensional Tensors.
+
+- Key Attributes of Tensors
+  - **Rank (Order)** - Number of axes or dimensions (e.g., scalar = 0D, vector = 1D, matrix = 2D).
+  - **Data Type (dtype)** - Type of data contained, e.g., float32, int32, character.
+
+&lt;!--
+## Vectors (1D Tensors)
+
+- **Vector** is a 1-dimensional tensor (1D tensor), representing a sequence of values. 
+   - Example - A list of temperatures over a week, e.g., [25.3, 24.8, 26.1, 23.4].
+
+
+``` r
+month.abb
+```
+
+```
+##  [1] "Jan" "Feb" "Mar" "Apr" "May" "Jun" "Jul" "Aug" "Sep" "Oct" "Nov" "Dec"
+```
+
+## Matrices (2D Tensors)
+
+- **Matrix** is a 2-dimensional tensor (2D tensor), representing a table of numbers, organized in rows and columns.
+   - Example: A grayscale image where each pixel intensity is stored in a 2D matrix, e.g., 28x28 pixel image.
+
+
+``` r
+head(mtcars)
+```
+
+```
+##                    mpg cyl disp  hp drat    wt  qsec vs am gear carb
+## Mazda RX4         21.0   6  160 110 3.90 2.620 16.46  0  1    4    4
+## Mazda RX4 Wag     21.0   6  160 110 3.90 2.875 17.02  0  1    4    4
+## Datsun 710        22.8   4  108  93 3.85 2.320 18.61  1  1    4    1
+## Hornet 4 Drive    21.4   6  258 110 3.08 3.215 19.44  1  0    3    1
+## Hornet Sportabout 18.7   8  360 175 3.15 3.440 17.02  0  0    3    2
+## Valiant           18.1   6  225 105 2.76 3.460 20.22  1  0    3    1
+```
+
+## 3D Tensors and Higher-Dimensional Tensors
+
+- **Tensors** can extend to 3D and higher dimensions. These tensors are used to represent more complex data structures.
+   - Example: 3D tensor - A color image with RGB channels, e.g., (height, width, channels) = (28, 28, 3).
+   - Example: 4D tensor - A batch of images, e.g., (batch_size, height, width, channels) = (32, 28, 28, 3).
+
+## Real-World Examples of Data Tensors
+
+- Vector Data: Examples include tabular data (e.g., financial data), represented as a 2D tensor of shape (samples, features).
+
+- Time Series Data (Sequence Data): Stock prices, heartbeats, or weather patterns are sequences of values over time, represented as 3D tensors (samples, timesteps, features).
+
+- Image Data: Grayscale or color images stored as 3D tensors (height, width, channels).
+
+- Video Data: Videos represented as 5D tensors (samples, frames, height, width, channels).
+--&gt;
+
+---
+## Vector Data (2D tensor)
+
+- Definition: Each sample in vector data (data point) is represented as a 1D tensor (vector).
+
+- Shape: (samples, features) where samples are the rows and features are the columns.
+
+- Example: A dataset of patient records where each patient's features (age, height, weight, blood pressure, etc.) form a vector (patient x feature).
+
+- Another example: a collection of news articles represented by the counts of words from a dictionary of 20,000 words (news articles x 20,000 words).
+
+---
+## Timeseries Data or Sequence Data (3D tensor)
+
+- Definition: Timeseries or sequential data is represented as a 3D tensor.
+
+- Shape: (samples, timesteps, features) where timesteps represent the length of the sequence. The timestep axis is always the second.
+
+- Example: Financial stock prices over time, ECG readings, or language sequences (e.g., word embeddings).
+
+.center[&lt;img src="img/timeseries_tensor.jpg" height=230&gt;]
+.small[ http://dx.doi.org/10.1016/j.mlwa.2020.100013 ]
+
+---
+## Image Data (4D tensor)
+
+- Definition: Image data is typically represented as a 3D tensor.
+
+- Shape: For a batch of 32 color images, the shape would be (32, height, width, 3).
+
+- Example: A grayscale image is represented as (height, width, 1) and a color image as (height, width, 3).
+
+.center[&lt;img src="img/image_tensor.png" height=230&gt;]
+.small[ https://livebook.manning.com/concept/deep-learning/shape ]
+
+
+---
+## Video Data (5D tensor)
+
+- Definition: Video data adds another dimension for time (frames) and is represented as a 5D tensor.
+
+- Shape: For a batch of 10 videos, each with 60 frames, the shape is (10, 60, 720, 1280, 3).
+
+- Example: A video file with 60 frames of 720p resolution (720, 1280) in RGB color would be (samples, frames, height, width, 3).
+
+---
+## Data Batches
+
+- Large amount of training data raises a question how to process it efficiently.
+
+- Neural networks process data in batches for efficiency and optimization during training.
+
+- Instead of processing 1 image at a time, a model might process 128 images simultaneously, creating a 4D tensor of shape (128, 28, 28, 3).
+
+- Advantages - Reduces memory usage and speeds up training through mini-batch gradient descent.
+
+---
+## Key Concepts of Neural Networks
+
+*   **Tensor Manipulation:**
+    *   Tensors, including those storing network state (variables).
+    *   Tensor operations like addition, `relu`, and `matmul`.
+    *   Backpropagation for gradient computation, handled by the `GradientTape` object.
+
+*   **High-Level Concepts:**
+    *   Layers combined into a model.
+    *   Loss function to define the feedback signal.
+    *   Optimizer to determine the learning process.
+    *   Metrics to evaluate model performance (e.g., accuracy).
+    *   A training loop for mini-batch stochastic gradient descent.
+    
+---
+## Manipulating Tensors in R
+
+You can manipulate tensors using libraries like TensorFlow for R.
+
+
+``` r
+# Create a 3x4x2 tensor
+tensor_example &lt;- array(1:24, dim = c(3, 4, 2))
+
+# Print the tensor to visualize its structure
+print(tensor_example)
+```
+
+```
+## , , 1
+## 
+##      [,1] [,2] [,3] [,4]
+## [1,]    1    4    7   10
+## [2,]    2    5    8   11
+## [3,]    3    6    9   12
+## 
+## , , 2
+## 
+##      [,1] [,2] [,3] [,4]
+## [1,]   13   16   19   22
+## [2,]   14   17   20   23
+## [3,]   15   18   21   24
+```
+
+---
+## Manipulating Tensors in R
+
+Reshaping a tensor column-wise
+
+
+``` r
+# order	- The order in which elements of x should be read during the rearrangement. 
+# "C" means elements should be read in row-major order; 
+# "F" means elements should be read in column-major order.
+tensorflow::array_reshape(tensor_example, dim = c(3, 8), order = c("F"))
+```
+
+```
+##      [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+## [1,]    1    4    7   10   13   16   19   22
+## [2,]    2    5    8   11   14   17   20   23
+## [3,]    3    6    9   12   15   18   21   24
+```
+
+``` r
+tensorflow::array_reshape(tensor_example, dim = c(3, 8), order = c("C"))
+```
+
+```
+##      [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+## [1,]    1   13    4   16    7   19   10   22
+## [2,]    2   14    5   17    8   20   11   23
+## [3,]    3   15    6   18    9   21   12   24
+```
+
+---
+## Element-wise Operations
+
+- Operations applied independently to each element of a tensor, performed element-by-element between tensors of the same shape.
+
+* **Element-wise Addition:** The `+` operator or `tf$math$add()` performs element-wise addition `\(A + B = [a_{ij} + b_{ij}]\)`.
+* **Element-wise Subtraction:** The `-` operator or `tf$math$subtract()` performs element-wise subtraction `\(A - B = [a_{ij} - b_{ij}]\)`.
+* **Element-wise Multiplication (Hadamard Product):** The `*` operator or `tf$math$multiply()` performs element-wise multiplication `\(A \circ B = [a_{ij} \cdot b_{ij}]\)`.
+* **Element-wise Division:** The `/` operator or `tf$math$divide()` performs element-wise division: `\(A / B = [a_{ij} \div b_{ij}]\)`.
+
+- These operations require the tensors to have the **same shape** or be **broadcastable** (following broadcasting rules in TensorFlow).
+
+--- 
+## Element-wise addition
+
+
+``` r
+# Create two matrices (2x2 for simplicity)
+tensor1 &lt;- matrix(c(1, 2, 3, 4), nrow=2, ncol=2)
+tensor2 &lt;- matrix(c(5, 6, 7, 8), nrow=2, ncol=2)
+
+# Initialize a result matrix with the same dimensions
+result &lt;- matrix(0, nrow=2, ncol=2)
+
+# Perform element-wise multiplication using a for loop
+for (i in 1:nrow(tensor1)) {
+  for (j in 1:ncol(tensor1)) {
+    result[i, j] &lt;- tensor1[i, j] * tensor2[i, j]
+  }
+}
+
+# Print the result
+print(result)
+```
+
+```
+##      [,1] [,2]
+## [1,]    5   21
+## [2,]   12   32
+```
+
+---
+## Element-wise Multiplication
+
+
+
+
+``` r
+# Create two tensors (2x2 matrix for simplicity)
+(tensor1 &lt;- tf$constant(matrix(c(1, 2, 3, 4), nrow=2, ncol=2), dtype="float32"))
+```
+
+```
+## tf.Tensor(
+## [[1. 3.]
+##  [2. 4.]], shape=(2, 2), dtype=float32)
+```
+
+``` r
+(tensor2 &lt;- tf$constant(matrix(c(5, 6, 7, 8), nrow=2, ncol=2), dtype="float32"))
+```
+
+```
+## tf.Tensor(
+## [[5. 7.]
+##  [6. 8.]], shape=(2, 2), dtype=float32)
+```
+
+``` r
+# Perform element-wise multiplication
+(result &lt;- tf$math$multiply(tensor1, tensor2))
+```
+
+```
+## tf.Tensor(
+## [[ 5. 21.]
+##  [12. 32.]], shape=(2, 2), dtype=float32)
+```
+
+---
+## Dot-product operation
+
+- The `%*%` operator or `tf$matmul()` computes the dot product (matrix multiplication), which involves summing the products of corresponding elements from rows of the first matrix and columns of the second matrix (`\(x \cdot y\)` in mathematical notation).
+- Dimension requirement: For matrix multiplication, the number of columns in the first matrix &lt;!--(or last dimension of the first tensor)--&gt; must equal the number of rows in the second matrix&lt;!-- (or second-to-last dimension of the second tensor)--&gt;.
+
+.center[&lt;img src="img/dotproduct.png" height=250&gt;]
+
+---
+## Dot-product operation
+
+- Higher-dimensional tensors: `tf$matmul()` can perform batched matrix multiplication for tensors with more than two dimensions, applying the dot product across corresponding submatrices in the batch.
+
+- For tensors with more than one dimension, the dot product is not symmetric, meaning that the order of the operands matters (`A %*% B` or `tf$matmul(A, B)` is generally not equal to `B %*% A` or `tf$matmul(B, A)`).
+
+.center[&lt;img src="img/dotproduct.png" height=250&gt;]
+
+---
+## Dot-product operation
+
+
+``` r
+# Create two tensors (2x2 matrices for simplicity)
+(tensor1 &lt;- tf$constant(matrix(c(1, 2, 3, 4), nrow = 2, ncol = 2), dtype = "float32"))
+```
+
+```
+## tf.Tensor(
+## [[1. 3.]
+##  [2. 4.]], shape=(2, 2), dtype=float32)
+```
+
+``` r
+(tensor2 &lt;- tf$constant(matrix(c(5, 6, 7, 8), nrow = 2, ncol = 2), dtype = "float32"))
+```
+
+```
+## tf.Tensor(
+## [[5. 7.]
+##  [6. 8.]], shape=(2, 2), dtype=float32)
+```
+
+``` r
+# Compute the dot product
+# The dot product of two 2x2 matrices results in another 2x2 matrix
+(result &lt;- tf$matmul(tensor1, tensor2))
+```
+
+```
+## tf.Tensor(
+## [[23. 31.]
+##  [34. 46.]], shape=(2, 2), dtype=float32)
+```
+
+
+---
+## Tensor Reshaping
+
+- Changing the shape (dimensions) of tensors without modifying the data.
+- Needed to prepare inputs for layers in neural networks.
+Reshape between different operations (e.g., convnets to dense layers).
+
+``` r
+tensor &lt;- matrix(1:8, nrow=2)
+# Flatten a tensor into a 1D tensor
+reshaped &lt;- as.vector(tensor)
+array_reshape(tensor, dim = c(1, 8))
+```
+
+```
+##      [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+## [1,]    1    3    5    7    2    4    6    8
+```
+
+``` r
+# Reshaping into higher dimension tensor
+array_reshape(tensor, dim = c(2, 2, 2))
+```
+
+```
+## , , 1
+## 
+##      [,1] [,2]
+## [1,]    1    5
+## [2,]    2    6
+## 
+## , , 2
+## 
+##      [,1] [,2]
+## [1,]    3    7
+## [2,]    4    8
+```
+
+---
+## Tensor Reshaping
+
+- Reshaping: The `as_tensor()` function can reshape an R array during the conversion process. You can specify the desired shape using the shape argument.
+
+- Row-major vs. Column-major Ordering: A key difference arises when reshaping arrays for use in TensorFlow. While R uses column-major ordering, TensorFlow utilizes row-major ordering. Therefore, it's crucial to employ the `array_reshape()` function in R with the order = "C" argument to ensure compatibility with TensorFlow's row-major semantics.
+
+- Inferring Dimensions: Both `array_reshape()` and `as_tensor()` allow you to leave the size of one axis unspecified by using -1 or NA. The missing dimension will be automatically inferred based on the total size of the array and the sizes of the specified dimensions.
+
+---
+## Tensor Reshaping
+
+
+
+``` r
+# 1. Reshaping during Conversion with `as_tensor()`
+r_array &lt;- array(1:6, dim = c(2, 3))  # An R array, column-major by default
+tensor_reshaped &lt;- as_tensor(r_array, shape = c(3, 2)) #  Reshape to (3x2) using as_tensor())
+
+# 2. Row-Major vs. Column-Major Ordering
+array_col_major &lt;- array_reshape(r_array, c(3, 2), order = "C") # Column-wise default for tensorflow
+(array_row_major &lt;- array_reshape(r_array, c(3, 2), order = "F")) # Row-wise ordering
+```
+
+```
+##      [,1] [,2]
+## [1,]    1    4
+## [2,]    2    5
+## [3,]    3    6
+```
+
+``` r
+# 3. Inferring Dimensions with -1 or NA
+# Reshape the array to (2x-1) where one dimension is inferred
+tensor_inferred &lt;- as_tensor(array_row_major, shape = c(2, -1))
+# Another example using NA for inference 
+(tensor_inferred_na &lt;- as_tensor(array_row_major, shape = c(NA, 2)))
+```
+
+```
+## tf.Tensor(
+## [[1 4]
+##  [2 5]
+##  [3 6]], shape=(3, 2), dtype=int32)
+```
+
+---
+## Tensor Slicing
+
+- Slicing: You can subset TensorFlow tensors similarly to R arrays using slicing. However, TensorFlow slicing offers some convenient features not available in R. For instance, you can use NA within a slice range to represent "the rest of the tensor in that direction".
+
+- Negative Indices: TensorFlow uses negative indices differently than R. Instead of dropping elements, negative indices in TensorFlow indicate positions relative to the end of the axis. Importantly, this behavior differs from R and might trigger a warning message the first time it's encountered.
+
+- Capturing Remaining Dimensions: TensorFlow provides the all_dims() object for capturing all remaining dimensions without explicitly providing commas in the slicing operation. This simplifies code and improves readability, especially when working with tensors of different ranks.
+
+---
+## Tensor Slicing
+
+
+``` r
+# Create a 3D Tensor (2x3x4)
+tensor &lt;- tf$constant(array(1:24, dim = c(2, 3, 4)), dtype = tf$int32)
+
+cat("Original Tensor (Shape 2x3x4):\n")
+print(tensor)
+
+# 1. Slicing: Using NA to represent "the rest of the tensor in that direction"
+slice_2 &lt;- tensor[, 1:2, NA] # Slice all rows, first two columns, and "the rest" in the last dimension
+
+# 2. Negative Indices: Indicate positions relative to the end of the axis
+slice_3 &lt;- tensor[, -1, ]  # TensorFlow treats -1 as the last element
+slice_4 &lt;- tensor[, , -2:-1] # Select the last two elements of the last dimension for all rows and columns
+
+# 3. Capturing Remaining Dimensions with all_dims()
+slice_5 &lt;- tensor[2, tf$all_dims()] # Slice the second element along the first axis and keep all remaining dimensions
+slice_6 &lt;- tensor[1:2, tf$all_dims()] # Slice specific rows and capture remaining dimensions
+cat("\nSlice 6 (First two rows, capturing all remaining dimensions):\n")
+print(slice_6)
+```
+
+
+
+
+---
+## Geometric Interpretation of Tensor Operations
+
+- Tensors as Geometric Objects - Vectors, matrices, and higher-dimensional tensors have geometric meanings.
+- Element-wise operations - scaling/stretching.
+- Dot products: projection or similarity measures.
+- Tensor reshaping: dimensional transformations.
+.center[&lt;img src="img/geometric_vector_addition.png" height=320&gt;]
+.small[ https://www.cuemath.com/geometry/addition-of-vectors/ ]
+
+---
+## Geometric Interpretation of the Dot Product
+
+- The dot product of two vectors results in a scalar.
+
+- It's calculated as the sum of the products of corresponding entries.
+
+- Geometrically, it relates to the angle between the vectors:
+  - If the vectors are orthogonal (perpendicular), their dot product is 0.
+  - A larger dot product indicates a smaller angle between the vectors.
+
+---
+## Geometric Interpretation of Deep Learning
+
+- Neural Networks as Geometric Transformations. Each layer transforms data geometrically.
+- Non-linear activations distort the geometry to enhance learning capacity.
+- Optimization (e.g., SGD) guides the geometric shape toward a solution.
+.center[&lt;img src="img/manifold.png" height=320&gt;]
+.small[ Manifold-based approach for neural network robustness analysis  
+https://doi.org/10.1038/s44172-024-00263-8 ]
+
+---
+## Tensor operations in Layers
+
+- A layer can be represented as a function that takes a tensor as an input and return another tensor, a new representation for the input tensor. 
+
+- Functions transforming the data are nonlinear, e.g. rectified linear unit (ReLU) `\(\text{ReLU}(x) = \max(0, x)\)`, SoftMax `\({Softmax}(x_i) = \frac{e^{x_i}}{\sum_{j=1}^{n} e^{x_j}}\)`.
+
+- Adding weights and biases, we have `\(output = ReLU(dot(W, input) + b)\)`.
+  - A dot product between the input tensor and a tensor of weights.
+  - An addition between the resulting tensor and a tensor of biases.
+  - A ReLU operation.
+  
+---
+## Introduction to Gradient-Based Optimization
+
+- Each layer in a neural network transforms its input. For example, a dense (fully connected) layer computes `\(output = ReLU(dot(W, input) + b)\)`, where `\(W\)` (weights) and `\(b\)` (biases) are the trainable parameters of the layer.
+
+- These parameters, `\(W\)` and `\(b\)`, are initialized randomly, which is why the initial predictions often don’t reflect any useful data patterns.
+
+- Goal of Optimization: Adjust these parameters gradually to improve model predictions.
+  - Forward Pass: Calculate the predicted output, `\(y_{\text{pred}}\)`, given the current weights.
+  - Loss Calculation: Measure how far `\(y_{\text{pred}}\)` is from the actual target `\(y\)`.
+  - Gradient-Based Optimization: Adjust weights to minimize this loss iteratively.
+
+---
+## Differentiability in Neural Networks
+
+- Every operation in a neural network is designed to be differentiable, enabling us to calculate how small changes in each weight affect the loss function.
+
+- Gradient - Indicates the rate and direction to adjust each parameter to reduce the loss.
+
+- Key Concept: By moving the weights in the direction opposite to the gradient, we can iteratively decrease the loss.
+
+- Derivative: For a function `\(f(x)\)`, its derivative `\(f'(x)\)` gives the rate of change with respect to `\(x\)`.
+
+---
+## Differentiability in Neural Networks
+
+- Geometric Interpretation: Derivatives represent the slope of the tangent line at any point, guiding adjustments.
+
+.center[&lt;img src="img/derivative.svg" height=300&gt;]
+
+- Example: For `\(f(x) = x^2\)`, `\(f'(x) = 2x\)`, meaning the slope and adjustment direction depend on `\(x\)`.
+
+---
+## Derivative of a Tensor Operation: The Gradient
+
+- Gradient: Generalization of a derivative to multi-variable functions. In a neural network, it measures sensitivity to changes in each weight.
+
+- For a function with multiple variables, the gradient vector `\(\nabla \mathcal{L}(\mathbf{w})\)` points in the steepest ascent direction. In training, we use `\(-\nabla \mathcal{L}(\mathbf{w})\)` to decrease the loss.
+
+- Example: If `\(\mathbf{w} = (w_1, w_2)\)`, then for a loss function `\(\mathcal{L}(\mathbf{w})\)`:
+
+ `$$\nabla_{\mathbf{w}} \mathcal{L} = \left( \frac{\partial \mathcal{L}}{\partial w_1}, \frac{\partial \mathcal{L}}{\partial w_2} \right)$$`
+---
+## Stochastic Gradient Descent (SGD)
+
+- Stochastic Gradient Descent (SGD): A variant of gradient descent where we update weights based on small batches (mini-batches) instead of the entire dataset.
+
+- Advantages:
+  - Computational Efficiency: Processes smaller data portions at a time, accelerating training.
+  - Regularization Effect: Introduces noise, which can help the model escape local minima and explore more of the loss surface.
+
+- SGD Update Rule: `\(\mathbf{w}_{t+1} = \mathbf{w}_t - \eta \cdot \nabla_{\mathbf{w}} \mathcal{L}(\mathbf{w})\)`
+where `\(\eta\)` is the learning rate.
+
+---
+## Learning Rate and Its Impact
+
+- Learning Rate (`\(\eta\)`): A hyperparameter that controls the step size in each iteration of gradient descent.
+  - Too High: May overshoot the minimum, leading to divergent training.
+  - Too Low: Training takes much longer to converge and risks getting stuck in local minima.
+
+- Finding an optimal learning rate is key for efficient and effective training. Techniques such as learning rate schedules and adaptive optimizers (e.g., Adam) can help.
+
+---
+## Chaining Derivatives: The Backpropagation Algorithm
+
+- Backpropagation: Core algorithm for calculating gradients across all network parameters, allowing efficient updates during training.
+
+- Chain Rule: Allows us to calculate the gradient of composite functions. For functions `\(f(g(x))\)`, the derivative is:
+
+`$$\frac{d}{dx} [f(g(x))] = f'(g(x)) \cdot g'(x)$$`
+- Backpropagation uses this rule to propagate errors from output layers back through each layer.
+
+---
+## Backpropagation in Action
+
+- Forward Pass:
+  - Feed the input through the network to obtain the output prediction.
+  - Store intermediate activations, as these are required for calculating gradients in the backward pass.
+
+- Backward Pass:
+  - Starting from the loss at the output, compute gradients with respect to each layer’s weights using stored activations.
+  - Update weights across all layers based on these gradients.
+
+---
+## Example of Backpropagation
+
+Two-Layer Network:
+
+- Forward Pass: Input `\(x \rightarrow\)` Hidden Layer `\(h = W_1 x + b_1 \rightarrow\)` Output `\(o = W_2 h + b_2\)`
+
+- Backward Pass:
+    - Calculate gradients `\(\nabla L\)` for weights `\(W_1\)`, `\(W_2\)` and biases `\(b_1\)`, `\(b_2\)`.
+    - Update weights to reduce the loss, layer by layer, using chain rule.
+
+---
+## Visualizing Gradient Descent
+
+- Loss Surface: Imagine the loss function as a landscape, with peaks, valleys, and slopes.
+
+- Gradient Descent Steps: Moves in the direction that reduces the loss, analogous to descending a hill.
+
+- Challenges in Optimization:
+  - Local Minima: Points where the gradient is zero but not the lowest possible loss.
+  - Saddle Points: Flat regions where the gradient is near zero, slowing down progress.
+  - Plateaus: Regions where the gradient is very small, making it difficult to move toward the minimum.
+
+---
+## GradientTape in TensorFlow
+
+* The **GradientTape()** is an API in TensorFlow for automatic differentiation. This powerful tool enables calculating the gradients of complex combinations of differentiable tensor operations.
+
+* `GradientTape()` records operations performed on Variable objects to enable automatic differentiation and gradient calculation.
+
+* `GradientTape()` creates a **computation graph**, or "tape". This graph facilitates retrieving the gradient of any output concerning any variable or set of variables.
+
+*   **Automatic Differentiation** employs computation graphs to determine the gradients of differentiable tensor operations. Modern frameworks, including TensorFlow, have this capability, making manual backpropagation implementation unnecessary.
+
+---
+## GradientTape operates with tensor operations
+
+
+``` r
+# Create a 2x2 matrix of zeros as a TensorFlow Variable
+x &lt;- tf$Variable(array(0, dim = c(2, 2)))
+with(tf$GradientTape() %as% tape, {
+    y &lt;- 2 * x + 3    # Linear operation: y = 2x + 3
+})
+# Compute gradient dy/dx and convert to R array
+(grad_of_y_wrt_x &lt;- as.array(tape$gradient(y, x)))
+```
+
+```
+##      [,1] [,2]
+## [1,]    2    2
+## [2,]    2    2
+```
+
+- Result is a 2x2 matrix of 2's.
+- This is because ∂y/∂x = 2 for each element (derivative of 2x + 3).
+
+---
+## GradientTape operates with tensor operations
+
+*   A variable with a shape (2,2) and an initial value of zeros is instantiated.
+
+*   A GradientTape scope is opened.
+
+*   Tensor operations are applied to the variable within the scope.
+
+*   The scope is exited.
+
+*   The tape is used to retrieve the gradient of the output *y* with respect to our variable *x*.
+
+*   `grad_of_y_wrt_x` represents a tensor of shape (2, 2) that describes the curvature of `y = 2 * a + 3` around `x = array(0, dim = c(2, 2))`.
+
+*   `tape$gradient()` returns a TensorFlow Tensor that is converted to an R array using `as.array()`.
+
+---
+## GradientTape operates with tensor operations
+
+*   GradientTape() can also handle lists of variables:
+
+
+``` r
+# Create a 2x2 random weight matrix as a TensorFlow Variable
+W &lt;- tf$Variable(random_array(c(2, 2)))
+# Create a 2-element zero bias vector as a TensorFlow Variable
+b &lt;- tf$Variable(array(0, dim = c(2)))
+# Create a 2x2 random input matrix (not a Variable)
+x &lt;- random_array(c(2, 2))
+with(tf$GradientTape() %as% tape, {
+    y &lt;- tf$matmul(x, W) + b    # Linear layer: y = xW + b
+})
+grad_of_y_wrt_W_and_b &lt;- tape$gradient(y, list(W, b))
+```
+
+*   `matmul` represents the **dot product** (matrix multiplication) in TensorFlow.
+
+*   `grad_of_y_wrt_W_and_b` is a list containing two tensors, dy/dW: 
+  - Gradient of loss with respect to weights and dy/db.
+  - Gradient of loss with respect to biases, each matching the shape of *W* and *b*, respectively.
+
+---
+## Practical Implementation in R with Keras/TensorFlow
+
+- Define Model: Use keras_model_sequential() to stack layers. Each layer has weights and biases that will be optimized.
+- Compile Model:
+  - Specify optimizer (e.g., SGD, Adam).
+  - Define loss function (e.g., mean squared error for regression).
+  - Add metrics for monitoring during training.
+- Train Model:
+  - Use fit() to start training, where Keras automatically performs forward and backward passes.
+  - Parameters are updated according to chosen optimization strategy (e.g., SGD, Adam).
+- Visualize Training Process:
+  - Plot training/validation loss over epochs to observe convergence.
+  - Experiment with different learning rates and optimizers to understand their effects on convergence.
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"ratio": "16:9",
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
