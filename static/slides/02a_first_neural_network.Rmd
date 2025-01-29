@@ -207,6 +207,48 @@ https://www.analyticsvidhya.com/blog/2020/01/fundamentals-deep-learning-activati
 .small[ https://medium.com/@shrutijadon/survey-on-activation-functions-for-deep-learning-9689331ba092 ]
 
 ---
+## Activation functions
+
+```{r}
+library(keras3)
+ls("package:keras3", pattern = "^activation_")
+```
+
+---
+## ReLU (Rectified Linear Unit)
+
+The most popular activation function in deep learning
+
+ReLU zeroes out negative values, retaining positive values as they are.
+
+.center[<img src="img/activation_relu.png" height=350>]
+
+.small[ https://machinelearningmastery.com/rectified-linear-activation-function-for-deep-learning-neural-networks/ ]
+
+---
+## Sigmoid
+
+Squashes values into the range of 0 to 1, producing outputs that can be interpreted as probabilities.
+
+Often used in the output layer for binary classification problems.
+
+.center[<img src="img/activation_sigmoid.png" height=350>]
+
+.small[ https://botpenguin.com/glossary/sigmoid-function   
+https://machinelearningmastery.com/a-gentle-introduction-to-sigmoid-function/ ]
+
+---
+## Softmax
+
+Outputs a probability distribution over multiple classes, typically used in the output layer for multiclass classification.
+
+Often used in the multiclass classification problems.
+
+.center[<img src="img/activation_softmax.png" height=350>]
+
+.small[ https://botpenguin.com/glossary/softmax-function ]
+
+---
 ## Learning rules
 
 - **Optimization** - update model parameters on the training data and check its performance on a new validation data to find the most optimal parameters for the best model performance.
