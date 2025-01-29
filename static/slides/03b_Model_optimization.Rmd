@@ -3,7 +3,7 @@ title: "Foundations of Deep Learning"
 subtitle: "Classification, Regression, and Model Optimization"
 author: "Mikhail Dozmorov"
 institute: "Virginia Commonwealth University"
-date: "`r Sys.Date()`"
+date: 2025-01-29 # "`r Sys.Date()`"
 output:
   xaringan::moon_reader:
     lib_dir: libs
