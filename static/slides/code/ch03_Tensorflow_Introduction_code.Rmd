@@ -456,7 +456,8 @@ layer_simple_dense <- new_layer_class(
 )
 
 # Create the layer
-my_dense <- layer_simple_dense(units = 32L, activation = tf$nn$relu)
+my_dense <- layer_simple_dense(units = 32L, 
+                               activation = tf$nn$relu)
 
 # Create input tensor
 input_tensor <- tf$ones(shape = shape(2L, 784L))
