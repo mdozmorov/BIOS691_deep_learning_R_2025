@@ -17,7 +17,7 @@ editor_options:
   chunk_output_type: console
 ---
 
-# Self-study
+# MNIST classification
 
 Sequential neural network for MNIST handwritten digits classification, batch size, learning rate, callbacks, regularization, model capacity, hyperparameter tuning.
 
