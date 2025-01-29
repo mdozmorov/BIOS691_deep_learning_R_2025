@@ -17,7 +17,7 @@ lessons:
   - title: '**Week 3: Data representations for neural network, Keras, Tensorflow**'
     date: "January 27"
     # reading: "03-reading"
-    # assignment: "03-problem-set"
+    assignment: "03-problem-set"
     class: "03-class"
   # 
   # - title: '**Day 4: Convolutional Neural Networks, images**'
