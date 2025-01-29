@@ -1,0 +1,190 @@
+---
+title: "Foundations of Deep Learning"
+subtitle: "Introduction to TensorFlow and Keras"
+author: "Mikhail Dozmorov"
+institute: "Virginia Commonwealth University"
+date: 2025-01-29 # "`r Sys.Date()`"
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    css: ["xaringan-themer.css", "xaringan-my.css"]
+    nature:
+      ratio: '16:9'
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+```{r xaringan-themer, include = FALSE}
+library(xaringanthemer)
+mono_light(
+  base_color = "midnightblue",
+  header_font_google = google_font("Josefin Sans"),
+  text_font_google   = google_font("Montserrat", "500", "500i"),
+  code_font_google   = google_font("Droid Mono"),
+  link_color = "#8B1A1A", #firebrick4, "deepskyblue1"
+  text_font_size = "28px"
+)
+```
+
+## What is TensorFlow?
+
+*   **TensorFlow** is a free and open-source platform for machine learning developed by Google.
+<!-- *   TensorFlow is used to manipulate mathematical expressions over numerical tensors by researchers, engineers, and scientists. -->
+*   TensorFlow scales well and has been used to train models on supercomputers.
+*   The platform offers various components, including:
+    *   TF-Agents for reinforcement learning research.
+    *   TFX for managing machine learning workflows in industry.
+    *   TensorFlow Serving for production deployment.
+    *   TensorFlow Hub, which contains pretrained models.
+
+.center[ <img src="img/tensorflow_logo.png" height=200> ]
+
+---
+## TensorFlow Features
+
+*   Automatic computation of the gradient of any differentiable expression, making it suitable for machine learning.
+
+*   Capability to run on CPUs, GPUs, and TPUs.
+
+*   Easy distribution of computation across multiple machines.
+
+*   Exportability to other runtimes like C++, JavaScript, and TensorFlow Lite for mobile and embedded device applications.
+
+.center[ <img src="img/tensorflow_logo.png" height=200> ]
+
+---
+## Keras: A Modular and User-Friendly Framework
+
+- Keras is a high-level, user-friendly deep learning framework that simplifies the process of defining and training various types of deep learning models. 
+
+Keras distinguishes itself through several key features:
+
+* **Modularity and Backend Agnosticism:** Keras operates as a model-level library, meaning it handles high-level aspects of model development but relies on a separate, optimized tensor library for low-level operations like tensor manipulation and differentiation.  It's designed to work with different backend engines, providing flexibility and allowing users to switch between them. Currently supported backends include Tensorflow, Jax, Numpy, or Torch.
+
+.small[ https://keras3.posit.co ]
+
+---
+## Keras: A Modular and User-Friendly Framework
+
+* **User-friendliness and Ease of Use:** The user-friendly API, which enables rapid prototyping of deep learning models, making it accessible to a wider range of users, including beginners. 
+
+* **Versatility and Architectural Flexibility:** Keras supports a wide range of network architectures, including convolutional networks for computer vision, recurrent networks for sequence processing, and combinations of both. Its flexibility extends to building models with multiple inputs and outputs, layer sharing, and more complex topologies.
+
+* **Seamless CPU and GPU Execution:** Keras, through its backend engines, can execute code seamlessly on both CPUs and GPUs. This adaptability ensures that users can leverage available hardware resources for optimal performance.
+
+.small[ https://keras3.posit.co ]
+
+---
+## Keras and TensorFlow: A Symbiotic Relationship
+
+*   Keras, released in March 2015, predates TensorFlow (released November 2015).
+
+*   Originally built on top of Theano, Keras was refactored to support multiple backends, including TensorFlow.
+
+*   Keras was adopted as TensorFlow's official high-level API, playing a key role in the TensorFlow 2.0 redesign.
+
+---
+## Installation and Development Workflow
+
+*   R interfaces for TensorFlow and Keras were developed by RStudio and are built on top of the `reticulate` package, which allows access to both Python and R functionalities.
+```{r eval=FALSE}
+# install.packages("remotes")
+remotes::install_github("rstudio/tensorflow")
+reticulate::install_python()
+tensorflow::install_tensorflow(envname = "r-tensorflow")
+install.packages("keras3")
+keras3::install_keras(backend = "tensorflow") # "jax" or "torch"
+```
+If GPU is available, it will be detected and configured. May use `gpu = TRUE` to force GPU installation.
+.small[ https://tensorflow.rstudio.com/installation/  
+https://keras3.posit.co/articles/getting_started.html ]
+
+---
+## Developing with Keras: Model
+
+- Define your training data, input and target tensors.
+
+- Define a model, a network of layers that maps inputs to targets.
+  - Two ways to define a model:  using the `keras_model_sequential()` function for linear stacks of layers, or the functional API for more complex, directed acyclic graphs of layers.
+  
+```{r eval=FALSE}
+model <- keras_model_sequential(input_shape = c(10000)) %>% 
+  layer_dense(units = 16, activation = "relu") %>% 
+  layer_dense(units = 1, activation = "sigmoid")
+```
+
+---
+## Developing with Keras: Learning parameters
+
+- Set the learning process by choosing a loss function and an optimizer.
+
+```{r eval=FALSE}
+model %>% compile(
+  optimizer = "rmsprop",
+  loss = "binary_crossentropy",
+  metrics = c("accuracy")
+)
+```
+
+---
+## Developing with Keras: Learning
+
+- Iterate on your training data
+
+```{r eval=FALSE}
+model %>% fit(
+  input_tensor,
+  target_tensor,
+  epochs = 20,
+  batch_size = 512,
+  validation_data = list(x_val, y_val)
+)
+```
+
+---
+## GPU for Machine Learning
+
+Speed increase: 5-10X or more for deep learning models, especially for large datasets and complex neural networks.
+
+Commercial Cloud GPU Providers (most have free tier options):
+
+- Amazon Web Services (AWS): Deep Learning AMIs with pre-configured environments for TensorFlow, PyTorch, and more.
+- Microsoft Azure: Offers various VM sizes optimized for AI, including support for NVIDIA GPUs. 
+- Google Cloud Platform (GCP): Provides access to NVIDIA Tesla GPUs with deep integration into TensorFlow and other frameworks.
+- Oracle Cloud: GPU-powered instances, such as the Oracle Cloud Infrastructure (OCI) optimized for AI workloads.
+- IBM Cloud: Access to NVIDIA GPUs, supporting popular machine learning frameworks.
+
+.small[ https://aws.amazon.com/machine-learning/amis/  
+https://azure.microsoft.com/en-us/products/machine-learning/  
+https://cloud.google.com/products/compute  
+https://www.oracle.com/cloud/  
+https://www.ibm.com/cloud]
+
+---
+## Free GPU Options for Machine Learning
+
+**Google Colab:** https://colab.research.google.com/
+
+- Offers free access to GPUs (including Tesla T4) and TPUs for Jupyter notebooks.
+- Ideal for small to medium deep learning projects.
+- Pro and Pro+ tiers available for more resources.
+
+**Kaggle Notebooks:** https://www.kaggle.com/code
+
+- Free access to GPUs (Tesla P100) and TPUs for running notebooks.
+- Includes a large community and many open datasets for experimentation.
+
+---
+## Links to bookmark
+
+- https://keras3.posit.co/ - R interface to Keras.
+- https://github.com/rstudio/keras3 - official R implementation GitHub repository.
+- https://blogs.rstudio.com/ai/posts/2024-05-21-keras3/ - Introduction to Keras3.
+
+- https://tensorflow.rstudio.com/ - TensorFlow for R, and Tutorials, Guides, Examples.
+- https://www.tensorflow.org/api_docs/python/tf - Python documentation.
+- https://github.com/tensorflow/tensorflow/ - official GitHub repository.
+
+- https://forum.posit.co/c/ml/15 - Machine and deep learning community.
+- https://github.com/rstudio/keras3/discussions - Keras discussions.
