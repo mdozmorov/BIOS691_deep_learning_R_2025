@@ -12,7 +12,7 @@ type: docs
 weight: 1
 output:
   blogdown::html_page:
-    toc: true
+    toc: false
 editor_options: 
   chunk_output_type: console
 ---
@@ -23,3 +23,4 @@ editor_options:
 - Read and run the code in the `03_Ames_house_price.Rmd` file. Consult ChatGPT in case of errors.
 - Set `eval = TRUE` and answer questions in the code chunks labeled "Question:" and describe your observations.
 - Knit the document into an HTML format and submit the knitted document.
+
