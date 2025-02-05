@@ -1,0 +1,417 @@
+---
+title: "Working with Keras: A Deep Dive"
+subtitle: "Different ways to build Keras models"
+output: 
+  html_notebook: 
+    theme: cerulean
+    highlight: textmate
+editor_options: 
+  chunk_output_type: console
+---
+
+# 7.2 Different ways to build Keras models
+
+There are three APIs for building models in Keras:
+
+*   **Sequential model**: This is the most approachable API. It is limited to simple stacks of layers and is basically a list. It is suitable for novice users and simple models. The `keras_model_sequential()` function is used to build a sequential model.
+*   **Functional API**: This API focuses on graph-like model architectures. It represents a midpoint between usability and flexibility and is the API that is most commonly used. It is suitable for engineers with standard use cases. The `keras_model()` function is used to build a functional model.
+*   **Model subclassing**: This is a low-level option where the user writes everything from scratch. This provides the most control but limits access to built-in Keras features and is more prone to user errors. It is suitable for researchers and engineers with niche use cases that require bespoke solutions. The `new_model_class()` function is used to subclass the `Model` class.
+
+The design principle of the Keras API is **progressive disclosure of complexity**. This means that **it is easy to get started, and it is possible to handle high-complexity use cases by building upon the understanding gained from simpler workflows**. All models in the Keras API can smoothly interoperate.
+
+## 7.2.1 The Sequential model
+
+- This code creates a simple feedforward neural network with two layers
+- The model won't have actual weights until it's "built" with a specified input shape
+- The two methods of creating the model (chained pipes vs separate pipes) are functionally identical
+- The final model has:
+  - Input: 3 features
+  - Hidden layer: 64 neurons with ReLU activation
+  - Output layer: 10 neurons with softmax activation (suitable for 10-class classification)
+
+```{r}
+# Load the Keras library
+library(keras3)
+
+# Test functionality by creating a simple TensorFlow function that adds 1 to input
+# and immediately executing it with input value 1
+tensorflow::tf_function(function(x) x + 1)(1)
+
+# Method 1: Create a sequential neural network using chained pipes
+model <- keras_model_sequential() %>%
+  # Add first layer: 64 neurons with ReLU activation
+  layer_dense(64, activation = "relu") %>%
+  # Add output layer: 10 neurons with softmax activation (for classification)
+  layer_dense(10, activation = "softmax")
+
+# Method 2: Create the same model using separate pipe operations
+model <- keras_model_sequential()
+# Add first layer
+model %>% layer_dense(64, activation="relu")
+# Add output layer
+model %>% layer_dense(10, activation="softmax")
+
+# Try to access model weights - this will fail because the model hasn't been built yet
+model$weights
+
+# Build the model by specifying input shape
+# shape(NA, 3) means:
+#   NA: batch size is unspecified (flexible)
+#   3: input features dimension is 3
+model$build(input_shape = shape(NA, 3))
+
+# Display the model's weights structure after building
+str(model$weights)
+
+# Display model summary
+model
+```
+
+## 7.2.2 The Functional API
+
+- The Functional API (`keras_model()`) allows for creating complex model architectures
+- You can create models with Multiple inputs, Multiple outputs, Shared layers, Complex layer connectivity
+- Each layer is a callable object that returns a tensor
+- Models are created by specifying their inputs and outputs explicitly
+- The model can handle different loss functions and metrics for each output
+- The training and prediction processes handle multiple inputs/outputs through lists
+This is more flexible than the Sequential API, allowing for complex architectures like multi-branch networks, residual networks, or models with shared layers.
+
+- We will create synthetic data for training the multi-input, multi-output model using two helper functions:
+  - `random_uniform_array()` - creates continuous values between 0 and 1
+  - `random_vectorized_array()` - creates binary values (0s and 1s)
+- Input features:
+  - Title and text body: represented as binary bag-of-words vectors
+  - Tags: binary indicators for different tag categories
+- Target outputs:
+  - Priority: binary value (high/low)
+  - Department: one-hot encoded department assignment
+
+- We will explore our model using:
+  - `plot(model)`, creates a visual representation of Layer connectivity, Layer types, Flow of data through the network
+  - `plot(model, show_shapes = TRUE)`, to add Input shapes, Output shapes, Number of parameters
+  - `str(model$layers)` for programmatic access to Layer configurations, Layer ordering, Layer properties
+
+```{r}
+# 1. Basic Functional API Example
+# Create an input layer with 3 features
+inputs <- layer_input(shape = c(3), name = "my_input")
+# Create hidden layer with 64 neurons
+features <- inputs %>% layer_dense(64, activation = "relu")
+# Create output layer with 10 neurons
+outputs <- features %>% layer_dense(10, activation = "softmax")
+# Create model by specifying inputs and outputs
+model <- keras_model(inputs = inputs, outputs = outputs)
+
+# 2. Complex Multi-Input Multi-Output Model Example
+# Define dimensions
+vocabulary_size <- 10000
+num_tags <- 100
+num_departments <- 4
+
+# Number of samples in our dataset
+num_samples <- 1280
+
+# Helper function to create arrays with random uniform values between 0 and 1
+random_uniform_array <- function(dim)
+  array(runif(prod(dim)), dim)
+
+# Helper function to create binary arrays (0s and 1s)
+random_vectorized_array <- function(dim)
+  array(sample(0:1, prod(dim), replace = TRUE), dim)
+
+# Generate synthetic input data:
+# Each is a binary matrix where:
+# - Rows = number of samples (1280)
+# - Columns = size of respective feature space
+title_data     <- random_vectorized_array(c(num_samples, vocabulary_size))  # 1280 x 10000
+text_body_data <- random_vectorized_array(c(num_samples, vocabulary_size))  # 1280 x 10000
+tags_data      <- random_vectorized_array(c(num_samples, num_tags))         # 1280 x 100
+
+# Generate synthetic output/target data:
+priority_data    <- random_vectorized_array(c(num_samples, 1))              # 1280 x 1 (binary priority)
+department_data  <- random_vectorized_array(c(num_samples, num_departments)) # 1280 x 4 (one-hot encoded departments)
+
+# Create multiple input layers
+title     <- layer_input(shape = c(vocabulary_size), name = "title")
+text_body <- layer_input(shape = c(vocabulary_size), name = "text_body")
+tags      <- layer_input(shape = c(num_tags),        name = "tags")
+
+# Merge inputs and create shared features
+features <- layer_concatenate(list(title, text_body, tags)) %>%
+  layer_dense(64, activation="relu")
+
+# Create multiple output branches
+priority <- features %>%
+  layer_dense(1, activation = "sigmoid", name = "priority")
+department <- features %>%
+  layer_dense(num_departments, activation = "softmax", name = "department")
+
+# Create model with multiple inputs and outputs
+model <- keras_model(
+  inputs = list(title, text_body, tags),
+  outputs = list(priority, department)
+)
+
+# 3. Training the multi-output model
+model %>% compile(
+  optimizer = "rmsprop",
+  # Specify different loss functions for each output
+  loss = c("mean_squared_error", "categorical_crossentropy"),
+  metrics = c("mean_absolute_error", "accuracy")
+)
+
+# Fit model with multiple inputs/outputs
+model %>% fit(
+  x = list(title_data, text_body_data, tags_data),
+  y = list(priority_data, department_data),
+  epochs = 1
+)
+
+# 4. Making predictions
+# Use destructuring assignment to get multiple outputs
+c(priority_preds, department_preds) %<-% {
+   model %>% predict(list(title_data, text_body_data, tags_data))
+}
+
+# Create a basic visualization of the model architecture
+plot(model)
+
+# Create a more detailed visualization that includes shape information
+# Shows input/output dimensions for each layer
+plot(model, show_shapes = TRUE)
+
+# Inspect the model's layer structure
+# Shows all layers in the model as a list
+str(model$layers)
+
+# Inspect the input tensor of the 4th layer
+# Shows the shape and configuration of what goes into this layer
+str(model$layers[[4]]$input)
+
+# Inspect the output tensor of the 4th layer
+# Shows the shape and configuration of what comes out of this layer
+str(model$layers[[4]]$output)
+
+# Get the output tensor from the 5th layer (shared features layer)
+features <- model$layers[[5]]$output
+
+# Create a new output branch for difficulty prediction
+# - 3 output units (presumably for easy/medium/hard classification)
+# - softmax activation for multi-class classification
+# - named "difficulty" for identification
+difficulty <- features %>%
+  layer_dense(3, activation = "softmax", name = "difficulty")
+
+# Create a new model that includes all previous inputs and outputs
+# plus the new difficulty output
+new_model <- keras_model(
+  # Original inputs remain the same
+  inputs = list(title, text_body, tags),
+  # Outputs now include the new difficulty branch
+  outputs = list(priority, department, difficulty)
+)
+
+# Visualize the new model architecture with shape information
+plot(new_model, show_shapes=TRUE)
+```
+
+## 7.2.3 Subclassing the Model class
+
+- Benefits of model subclassing
+  - More flexible than Sequential or Functional APIs
+  - Allows custom logic in forward pass
+  - Enables reusable model architectures
+- Structure:
+  - initialize: Sets up layers and model parameters
+  - call: Defines forward pass logic
+  - Can add custom methods as needed
+- Usage patterns:
+  - Direct instantiation and calling
+  - Wrapping as a layer for Functional API
+  - Full Keras integration (compile, fit, evaluate, predict)
+- This example creates a specialized model for:
+  - Processing multiple text inputs
+  - Generating priority and department predictions
+  - Sharing features between outputs
+
+MODIFIED
+
+```{r}
+# Define the custom model class
+CustomerTicketModel <- new_model_class(
+  classname = "CustomerTicketModel",
+
+  initialize = function(num_departments) {
+    super$initialize()
+
+    # Define input layers with appropriate shapes
+    self$title_input <- layer_input(shape = c(10000), name = "title_input")
+    self$text_body_input <- layer_input(shape = c(10000), name = "text_body_input")
+    self$tags_input <- layer_input(shape = c(100), name = "tags_input")
+
+    # Define other layers
+    self$concat_layer <- layer_concatenate()
+    self$mixing_layer <- layer_dense(units = 64, activation = "relu")
+    self$priority_scorer <- layer_dense(units = 1, activation = "sigmoid")
+    self$department_classifier <- layer_dense(units = num_departments, activation = "softmax")
+  },
+
+  call = function(inputs) {
+    # Extract inputs
+    title <- inputs$title
+    text_body <- inputs$text_body
+    tags <- inputs$tags
+
+    # Concatenate and process features
+    features <- list(title, text_body, tags) %>%
+      self$concat_layer() %>%
+      self$mixing_layer()
+    
+    # Generate outputs
+    priority <- self$priority_scorer(features)
+    department <- self$department_classifier(features)
+    list(priority, department)
+  }
+)
+
+# Instantiate the model
+model <- CustomerTicketModel(num_departments = 4)
+
+# Wrap the subclassed model into a functional API model
+inputs <- list(
+  title = layer_input(shape = c(10000), name = "title_input"),
+  text_body = layer_input(shape = c(10000), name = "text_body_input"),
+  tags = layer_input(shape = c(100), name = "tags_input")
+)
+outputs <- model(inputs)
+model <- keras_model(inputs, outputs)
+
+# Compile the model
+# Compile the model with metrics specified for each output in order
+model %>%
+  compile(
+    optimizer = "rmsprop",
+    loss = c("mean_squared_error", "categorical_crossentropy"),
+    metrics = list("mean_absolute_error", "accuracy")  # Metrics for priority and department outputs
+  )
+
+# Inputs and targets
+x <- list(
+  title = title_data,
+  text_body = text_body_data,
+  tags = tags_data
+)
+y <- list(
+  priority_data,         # Shape: (1280, 1)
+  department_data        # Shape: (1280, 4)
+)
+
+# Train the model
+model %>% fit(
+  x = x,
+  y = y,
+  batch_size = 32,
+  epochs = 1
+)
+
+# Evaluate the model
+model %>% evaluate(x, y)
+
+# Make predictions
+predictions <- model %>% predict(x)
+priority_preds <- predictions[[1]]
+department_preds <- predictions[[2]]
+
+```
+
+## 7.2.4 Mixing and matching different components
+
+This code defines and combines custom model classes in Keras for building flexible machine learning architectures. The two classes (ClassifierModel and MyModel) encapsulate different behaviors for classification tasks. 
+
+- `ClassifierModel`
+  - Dynamic Configuration: The number of units and activation function in the dense layer are determined by the num_classes parameter.
+  - Binary Classification:
+    - Uses sigmoid activation with one output unit.
+  - Multi-Class Classification:
+  - Uses softmax activation with num_classes output units.
+
+```{r}
+ClassifierModel <- new_model_class(
+  classname = "Classifier",  # Name of the custom class
+  initialize = function(num_classes = 2) {  # Constructor to set up the model
+    super$initialize()  # Call the parent class initializer
+
+    # Configure output layer depending on the number of classes
+    if (num_classes == 2) {  # Binary classification
+      num_units <- 1
+      activation <- "sigmoid"  # Sigmoid activation for binary output
+    } else {  # Multi-class classification
+      num_units <- num_classes
+      activation <- "softmax"  # Softmax activation for multi-class probabilities
+    }
+
+    # Define the final dense layer with chosen configuration
+    self$dense <- layer_dense(units = num_units, activation = activation)
+  },
+
+  # Forward pass method: defines how the model processes inputs
+  call = function(inputs)
+    self$dense(inputs)  # Apply the dense layer to the inputs
+)
+```
+
+- Building a Model with `ClassifierModel`
+  - Input Layer: Accepts 3-dimensional inputs (`shape = (batch_size, 3)`).
+  - Intermediate Dense Layer: Adds a fully connected layer with 64 units and ReLU activation.
+  - ClassifierModel Integration: The custom classifier is used for final predictions.
+
+```{r}
+inputs <- layer_input(shape = c(3))  # Define an input layer with 3 features
+classifier <- ClassifierModel(num_classes = 10)  # Instantiate for 10-class classification
+
+# Build a model pipeline
+outputs <- inputs %>%
+  layer_dense(64, activation = "relu") %>%  # Hidden dense layer
+  classifier()  # Pass through ClassifierModel
+
+model <- keras_model(inputs = inputs, outputs = outputs)  # Functional Keras model
+```
+
+- `MyModel`
+  - Hidden Dense Layer:
+    - Contains 64 units with ReLU activation, applied to the inputs.
+  - Binary Classifier Reuse:
+    - Uses the previously defined `binary_classifier` as the final layer.
+  - Encapsulation:
+    - Combines reusable components into a higher-level model.
+
+```{r}
+# Binary Classifier, a component for the MyModel class.
+inputs <- layer_input(shape = c(64))  # Define an input layer with 64 features
+outputs <- inputs %>% layer_dense(1, activation = "sigmoid")  # Binary output layer
+binary_classifier <- keras_model(inputs = inputs, outputs = outputs)  # Define as a reusable model
+
+MyModel <- new_model_class(
+  classname = "MyModel",  # Name of the custom class
+  initialize = function(num_classes = 2) {  # Constructor
+    super$initialize()  # Call the parent initializer
+
+    # Define a hidden dense layer
+    self$dense <- layer_dense(units = 64, activation = "relu")
+    # Use the pre-built binary_classifier as the final classification layer
+    self$classifier <- binary_classifier
+  },
+
+  # Forward pass method
+  call = function(inputs) {
+    inputs %>%
+      self$dense() %>%  # Pass through the hidden layer
+      self$classifier()  # Pass through the binary classifier
+  }
+)
+
+model <- MyModel()  # Instantiate the model
+print(model)
+```
+

@@ -1,0 +1,651 @@
+---
+title: "Working with Keras: A Deep Dive"
+subtitle: "Training and evaluation loops and metrics"
+output: 
+  html_notebook: 
+    theme: cerulean
+    highlight: textmate
+editor_options: 
+  chunk_output_type: console
+---
+
+# 7.3 Using built-in training and evaluation loops
+
+This code demonstrates the process of building, training, evaluating, and making predictions with a Keras model using the built-in training and evaluation loops. It uses the MNIST dataset, which contains grayscale images of handwritten digits (28x28 pixels) classified into 10 classes (digits 0-9). 
+
+- Defining the model
+  - Input Shape: The input layer expects a 1D array of 28x28 pixels (flattened).
+  - Hidden Layer: A dense layer with 512 neurons and ReLU activation.
+  - Dropout: Helps mitigate overfitting by randomly "dropping out" neurons during training.
+  - Output Layer: Softmax activation produces probabilities for 10 classes.
+
+```{r}
+get_mnist_model <- function() {
+  inputs <- layer_input(shape = c(28 * 28))  # Input layer for flattened 28x28 images
+  outputs <- inputs %>%
+    layer_dense(512, activation = "relu") %>%  # First hidden layer with 512 units and ReLU activation
+    layer_dropout(0.5) %>%  # Dropout layer with a rate of 50% to prevent overfitting
+    layer_dense(10, activation = "softmax")  # Output layer with 10 units for 10 classes, using softmax
+
+  keras_model(inputs, outputs)  # Create a Keras model
+}
+
+```
+
+- Loading and Preprocessing the MNIST Dataset
+  - `dataset_mnist()`: Loads the MNIST dataset, splitting it into training and testing sets.
+    - images and labels: Training data and labels.
+    - test_images and test_labels: Testing data and labels.
+  - `array_reshape()`: Flattens the 28x28 images into 1D arrays (784 features).
+  - Normalization: Divides by 255 to scale pixel values to the range [0, 1], improving model performance.
+  
+```{r}
+c(c(images, labels), c(test_images, test_labels)) %<-% dataset_mnist()
+images <- array_reshape(images, c(-1, 28 * 28)) / 255
+test_images <- array_reshape(test_images, c(-1, 28 * 28)) / 255
+
+```
+
+- Splitting Data into Training and Validation Sets
+  - The first 10,000 samples are used for validation, and the remaining samples are used for training.
+
+```{r}
+val_idx <- seq(10000)  # Indices for the first 10,000 samples
+val_images <- images[val_idx, ]  # Validation images
+val_labels <- labels[val_idx]  # Validation labels
+train_images <- images[-val_idx, ]  # Training images
+train_labels <- labels[-val_idx]  # Training labels
+```
+
+- Compiling the Model
+  - RMSprop: Adaptive learning rate optimizer, suitable for this problem.
+  - Sparse Categorical Crossentropy: Used for multi-class classification with integer labels.
+  - Accuracy: The percentage of correctly classified samples is reported during training.
+
+```{r}
+model <- get_mnist_model()
+model %>% compile(
+  optimizer = "rmsprop",  # Optimizer for training
+  loss = "sparse_categorical_crossentropy",  # Loss function for integer labels
+  metrics = "accuracy"  # Metric to monitor during training
+)
+
+```
+
+- Training the Model
+  - Trains the model for 3 epochs using the training set, while monitoring its performance on the validation set.
+
+
+```{r}
+model %>% fit(
+  train_images, train_labels,  # Training data
+  epochs = 3,  # Number of training iterations over the entire dataset
+  validation_data = list(val_images, val_labels)  # Validation data for monitoring
+)
+
+```
+
+- Evaluating the Model
+  - Evaluate: Computes the loss and accuracy on the test set.
+  
+```{r}
+test_metrics <- model %>% evaluate(test_images, test_labels)
+test_metrics
+```
+
+- Making Predictions
+  - Predict: Outputs probabilities for each of the 10 classes for the test images.
+  - Shape of predictions:
+    - If the test set has N samples, predictions will be a N×10 matrix, where each row contains probabilities for the 10 classes.
+  
+```{r}
+predictions <- model %>% predict(test_images)
+```
+
+## 7.3.1 Writing your own metrics
+
+This code demonstrates how to create a custom metric in TensorFlow for use in Keras models. The metric being implemented is Root Mean Squared Error (RMSE). RMSE measures the average magnitude of errors in predictions, providing insight into the model's predictive accuracy. Below is an annotated explanation of each part of the code.
+
+- Custom Metrics:
+  - A metric in Keras evaluates the performance of the model during training and testing.
+  - This custom RMSE metric computes a batch-wise running average of the RMSE and reports it at the end of each epoch.
+- State Variables:
+  - self$add_weight: Creates persistent variables (mse_sum and total_samples) that are updated across batches.
+- Methods:
+  - initialize: Sets up the metric and state variables.
+  - update_state: Updates the state variables based on the current batch.
+  - result: Computes the final metric value.
+  - reset_state: Resets state variables for a new evaluation cycle.
+
+
+```{r}
+library(tensorflow)
+
+# Define a custom metric class for Root Mean Squared Error (RMSE)
+metric_root_mean_squared_error <- new_metric_class(
+  classname = "RootMeanSquaredError",  # Name of the metric class
+  
+  initialize = function(name = "rmse", ...) {
+    # Initialize the metric and set up state variables
+    super$initialize(name = name, ...)  # Call the parent class initializer
+    self$mse_sum <- self$add_weight(
+      name = "mse_sum",  # Variable to accumulate sum of squared errors
+      initializer = "zeros",  # Start at zero
+      dtype = "float32"  # Use float32 for precision
+    )
+    self$total_samples <- self$add_weight(
+      name = "total_samples",  # Variable to track total number of samples
+      initializer = "zeros",  # Start at zero
+      dtype = "int32"  # Integer count of samples
+    )
+  },
+  
+  # Implement the state update logic in update_state(). The y_true argument is the targets
+  # (or labels) for one batch, and y_pred represents the corresponding predictions from the
+  # model. You can ignore the sample_weight argument—we won’t use it here.
+  update_state = function(y_true, y_pred, sample_weight = NULL) {
+    # Update the state variables for each batch of data
+    num_samples <- tf$shape(y_pred)[1]  # Number of samples in the current batch
+    num_features <- tf$shape(y_pred)[2]  # Number of features in predictions
+
+    # To match our MNIST model, we expect categorical predictions and integer labels
+    y_true <- tf$one_hot(y_true, depth = num_features)  # Convert true labels to one-hot encoding
+
+    mse <- sum((y_true - y_pred) ^ 2)  # Calculate sum of squared errors
+    self$mse_sum$assign_add(mse)  # Add the current batch error to the accumulated error
+    self$total_samples$assign_add(num_samples)  # Increment the sample count
+  },
+  
+  result = function() {
+    # Compute the final RMSE metric
+    sqrt(self$mse_sum / tf$cast(self$total_samples, "float32"))  # Divide error sum by sample count and take square root
+  },
+  
+  reset_state = function() {
+    # Reset the state variables for a new computation cycle
+    self$mse_sum$assign(0)  # Reset accumulated squared error to zero
+    self$total_samples$assign(0L)  # Reset sample count to zero
+  }
+)
+
+# Create the model for MNIST classification
+model <- get_mnist_model()  # Build a model using the previously defined `get_mnist_model` function
+
+# Compile the model
+model %>%
+  compile(
+    optimizer = "rmsprop",  # Use RMSProp optimizer for adaptive learning rates
+    loss = "sparse_categorical_crossentropy",  # Loss function for multi-class classification
+    metrics = list(
+      "accuracy",  # Include accuracy as a built-in metric for classification performance
+      metric_root_mean_squared_error()  # Include the custom RMSE metric defined earlier
+    )
+  )
+
+# Train the model on the MNIST training dataset
+model %>%
+  fit(
+    train_images, train_labels,  # Training images and labels
+    epochs = 3,  # Train for 3 epochs
+    validation_data = list(val_images, val_labels)  # Use validation data to monitor performance during training
+  )
+
+# Evaluate the model on the test dataset
+test_metrics <- model %>%
+  evaluate(test_images, test_labels)  # Compute metrics on the test dataset
+test_metrics
+
+```
+
+## 7.3.2 Using callbacks
+
+Here’s the explanation and usage of the commented functions related to Keras callbacks:
+
+**1. `callback_model_checkpoint()`**
+
+```{r}
+callback_model_checkpoint(filepath = "model_checkpoint.keras", monitor = "val_loss", save_best_only = TRUE, save_weights_only = FALSE)
+```
+- **Purpose:** Saves the model during training at specified intervals, typically when performance improves.
+- **Key Arguments:**
+  - **`filepath`:** Where to save the model file(s). Can include formatting (e.g., `epoch-{epoch:02d}-val_loss-{val_loss:.2f}.h5`).
+  - **`monitor`:** Metric to monitor for saving (e.g., validation loss or accuracy).
+  - **`save_best_only`:** If `TRUE`, saves only the model with the best monitored value.
+  - **`save_weights_only`:** If `TRUE`, saves only the model's weights instead of the entire model.
+
+**2. `callback_early_stopping()`**
+
+```{r}
+callback_early_stopping(monitor = "val_loss", patience = 5, restore_best_weights = TRUE)
+```
+
+- **Purpose:** Stops training early if the monitored metric (e.g., validation loss) does not improve for a specified number of epochs.
+- **Key Arguments:**
+  - **`monitor`:** Metric to monitor for stopping.
+  - **`patience`:** Number of epochs to wait before stopping after no improvement.
+  - **`restore_best_weights`:** If `TRUE`, restores the model weights with the best monitored value before stopping.
+
+**3. `callback_learning_rate_scheduler()`**
+
+```{r eval=FALSE}
+callback_learning_rate_scheduler(schedule)
+```
+
+- **Purpose:** Dynamically adjusts the learning rate during training according to a user-defined schedule.
+- **Key Arguments:**
+  - **`schedule`:** A function that takes an epoch index as input and returns the new learning rate.
+
+Example:
+```{r}
+schedule <- function(epoch, lr) {
+  if (epoch > 10) {
+    return(lr * 0.1)  # Reduce learning rate after 10 epochs
+  }
+  return(lr)
+}
+callback_learning_rate_scheduler(schedule = schedule)
+```
+
+**4. `callback_reduce_lr_on_plateau()`**
+
+```{r}
+callback_reduce_lr_on_plateau(monitor = "val_loss", factor = 0.1, patience = 5)
+```
+- **Purpose:** Reduces the learning rate if the monitored metric (e.g., validation loss) stops improving.
+- **Key Arguments:**
+  - **`monitor`:** Metric to monitor for learning rate adjustment.
+  - **`factor`:** Factor by which to reduce the learning rate (e.g., `0.1` reduces it to 10% of the current value).
+  - **`patience`:** Number of epochs to wait before reducing the learning rate after no improvement.
+
+**5. `callback_csv_logger()`**
+
+```{r}
+callback_csv_logger("training_log.csv")
+```
+- **Purpose:** Logs training metrics (e.g., loss, accuracy) to a CSV file for later analysis.
+- **Key Argument:**
+  - **`filename`:** Path to save the log file (e.g., `training_log.csv`).
+
+
+**How These Callbacks Are Used**
+
+You can include these callbacks in the `fit` method of your model to enhance the training process:
+
+```{r}
+model %>%
+  fit(
+    train_images, train_labels,
+    epochs = 20,
+    validation_data = list(val_images, val_labels),
+    callbacks = list(
+      callback_model_checkpoint("best_model.keras", monitor = "val_loss"),
+      callback_early_stopping(monitor = "val_loss", patience = 3),
+      callback_learning_rate_scheduler(schedule = schedule),
+      callback_reduce_lr_on_plateau(monitor = "val_loss", factor = 0.1, patience = 5),
+      callback_csv_logger("training_log.csv")
+    )
+  )
+```
+
+**Explanation Summary**
+
+- These callbacks automate key aspects of training, such as saving models, adjusting learning rates, stopping early, or logging metrics.
+- They help improve training efficiency, model performance, and reproducibility.
+
+Here is the code with detailed comments explaining each part:
+
+```{r}
+# Define a callback for saving the model checkpoint
+callback_checkpoint <- callback_model_checkpoint(
+  filepath = "checkpoint_path.keras",  # File path to save the model
+  monitor = "val_loss",               # Monitor validation loss for saving checkpoints
+  save_best_only = TRUE               # Save the model only when validation loss improves
+)
+
+# Create a list of callbacks to pass to the `fit` function
+callbacks_list <- list(callback_checkpoint)
+
+# Initialize and compile the MNIST model
+model <- get_mnist_model()  # Function to create a simple MNIST model
+
+# Compile the model with appropriate loss function and metrics
+model %>% compile(
+  optimizer = "rmsprop",                # Optimizer for gradient descent
+  loss = "sparse_categorical_crossentropy", # Loss function for multi-class classification
+  metrics = "accuracy"                 # Metric to monitor during training
+)
+
+# Train the model using training data and validation data
+model %>% fit(
+  train_images, train_labels,          # Training images and labels
+  epochs = 10,                         # Train for 10 epochs
+  callbacks = callbacks_list,          # Include the callback for saving checkpoints
+  validation_data = list(val_images, val_labels) # Validation data for monitoring
+)
+
+# Load the best model saved during training from the specified checkpoint
+model <- load_model("checkpoint_path.keras")
+```
+
+Explanation of Key Components:
+
+1. **Callback Definition (`callback_model_checkpoint`):**
+   - Saves the model whenever the validation loss improves.
+   - The `save_best_only` argument ensures only the best-performing model is saved, avoiding unnecessary overwrites.
+
+2. **Callback List:**
+   - `callbacks_list` contains the list of callbacks to be applied during training. In this example, only the model checkpoint callback is used.
+
+3. **Model Compilation:**
+   - The `compile` method prepares the model for training, specifying the optimizer, loss function, and metric.
+   - **Loss Function:** `sparse_categorical_crossentropy` is used for multi-class classification where labels are integers.
+   - **Metric:** `accuracy` is used to measure model performance during training and validation.
+
+4. **Model Training (`fit`):**
+   - The `fit` method trains the model with the provided training and validation data.
+   - **Callbacks Argument:** Includes the checkpoint callback to save the best model during training.
+
+5. **Loading the Best Model (`load_model_tf`):**
+   - After training, the best model saved in `checkpoint_path.keras` can be loaded for evaluation or prediction. This ensures you work with the most accurate model from training.
+
+
+## 7.3.3 Writing your own callbacks
+
+Below is an explanation of each callback method. These methods are part of the `Callback` class in Keras, allowing custom behavior during different stages of training.
+
+Callback Methods and Their Roles:
+
+1. **`on_epoch_begin(epoch, logs)`**
+   - **Triggered:** At the start of each training epoch.
+   - **Parameters:**
+     - `epoch`: Integer, the index of the current epoch (starting at 0).
+     - `logs`: Dictionary, contains metrics from the previous epoch or empty at the start.
+   - **Purpose:** Can be used to log or modify settings before an epoch begins (e.g., dynamically change learning rates or reset certain metrics).
+```{r}
+# Example: Log epoch start
+on_epoch_begin <- function(epoch, logs = NULL) {
+ cat("Starting epoch:", epoch, "\n")
+}
+```
+
+2. **`on_epoch_end(epoch, logs)`**
+   - **Triggered:** At the end of each training epoch.
+   - **Parameters:**
+     - `epoch`: Integer, the index of the current epoch.
+     - `logs`: Dictionary, contains metrics such as loss and accuracy at the end of the epoch.
+   - **Purpose:** Can be used for actions like saving intermediate results or custom metrics analysis.
+```{r}
+# Example: Log epoch end metrics
+on_epoch_end <- function(epoch, logs = NULL) {
+ cat("Finished epoch:", epoch, "with metrics:", logs, "\n")
+}
+```
+
+3. **`on_batch_begin(batch, logs)`**
+   - **Triggered:** At the start of each training batch.
+   - **Parameters:**
+     - `batch`: Integer, the index of the current batch.
+     - `logs`: Dictionary, contains details like batch size and input shape.
+   - **Purpose:** Useful for monitoring or modifying the batch processing behavior.
+```{r}
+# Example: Track batch start
+on_batch_begin <- function(batch, logs = NULL) {
+ cat("Starting batch:", batch, "\n")
+}
+```
+
+4. **`on_batch_end(batch, logs)`**
+   - **Triggered:** At the end of each training batch.
+   - **Parameters:**
+     - `batch`: Integer, the index of the current batch.
+     - `logs`: Dictionary, contains metrics such as batch loss and accuracy.
+   - **Purpose:** Can be used for logging metrics or updating visualizations like training progress bars.
+```{r}
+# Example: Log batch end results
+on_batch_end <- function(batch, logs = NULL) {
+ cat("Finished batch:", batch, "with metrics:", logs, "\n")
+}
+```
+
+5. **`on_train_begin(logs)`**
+   - **Triggered:** At the start of the training process.
+   - **Parameters:**
+     - `logs`: Dictionary, typically empty but can be used to initialize custom settings or logs.
+   - **Purpose:** Commonly used for setup tasks before training begins.
+```{r}
+# Example: Initialize training log
+on_train_begin <- function(logs = NULL) {
+ cat("Training started.\n")
+}
+```
+
+6. **`on_train_end(logs)`**
+   - **Triggered:** At the end of the training process.
+   - **Parameters:**
+     - `logs`: Dictionary, contains overall metrics from the training process.
+   - **Purpose:** Can be used for finalization tasks like closing resources, saving logs, or summarizing results.
+```{r}
+# Example: Summarize training end
+on_train_end <- function(logs = NULL) {
+ cat("Training completed. Final metrics:", logs, "\n")
+}
+```
+
+Summary:
+
+These callback methods provide hooks for inserting custom behavior at different stages of training. By overriding these methods in a custom callback, you can control, monitor, or augment the training process to fit specific requirements.
+
+Here is the annotated code for the custom callback, `callback_plot_per_batch_loss_history`, which tracks and plots the training loss for each batch and generates a PDF report for each epoch's losses.
+
+```{r}
+# Define a custom callback class to track and plot per-batch training loss
+callback_plot_per_batch_loss_history <- new_callback_class(
+  classname = "PlotPerBatchLossHistory",  # Name of the callback class
+
+  # Initialize method to set up the output file path for plots
+  initialize = function(file = "training_loss.pdf") {
+    private$outfile <- file  # File where all epoch loss plots will be combined
+  },
+
+  # Called at the start of training to initialize tracking variables
+  on_train_begin = function(logs = NULL) {
+    private$plots_dir <- tempfile()  # Create a temporary directory for storing plots
+    dir.create(private$plots_dir)   # Ensure the directory exists
+    private$per_batch_losses <-
+      fastmap::faststack(init = self$params$steps)  # Create a stack to store per-batch losses
+  },
+
+  # Called at the start of each epoch to reset batch loss tracking
+  on_epoch_begin = function(epoch, logs = NULL) {
+    private$per_batch_losses$reset()  # Clear the stack for storing batch losses
+  },
+
+  # Called at the end of each batch to record the loss for the batch
+  on_batch_end = function(batch, logs = NULL) {
+    private$per_batch_losses$push(logs$loss)  # Add the batch loss to the stack
+  },
+
+  # Called at the end of each epoch to generate and save a plot of batch losses
+  on_epoch_end = function(epoch, logs = NULL) {
+    losses <- as.numeric(private$per_batch_losses$as_list())  # Convert stored losses to numeric
+
+    # Generate a unique filename for the epoch's loss plot
+    filename <- sprintf("epoch_%04i.pdf", epoch)
+    filepath <- file.path(private$plots_dir, filename)
+
+    # Save the loss plot to a PDF file
+    pdf(filepath, width = 7, height = 5)  # Open a new PDF device
+    on.exit(dev.off())  # Ensure the PDF device is closed properly
+
+    # Plot batch losses
+    plot(
+      losses, type = "o",  # Line plot with points
+      ylim = c(0, max(losses)),  # Set Y-axis limits based on losses
+      panel.first = grid(),  # Add grid lines
+      main = sprintf("Training Loss for Each Batch\n(Epoch %i)", epoch),  # Title
+      xlab = "Batch", ylab = "Loss"  # Axis labels
+    )
+  },
+
+  # Called at the end of training to finalize and save the combined report
+  on_train_end = function(logs) {
+    private$per_batch_losses <- NULL  # Clear the batch losses stack
+    plots <- sort(list.files(private$plots_dir, full.names = TRUE))  # List all saved plots
+    qpdf::pdf_combine(plots, private$outfile)  # Combine all epoch plots into a single PDF
+    unlink(private$plots_dir, recursive = TRUE)  # Remove the temporary directory
+  }
+)
+```
+
+Explanation of Functionality:
+
+1. **Initialization (`initialize`)**
+   - Takes a `file` parameter specifying the name of the combined PDF output.
+   - Sets up the private variable `outfile` to store the final PDF path.
+
+2. **On Training Begin (`on_train_begin`)**
+   - Creates a temporary directory to store individual epoch plots.
+   - Initializes a stack to hold batch losses during each epoch.
+
+3. **On Epoch Begin (`on_epoch_begin`)**
+   - Resets the batch loss stack to start tracking losses for the new epoch.
+
+4. **On Batch End (`on_batch_end`)**
+   - Records the loss of the current batch by pushing it onto the stack.
+
+5. **On Epoch End (`on_epoch_end`)**
+   - Retrieves the losses from the stack and converts them into a numeric list.
+   - Saves a plot of the losses to a PDF file, named uniquely for the epoch.
+
+6. **On Training End (`on_train_end`)**
+   - Combines all the individual epoch plots into a single PDF using `qpdf::pdf_combine`.
+   - Cleans up by deleting the temporary directory and clearing the loss stack.
+
+Use Case:
+
+This callback provides detailed insights into the loss trends at a batch level for every epoch. The generated PDF serves as a comprehensive visual report of training loss dynamics, aiding in debugging and performance analysis.
+
+Here’s the annotated version of the code:
+
+```{r}
+# Load the MNIST model structure
+model <- get_mnist_model()
+
+# Compile the model with optimizer, loss function, and metrics
+model %>% compile(
+  optimizer = "rmsprop",                    # RMSProp optimizer for adaptive learning rate
+  loss = "sparse_categorical_crossentropy", # Loss function for multi-class classification
+  metrics = "accuracy"                      # Track accuracy during training
+)
+
+# Train the model with custom callbacks and validation data
+model %>% fit(
+  train_images,                             # Training data (images)
+  train_labels,                             # Training data (labels)
+  epochs = 10,                              # Number of epochs for training
+  callbacks = list(                         # List of callbacks for monitoring and visualization
+    callback_plot_per_batch_loss_history()  # Custom callback for plotting batch losses
+  ),
+  validation_data = list(                   # Validation data for monitoring overfitting
+    val_images,                             # Validation images
+    val_labels                              # Validation labels
+  )
+)
+```
+
+Explanation of Functionality:
+
+1. **Loading and Compiling the Model**
+   - `get_mnist_model()` initializes a neural network model for the MNIST dataset.
+   - The `compile()` function specifies:
+     - **Optimizer**: RMSProp adjusts learning rates dynamically for each parameter.
+     - **Loss Function**: `sparse_categorical_crossentropy` is suitable for multi-class classification tasks with integer-encoded labels.
+     - **Metrics**: Accuracy is calculated to track the performance of the model during training and validation.
+
+2. **Training the Model with Callbacks**
+   - `fit()` begins the training process with:
+     - **Training Data**:
+       - `train_images`: Flattened MNIST images (shape `[num_samples, 28*28]`).
+       - `train_labels`: Integer-encoded class labels (e.g., 0–9).
+     - **Epochs**: The model trains for 10 iterations over the entire training dataset.
+     - **Callbacks**: A list of functions to monitor and customize the training process:
+       - `callback_plot_per_batch_loss_history()`: This custom callback tracks and plots batch-level loss for every epoch and generates a detailed PDF report.
+     - **Validation Data**:
+       - Used to evaluate the model's performance on unseen data during training, helping monitor overfitting.
+
+3. **Output**
+   - After training, the callback creates a series of PDF plots showing the batch-wise loss progression for each epoch, helping in the visualization and debugging of the training process.
+
+This code integrates the custom callback into the standard Keras training loop, providing both functional and diagnostic utility.
+
+## 7.3.4 Monitoring and visualization with TensorBoard
+
+https://www.tensorflow.org/tensorboard
+
+Here’s the annotated version of the code for the "Monitoring and Visualization with TensorBoard" section:
+
+```{r}
+# Initialize the MNIST model
+model <- get_mnist_model()
+
+# Compile the model with optimizer, loss function, and metrics
+model %>% compile(
+  optimizer = "rmsprop",                    # RMSProp optimizer for adaptive learning rates
+  loss = "sparse_categorical_crossentropy", # Loss function for multi-class classification
+  metrics = "accuracy"                      # Accuracy as the evaluation metric
+)
+
+# Train the model while enabling TensorBoard for monitoring
+model %>% fit(
+  train_images,                             # Training images
+  train_labels,                             # Training labels
+  epochs = 10,                              # Train for 10 epochs
+  validation_data = list(                   # Validation data for monitoring generalization
+    val_images,                             # Validation images
+    val_labels                              # Validation labels
+  ),
+  callbacks = callback_tensorboard(         # TensorBoard callback for logging training data
+    log_dir = "logs/"                       # Directory where TensorBoard logs will be stored
+  )
+)
+
+# Launch TensorBoard from the R console to visualize logs (disable evaluation in code block)
+## ---- eval = FALSE -------------------------------------------------------
+tensorboard(log_dir = "logs/")              # Launch TensorBoard to visualize training metrics
+```
+
+Explanation of Each Component:
+
+1. **Model Initialization and Compilation**
+   - `get_mnist_model()`: Creates a neural network for classifying MNIST digits.
+   - `compile()`:
+     - **Optimizer**: RMSProp adjusts learning rates for better convergence.
+     - **Loss Function**: `sparse_categorical_crossentropy` calculates loss for integer-encoded labels.
+     - **Metrics**: Accuracy is used as a performance measure.
+
+2. **Training with TensorBoard Callback**
+   - `fit()` trains the model with:
+     - **Training Data**: Input features (`train_images`) and corresponding labels (`train_labels`).
+     - **Epochs**: The model iterates through the dataset 10 times.
+     - **Validation Data**: Monitors performance on unseen data (`val_images` and `val_labels`) during training.
+     - **Callbacks**: The `callback_tensorboard()` writes logs during training to the specified directory (`logs/`).
+
+3. **TensorBoard Callback**
+   - This callback logs:
+     - Training and validation loss.
+     - Training and validation accuracy.
+     - Any custom metrics if defined.
+   - The logs are stored in the `logs/` directory, which can be accessed by TensorBoard.
+
+4. **Launching TensorBoard**
+   - `tensorboard(log_dir = "logs/")`: Launches TensorBoard to visualize:
+     - Loss and accuracy trends over epochs.
+     - Histograms of weight distributions.
+     - Other custom metrics if defined.
+   - This command must be run in the R console, and the TensorBoard dashboard will open in a browser.
+
+Key Benefits:
+
+- Real-time visualization of training and validation metrics helps in diagnosing model performance.
+- TensorBoard provides insights into overfitting, learning rates, and more through detailed graphs and summaries.
+

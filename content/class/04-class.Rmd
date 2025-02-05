@@ -19,7 +19,27 @@ editor_options:
   chunk_output_type: console
 ---
 
+# In-class exercises
 
 Classifying movie reviews, sentiment analysis: a binary classification example, [RMarkdown](../../slides/code/04_Classifying_movie_review_code.Rmd)
 
 Classifying newswires: a multi-class classification example, with questions, [RMarkdown](../../slides/code/04_Classifying_newswires_code.Rmd)
+
+# Working with Keras: A Deep Dive
+
+<a href="../../slides/ch06_DL_Workflow_slides.html#1" target="_blank">Lecture slides in HTML format</a>
+
+```{r echo=FALSE}
+knitr::include_url('../../slides/ch06_DL_Workflow_slides.html#1')
+```
+
+<a href="../../slides/ch07_Keras_deep_dive_slides.html#1" target="_blank">Lecture slides in HTML format</a>
+
+```{r echo=FALSE}
+knitr::include_url('../../slides/ch07_Keras_deep_dive_slides.html#1')
+```
+
+Different ways to build Keras models, [RMarkdown](../../slides/code/ch07_2_Keras_models_code.Rmd)
+
+<!-- Training and evaluation loops and metrics, [RMarkdown](../../slides/code/ch07_3_loops_metrics_code.Rmd) -->
+
