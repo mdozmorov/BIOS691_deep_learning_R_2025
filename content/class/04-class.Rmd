@@ -1,5 +1,5 @@
 ---
-title: "Week 4: Best practices of deep learning"
+title: "Week 4: Deep dive into Keras"
 # linktitle: "1. Introduction to RStudio and Images"
 date: "2025-02-03"
 class_date: "2025-02-03"
