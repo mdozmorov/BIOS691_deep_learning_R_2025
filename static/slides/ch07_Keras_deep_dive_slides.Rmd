@@ -1,0 +1,101 @@
+---
+title: "Working with Keras"
+subtitle: "A deep dive"
+author: "Mikhail Dozmorov"
+institute: "Virginia Commonwealth University"
+date: 2025-02-05 # "`r Sys.Date()`"
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    css: ["xaringan-themer.css", "xaringan-my.css"]
+    nature:
+      ratio: '16:9'
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+```{r xaringan-themer, include = FALSE}
+library(xaringanthemer)
+mono_light(
+  base_color = "midnightblue",
+  header_font_google = google_font("Josefin Sans"),
+  text_font_google   = google_font("Montserrat", "500", "500i"),
+  code_font_google   = google_font("Droid Mono"),
+  link_color = "#8B1A1A", #firebrick4, "deepskyblue1"
+  text_font_size = "28px"
+)
+```
+
+<!-- .center[<img src="img/.png" height=450>] -->
+
+<!-- .small[  ] -->
+
+## Building Keras Models and Customizing Training
+
+*   The design of the Keras API is based on the principle of **progressive disclosure of complexity**. This means that it's easy to get started with Keras, but it also offers enough flexibility to handle more advanced use cases.
+
+*   Keras offers a **spectrum of workflows**, ranging from very simple to very flexible. This flexibility is evident in the different ways to build and train Keras models, and it caters to different user needs.
+
+*   All Keras workflows are built on shared APIs, ensuring that components from any workflow can be used in other workflows.
+
+---
+##   The three main APIs for building Keras models
+
+*   The **Sequential model**, defined with `keras_model_sequential()`, is the easiest to use. It's essentially a linear stack of layers, making it suitable for simpler models. 
+
+*   The **Functional API**, defined with `keras_model()`, is a more flexible API that can handle models with non-linear topologies, multiple inputs, and multiple outputs. This makes it the most commonly used API. 
+
+*   **Model subclassing**, defined with `new_model_class()`, offers the lowest level of control, where you can define everything about your model from scratch. While it offers flexibility, it also requires a deeper understanding of deep learning concepts and might involve more debugging. It's usually preferred by researchers who need to implement novel architectures. 
+
+---
+##   The three main APIs for building Keras models
+
+- `keras_model_sequential()`
+
+- `keras_model()`
+
+- `new_model_class()`
+
+*   The choice of which API to use depends on the complexity of the model and the level of control required. The Functional API offers a good balance between ease of use and flexibility. It also provides access to layer connectivity, which is helpful for visualization and feature extraction.
+
+---
+## Customizing training: Custom Metrics
+
+*   Beyond the default `fit()`, `evaluate()`, and `predict()` workflow, Keras offers several ways to customize training:
+
+*   **Custom metrics:** Custom metrics offer a way to go beyond the standard, built-in metrics when evaluating a model's performance during training and evaluation. 
+
+* Custom metrics in Keras are implemented by subclassing the `Metric` class, using the `new_metric_class()` function
+
+---
+### Custom Metrics
+
+*   Keras provides numerous built-in metrics for evaluating model performance, but you can also define custom metrics tailored to your specific needs. This allows you to measure aspects of model performance that are not covered by the built-in options. 
+
+* You can create your own metrics tailored to the specific problem you are working on. Custom metrics can be defined by subclassing the `Metric` class using the `new_metric_class()` function.  
+
+* These metrics are defined with methods that specify how to initialize state variables, update those variables during training or evaluation, calculate the metric's final result, and reset the state.
+
+---
+## Customizing training: Callbacks
+
+*   **Callbacks:**  Callbacks offer a way to interact with the training process at various points during training, allowing you to perform specific actions based on the model's current state. This might involve tasks like saving the model at checkpoints, interrupting training when performance plateaus, adjusting learning rates dynamically, or logging metrics to track progress. 
+
+* You can use built-in callbacks provided in Keras or create your own by subclassing the `Callback` class using the `new_callback_class()` function.
+
+---
+## Customizing training: Tensorboard
+
+*   **TensorBoard:** TensorBoard is a visualization tool that helps you monitor various aspects of model training, providing visual insights into performance metrics, model architecture, the distribution of activations and gradients, and embeddings. 
+
+* You can integrate TensorBoard with your Keras training process by using the `callback_tensorboard()` function to log relevant data during training.
+
+---
+## Customizing training: Custom Training Loops
+
+*   **Custom training loops:** When the standard `fit()` method's capabilities are not sufficient for your specific training requirements, you can create a fully customized training loop. This involves defining the forward pass of the model to calculate predictions, the backward pass to compute gradients, and the logic for updating model weights based on these gradients. 
+
+* While custom training loops offer maximum flexibility, they require more code and a deeper understanding of the training process. 
+
+* You can optimize the performance of custom training loops by compiling them into computation graphs using `tf_function()`. There is a middle ground between the standard `fit()` method and a custom training loop from scratch: you can override the `train_step()` method of the `Model` class.

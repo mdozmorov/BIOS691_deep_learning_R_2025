@@ -1,0 +1,151 @@
+---
+title: "The Universal Workflow of Machine Learning"
+# subtitle: "Brief History of Machine Learning"
+author: "Mikhail Dozmorov"
+institute: "Virginia Commonwealth University"
+date: 2025-02-05 # "`r Sys.Date()`"
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    css: ["xaringan-themer.css", "xaringan-my.css"]
+    nature:
+      ratio: '16:9'
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+```{r xaringan-themer, include = FALSE}
+library(xaringanthemer)
+mono_light(
+  base_color = "midnightblue",
+  header_font_google = google_font("Josefin Sans"),
+  text_font_google   = google_font("Montserrat", "500", "500i"),
+  code_font_google   = google_font("Droid Mono"),
+  link_color = "#8B1A1A", #firebrick4, "deepskyblue1"
+  text_font_size = "28px"
+)
+```
+
+<!-- .center[<img src="img/.png" height=450>] -->
+
+<!-- .small[  ] -->
+
+
+## Starting with Deep Learning
+
+* **Real-World Machine Learning Projects** originate from a problem or a business need. E.g., personalized photo search engines, spam detection, music recommendation systems, credit card fraud detection, and more.
+
+## Defining the Task: Understanding the Context
+
+* **Engaging with Stakeholders.** Thoroughly understand the project's context and the expectations. This involves:
+    * **Understanding Business Logic:**  Determining why the customer needs a solution, how the model will be used, its value proposition, and how it integrates into existing business processes.
+    * **Data Exploration:** Identifying available data sources and potential data collection strategies.
+    * **Task Mapping:** Determining the appropriate machine learning task to address the business problem – classification, regression, ranking, etc..
+
+---
+## Framing the Problem
+
+* **Input and Output Data:**  Clearly define the input data (features) and the desired output (target variable). Emphasize that data availability often dictates what can be predicted. Supervised learning requires labeled data for both inputs and targets. 
+
+* **Machine Learning Task Type:**  Accurately categorize the problem. Is it binary classification, multiclass classification, regression, ranking, or something else? Examples from the sources can be used to illustrate this (spam detection, music recommendation, etc.).
+
+---
+## Framing the Problem
+
+* **Existing Solutions:**  Investigate any existing solutions currently used by the customer.  These might be rule-based systems or manual processes. Understanding them helps in setting baselines and understanding potential improvements.
+
+* **Constraints:**  Identify any limitations in the project. For example, data privacy concerns might necessitate on-device processing, or real-time applications might demand strict latency limits.
+
+* **Formulating Hypotheses:**  Clearly state the assumptions being made. Can the target be predicted from the inputs? Is the available data sufficient and informative enough?  These hypotheses are validated or refuted during model development.
+
+---
+## Collecting a Dataset
+
+* Data is the foundation of machine learning. The quality and quantity of data heavily influence a model's ability to generalize.
+
+* **Data Collection Strategies:** Manual Annotation (e.g., tagging images or labeling text) and/or Automatic Retrieval (e.g., using user "likes" for music recommendation).
+
+* **Data Representativeness:** The training data should closely mirror the real-world data the model will encounter (avoid sampling bias). The nature of data can change over time (concept drift), necessitating model retraining and updates. 
+
+---
+## Understanding Your Data
+
+* **Exploratory Data Analysis:**  Visualizing data can reveal valuable insights and potential issues.
+    * **Data Imbalance:**  Identify and handle class imbalances in classification problems.
+    * **Missing Values:**  Use techniques for dealing with missing values, such as creating a new category, using mean/median imputation, or even training a model to predict missing values.
+    * **Target Leaking:**  Warn against the inclusion of features that leak information about the target variable, as this leads to artificially inflated performance.
+
+---
+## Choosing a Measure of Success
+
+* **Metric Selection:** Factors to consider include the nature of the problem (balanced vs. imbalanced classification), the type of task (classification or regression), and the alignment with business goals. The metric for success will guide all of the technical choices you make throughout the project.
+
+---
+## Choosing a Measure of Success
+
+- **Accuracy** (the fraction of predictions a model gets right) is a common metric for balanced classification where every class is equally likely.
+
+- **ROC AUC** (the area under the receiver operating characteristic curve) is another common metric for balanced classification problems.
+
+- **Precision** (What proportion of positive identifications was actually correct?) and **Recall** (What proportion of actual positives was identified correctly?) used for Class-imbalanced problems, Ranking problems, Multilabel classification.
+
+- **Categorical crossentropy** and **Binary crossenthropy** measure the distance between two probability distributions.
+
+- **Mean squared error (MSE)** and **Mean absolute error (MAE) ** are common metrics for regression problems.
+
+---
+## Developing a Model
+
+- Research existing solutions, feature engineering techniques, and architectures used for similar problems.
+
+- Prepare the Data, convert various data types (text, images, sound) into numerical tensors that neural networks can process.
+    * **Normalization:** normalize features to avoid issues with gradient updates and to aid in model convergence.
+    * **Handling Missing Values:** new category, replace with average, impute/predict.
+
+---
+## Choosing an Evaluation Protocol
+
+* **Reliable Performance Estimation:**  Use unseen data (validation dataset) to accurately estimate model's performance.
+    * **Holdout Validation Set:**  When sufficient data is available, keep a part of it for validation.
+    * **K-fold Cross-Validation:**  Describe its benefits when data is limited and how it provides a more robust performance estimate by averaging across multiple folds. Refer back to the previous discussion and example on K-fold cross-validation.
+
+---
+## Compare with a Baseline
+
+- A baseline model is a simple model that is used to measure the performance of a more complex model. The baseline model should be easy to implement and should not require a lot of tuning.
+  - You should select a simple baseline to beat during the model development process.
+  - Your initial goal should be to achieve statistical power, which means developing a small model that is capable of beating a simple baseline.
+
+---
+## Compare with a Baseline
+
+- If you cannot beat a simple baseline after trying multiple reasonable architectures, the answer to the question you're asking may not be present in the input data.
+  * **Feature Engineering:**  Selecting informative features and creating new ones based on domain knowledge.
+  * **Architecture Selection:**  Choosing the appropriate model architecture (densely connected networks, CNNs, RNNs, etc.) for the task.
+  * **Training Configuration:**  Selecting an appropriate loss function, batch size, and learning rate. 
+
+---
+## Scale Up: Overfit, Regularize and Tune Your Model
+
+* Push the model to overfit in order to determine its capacity and find the optimal balance between underfitting and overfitting.
+
+* Maximize Generalization, the model's performance on unseen data.
+  * **Regularization Techniques:** Dropout (randomly dropping units during training) and/or Weight Regularization (L1 and L2 regularization).
+  * **Hyperparameter Tuning:** Find the optimal model configuration (number of units, learning rate, etc.). KerasTuner can automate this.
+
+* Avoid Information Leakage from validation data, as it can lead to overfitting dto the validation process itself and make evaluation less reliable.
+
+---
+## Deploying the Model: From Training to Production
+
+- Explain Your Work to Stakeholders and Set Expectations
+  * Set realistic expectations about the model's capabilities and limitations.
+  * Explain that AI systems don't possess human-like understanding or common sense.
+  * Use metrics relevant to business goals (false positive rates, false negative rates) instead of abstract accuracy numbers.
+
+* Decide on model deployment method: REST API, On-device or browser deployment
+
+* Monitor the model to track performance, behavior, and business impact.
+
+* Maintain Your Model's performance and adjust given new data and/or concept drift.
