@@ -1,0 +1,648 @@
+---
+title: "Working with Keras: A Deep Dive"
+subtitle: "Writing your own training and evaluation loops"
+output: 
+  html_notebook: 
+    theme: cerulean
+    highlight: textmate
+editor_options: 
+  chunk_output_type: console
+---
+
+# 7.4 Writing your own training and evaluation loops
+
+## 7.4.1 Training vs. inference
+
+- **Trainable weights** — These are meant to be updated via backpropagation to mini-
+mize the loss of the model, such as the kernel and bias of a Dense layer.
+
+- **Nontrainable weights** — These are meant to be updated during the forward pass by
+the layers that own them. For instance, if you wanted a custom layer to keep a
+counter of how many batches it has processed so far, that information would be
+stored in a nontrainable weight, and at each batch, your layer would increment
+the counter by one.
+
+```{r}
+# Load the TensorFlow library
+library(tensorflow)
+
+# Define a single training step function
+train_step <- function(inputs, targets) {
+  # Start recording the computation graph for automatic differentiation
+  with(tf$GradientTape() %as% tape, {
+    # Compute model predictions in training mode (training = TRUE)
+    predictions <- model(inputs, training = TRUE)
+    
+    # Calculate the loss using the loss function
+    loss <- loss_fn(targets, predictions)
+  })
+
+  # Compute the gradients of the loss with respect to trainable weights
+  gradients <- tape$gradients(loss, model$trainable_weights)
+  
+  # Apply the gradients to update the model's weights
+  optimizer$apply_gradients(zip_lists(gradients, model$trainable_weights))
+}
+```
+
+Explanation of Each Component:
+
+1. **TensorFlow Library**  
+   - `tensorflow` is loaded to use its deep learning functionalities, including gradient calculation, model training, and optimization.
+
+2. **Purpose of `train_step` Function**  
+   - Encapsulates the operations required for a single training step:
+     - Forward pass: Compute predictions.
+     - Loss computation: Measure how far predictions are from targets.
+     - Backward pass: Calculate gradients and update weights.
+
+3. **Gradient Tape Context**  
+   - `with(tf$GradientTape() %as% tape, {...})`: Records all operations on tensors so that gradients can be calculated automatically with respect to those operations.
+
+4. **Predictions**  
+   - `model(inputs, training = TRUE)`: Passes inputs through the model in training mode. This ensures that layers like dropout and batch normalization behave appropriately (e.g., applying dropout during training but not inference).
+
+5. **Loss Computation**  
+   - `loss_fn(targets, predictions)`: Compares the model's predictions to the true targets using a predefined loss function.
+
+6. **Gradient Calculation**  
+   - `tape$gradients(loss, model$trainable_weights)`: Computes the gradients of the loss with respect to the model’s trainable parameters (e.g., weights, biases).
+
+7. **Gradient Application**  
+   - `optimizer$apply_gradients(zip_lists(gradients, model$trainable_weights))`: Updates the model’s parameters using the gradients:
+     - **`zip_lists`**: Combines gradients and the corresponding parameters into pairs.
+     - **`apply_gradients`**: Uses the optimizer to adjust the parameters in the direction that minimizes the loss.
+
+Key Takeaways:
+
+- **Training Mode**: Ensures that layers like dropout behave as intended during training.
+- **Custom Training Loop**: This function forms the building block for custom training loops, offering flexibility compared to `fit()`.
+- **Separation of Concerns**: This step focuses solely on parameter updates, distinguishing it from other training stages like validation and logging.
+
+## 7.4.2 Low-level usage of metrics
+
+```{r}
+# Create a sparse categorical accuracy metric
+# This metric is typically used for multi-class classification problems
+# It checks how many predictions match the true class labels exactly
+metric <- metric_sparse_categorical_accuracy()
+
+# Define ground truth targets (true class labels)
+# In this example, we have three samples with labels 0, 1, and 2
+targets <- c(0, 1, 2)
+
+# Define model predictions 
+# Each row represents predictions for a single sample
+# Predictions are probability distributions across classes
+# Note how each row represents a one-hot encoded prediction matching the target
+predictions <- rbind(c(1, 0, 0),  # Predicts class 0
+                     c(0, 1, 0),  # Predicts class 1
+                     c(0, 0, 1))  # Predicts class 2
+
+# Update the metric's internal state with targets and predictions
+# This calculates how many predictions are exactly correct
+metric$update_state(targets, predictions)
+
+# Retrieve the current accuracy result
+current_result <- metric$result()
+
+# Print the accuracy as a percentage
+sprintf("result: %.2f",  as.array(current_result)) # as.array(converts Tensor to R value)
+```
+
+Key points about the first code block:
+- `metric_sparse_categorical_accuracy()` creates a metric for multi-class classification
+- The predictions are perfect in this example (100% accuracy)
+- `update_state()` compares targets to predictions
+- `result()` returns the overall accuracy
+
+```{r}
+# Create a mean tracking metric
+# This demonstrates how to track and calculate the mean of a series of values
+values <- c(0, 1, 2, 3, 4)
+
+# Initialize a mean tracker metric
+mean_tracker <- metric_mean()
+
+# Update the metric's state with each value
+# This accumulates values to calculate their mean
+for (value in values)
+    mean_tracker$update_state(value)
+
+# Print the calculated mean of all values
+sprintf("Mean of values: %.2f", as.array(mean_tracker$result()))
+```
+
+Key points about the second code block:
+- `metric_mean()` creates a metric for tracking the average of values
+- It demonstrates how to incrementally update a metric
+- The `update_state()` method adds each value to the metric
+- `result()` returns the final calculated mean
+
+These examples showcase two common metric usage patterns in deep learning:
+1. Accuracy tracking for classification tasks
+2. Running mean calculation for tracking metrics during training
+
+The low-level metric API allows you to:
+- Manually update metric states
+- Retrieve current metric values
+- Incrementally track performance metrics
+- Customize metric calculations for specific use cases
+
+## 7.4.3 A complete training and evaluation loop
+
+```{r}
+# Load a pre-defined MNIST model 
+# This is typically a neural network designed for digit recognition
+model <- get_mnist_model()
+
+# Define the loss function for multi-class classification
+# Sparse categorical cross-entropy is common for integer-encoded class labels
+loss_fn <- loss_sparse_categorical_crossentropy()
+
+# Choose an optimization algorithm (RMSprop)
+# RMSprop adapts the learning rate for each parameter
+optimizer <- optimizer_rmsprop()
+
+# List of metrics to track during training
+# Here, we're tracking sparse categorical accuracy
+metrics <- list(metric_sparse_categorical_accuracy())
+
+# Create a metric to track the average loss across batches
+loss_tracking_metric <- metric_mean()
+
+# Define a custom training step function
+# This encapsulates the core of the training process
+train_step <- function(inputs, targets) {
+  # Use gradient tape to record operations for automatic differentiation
+  with(tf$GradientTape() %as% tape, {
+    # Forward pass: get model predictions
+    # training = TRUE enables dropout and other training-specific layers
+    predictions <- model(inputs, training = TRUE)
+    
+    # Calculate the loss between true targets and model predictions
+    loss <- loss_fn(targets, predictions)
+  })
+  
+  # Compute gradients of the loss with respect to trainable weights
+  gradients <- tape$gradient(loss, model$trainable_weights)
+  
+  # Apply gradients to update model parameters
+  optimizer$apply_gradients(zip_lists(gradients, model$trainable_weights))
+  
+  # Prepare a list to store logging information
+  logs <- list()
+  
+  # Update and store results for each metric
+  for (metric in metrics) {
+    metric$update_state(targets, predictions)
+    logs[[metric$name]] <- metric$result()
+  }
+  
+  # Track the loss
+  loss_tracking_metric$update_state(loss)
+  logs$loss <- loss_tracking_metric$result()
+  
+  # Return logging information
+  logs
+}
+
+# Function to reset all metrics at the start of each epoch
+reset_metrics <- function() {
+  # Reset each tracking metric to its initial state
+  for (metric in metrics)
+    metric$reset_state()
+  loss_tracking_metric$reset_state()
+}
+
+# Prepare the training dataset
+# Convert training data to a TensorFlow dataset
+# Batch the data into groups of 32 samples
+library(tfdatasets)
+training_dataset <-
+  list(train_images, train_labels) %>%
+  tensor_slices_dataset() %>%
+  dataset_batch(32)
+
+# Training loop
+epochs <- 3
+# Create an iterator for the dataset
+training_dataset_iterator <- as_iterator(training_dataset)
+
+# Iterate through epochs
+for (epoch in seq(epochs)) {
+  # Reset metrics at the start of each epoch
+  reset_metrics()
+  
+  # Get the next batch of data
+  c(inputs_batch, targets_batch) %<-% iter_next(training_dataset_iterator)
+  
+  # Perform a training step with the current batch
+  logs <- train_step(inputs_batch, targets_batch)
+  
+  # Print training results for the epoch
+  writeLines(c(
+    sprintf("Results at the end of epoch %s", epoch),
+    sprintf("...%s: %.4f", names(logs), sapply(logs, as.numeric))
+  ))
+}
+```
+
+Key Conceptual Highlights:
+1. **Model Setup**:
+   - Defines a model, loss function, optimizer, and metrics
+   - Prepares for tracking training progress
+
+2. **Training Step Function**:
+   - Uses TensorFlow's gradient tape for automatic differentiation
+   - Performs forward pass
+   - Calculates loss
+   - Computes and applies gradients
+   - Updates tracking metrics
+
+3. **Training Loop**:
+   - Iterates through a specified number of epochs
+   - Resets metrics at the start of each epoch
+   - Processes data in batches
+   - Logs and prints training results
+
+Important TensorFlow/R Deep Learning Concepts Demonstrated:
+- Automatic differentiation
+- Gradient-based optimization
+- Metric tracking
+- Batch processing
+- Epoch-based training
+
+This code provides a low-level, flexible approach to training neural networks, giving you fine-grained control over the training process.
+
+Note: The actual implementation assumes pre-existing `train_images`, `train_labels`, and `get_mnist_model()` functions, which would be defined elsewhere in the full script.
+
+The validation code:
+
+```{r}
+# Define a test/validation step function
+# This function is similar to train_step, but without gradient updates
+test_step <- function(inputs, targets) {
+  # Forward pass prediction
+  # training = FALSE disables dropout and other training-specific layers
+  predictions <- model(inputs, training = FALSE)
+  
+  # Calculate loss for the validation data
+  loss <- loss_fn(targets, predictions)
+
+  # Prepare a list to store logging information
+  logs <- list()
+  
+  # Update and store results for each metric
+  # Prefix validation metrics with "val_" to distinguish from training metrics
+  for (metric in metrics) {
+    metric$update_state(targets, predictions)
+    logs[[paste0("val_", metric$name)]] <- metric$result()
+  }
+
+  # Track the validation loss
+  loss_tracking_metric$update_state(loss)
+  logs[["val_loss"]] <- loss_tracking_metric$result()
+  
+  # Return logging information
+  logs
+}
+
+# Prepare the validation dataset
+# Similar to training dataset preparation
+val_dataset <- list(val_images, val_labels) %>%
+  tensor_slices_dataset() %>%
+  dataset_batch(32)
+
+# Reset all metrics before validation
+reset_metrics()
+
+# Create an iterator for the validation dataset
+val_dataset_iterator <- as_iterator(val_dataset)
+
+# Validation loop
+repeat {
+  # Get the next batch of validation data
+  batch <- iter_next(val_dataset_iterator)
+  
+  # Break the loop when no more batches are available
+  if(is.null(batch)) break
+  
+  # Unpack inputs and targets from the batch
+  c(inputs_batch, targets_batch) %<-% batch
+  
+  # Perform a validation step with the current batch
+  logs <- test_step(inputs_batch, targets_batch)
+}
+
+# Print validation results
+writeLines(c(
+  "Evaluation results:",
+  sprintf("...%s: %.4f", names(logs), sapply(logs, as.numeric))
+))
+```
+
+Key Differences from Training Step:
+1. **No Gradient Updates**
+   - `training = FALSE` disables training-specific layers
+   - No gradient computation or parameter updates
+   - Pure forward pass and metric evaluation
+
+2. **Metric Tracking**
+   - Metrics are prefixed with "val_" to distinguish validation metrics
+   - Accumulates performance on validation dataset
+
+3. **Validation Loop Structure**
+   - Uses a `repeat` loop with `iter_next()`
+   - Processes all batches in the validation dataset
+   - Breaks when no more batches are available
+
+Main Purposes of This Code:
+- Evaluate model performance on unseen data
+- Check for overfitting
+- Assess generalization capability
+- Collect validation metrics without modifying model weights
+
+Conceptual Flow:
+1. Prepare validation dataset
+2. Reset metrics
+3. Iterate through validation batches
+4. Compute predictions and metrics
+5. Aggregate and display results
+
+This approach provides a systematic way to assess the model's performance on a separate validation dataset, which is crucial for understanding the model's learning and generalization capabilities.
+
+## 7.4.4 Make it fast with `tf_function()`
+
+Performance optimization using `tf_function()` in R and TensorFlow:
+
+```{r}
+# Convert the test_step function to a TensorFlow graph function
+# This allows TensorFlow to optimize the function for faster execution
+tf_test_step <- tf_function(test_step)
+
+# Create an iterator for the validation dataset
+val_dataset_iterator <- as_iterator(val_dataset)
+
+# Reset metrics before evaluation
+reset_metrics()
+
+# Iterate through validation dataset batches
+# Uses a while loop with an inline iterator
+while(!is.null(iter_next(val_dataset_iterator) -> batch)) {
+  # Unpack the batch into inputs and targets
+  c(inputs_batch, targets_batch) %<-% batch
+  
+  # Use the TensorFlow-compiled test step function
+  logs <- tf_test_step(inputs_batch, targets_batch)
+}
+
+# Print evaluation results
+writeLines(c(
+  "Evaluation results:",
+  sprintf("...%s: %.4f", names(logs), sapply(logs, as.numeric))
+))
+```
+
+Key Concept: `tf_function()`
+- Converts R functions to TensorFlow graph functions
+- Enables performance optimizations
+- Allows TensorFlow to:
+  - Create an optimized computational graph
+  - Perform static compilation
+  - Reduce overhead of Python/R interpretation
+
+```{r}
+# Utility function to measure execution time
+run_eval <- function(fn) {
+  # Similar to previous validation loop
+  val_dataset_iterator <- as_iterator(val_dataset)
+  reset_metrics()
+
+  while (!is.null(iter_next(val_dataset_iterator) -> batch)) {
+    c(inputs_batch, targets_batch) %<-% batch
+    logs <- fn(inputs_batch, targets_batch)
+  }
+  NULL
+}
+
+# Measure execution time for manual and compiled versions
+manual_elapsed_time <- system.time(run_eval(test_step))[["elapsed"]] %>% sprintf("%1.1f", .)
+compiled_elapsed_time <- system.time(run_eval(tf_test_step))[["elapsed"]] %>% sprintf("%1.1f", .)
+manual_elapsed_time
+# [1] "2.7"
+compiled_elapsed_time
+# [1] "0.6"
+```
+
+Performance Comparison:
+- Measures execution time for regular and TensorFlow-compiled functions
+- Demonstrates potential speedup from `tf_function()`
+
+```{r}
+# Create a comprehensive evaluation function
+# Wraps the entire evaluation process in a TensorFlow graph function
+my_evaluate <- tf_function(function(model, dataset) {
+  # Reset metrics at the start of evaluation
+  reset_metrics()
+
+  # Iterate through entire dataset
+  for (batch in dataset) {
+    # Unpack batch and run test step
+    c(inputs_batch, targets_batch) %<-% batch
+    logs <- test_step(inputs_batch, targets_batch)
+  }
+  
+  # Return final logs
+  logs
+})
+
+# Measure execution time of the comprehensive evaluation function
+system.time(my_evaluate(model, val_dataset))
+```
+
+Advanced `tf_function()` Usage:
+- Compiles entire evaluation process
+- Allows TensorFlow to optimize full evaluation workflow
+- Reduces function call overhead
+- Enables more extensive graph-level optimizations
+
+Performance Optimization Strategies:
+1. Convert functions to graph functions
+2. Reduce interpretation overhead
+3. Enable TensorFlow's static compilation
+4. Optimize computational graphs
+
+Practical Benefits:
+- Faster execution
+- Reduced computational complexity
+- More efficient resource utilization
+- Simplified performance optimization
+
+Note: Actual performance gains depend on:
+- Model complexity
+- Dataset size
+- Hardware capabilities
+- Specific use case
+
+The key takeaway is that `tf_function()` provides a simple yet powerful way to optimize TensorFlow computations in R, often with minimal code changes.
+
+## 7.4.5 Leveraging `fit()` with a custom training loop
+
+Creating a custom model class with a custom training loop in R and TensorFlow:
+
+```{r}
+# Define the loss function
+loss_fn <- loss_sparse_categorical_crossentropy()
+
+# Create a metric to track the mean loss
+loss_tracker <- metric_mean(name = "loss")
+
+# Create a custom model class
+CustomModel <- new_model_class(
+  # Specify the class name
+  classname = "CustomModel",
+
+  # Define a custom train_step method
+  train_step = function(data) {
+    # Unpack inputs and targets from the data
+    c(inputs, targets) %<-% data
+    
+    # Use gradient tape for automatic differentiation
+    with(tf$GradientTape() %as% tape, {
+      # Perform forward pass
+      predictions <- self(inputs, training = TRUE)
+      
+      # Calculate loss
+      loss <- loss_fn(targets, predictions)
+    })
+    
+    # Compute gradients
+    gradients <- tape$gradient(loss, model$trainable_weights)
+    
+    # Apply gradients to update model parameters
+    optimizer$apply_gradients(zip_lists(gradients, model$trainable_weights))
+
+    # Update loss tracking metric
+    loss_tracker$update_state(loss)
+    
+    # Return loss as a list
+    list(loss = loss_tracker$result())
+  },
+
+  # Define metrics to track during training
+  metrics = mark_active(function() list(loss_tracker))
+)
+
+# Create optimizer
+optimizer <- optimizer_rmsprop()
+# Define model architecture
+inputs <- layer_input(shape=c(28 * 28))
+features <- inputs %>%
+  layer_dense(512, activation="relu") %>%
+  layer_dropout(0.5)
+outputs <- features %>%
+  layer_dense(10, activation="softmax")
+
+# Create model instance
+model <- CustomModel(inputs = inputs, outputs = outputs)
+
+# Compile and fit the model
+model %>% compile(optimizer = optimizer)
+model %>% fit(train_images, train_labels, epochs = 3)
+```
+
+Key Concepts in First Example:
+- Custom model class with overridden `train_step`
+- Manual loss calculation
+- Manual metric tracking
+- Uses `new_model_class()` to create a custom model
+
+
+After you’ve called compile(), you get access to the following:
+- `self$compiled_loss` — The loss function you passed to `compile()`.
+- `self$compiled_metrics` — A wrapper for the list of metrics you passed, which
+allows you to call `self$compiled_metrics$update_state()` to update all of
+your metrics at once.
+- `self$metrics` — The actual list of metrics you passed to `compile()`. Note that it
+also includes a metric that tracks the loss, similar to what we did manually with
+our loss_tracking_metric earlier.
+
+```{r}
+# Enhanced custom model class
+CustomModel <- new_model_class(
+  classname = "CustomModel",
+
+  # Updated train_step method
+  train_step = function(data) {
+    # Unpack inputs and targets
+    c(inputs, targets) %<-% data
+    
+    # Use gradient tape for automatic differentiation
+    with(tf$GradientTape() %as% tape, {
+      # Perform forward pass
+      predictions <- self(inputs, training = TRUE)
+      
+      # Use compiled loss method
+      loss <- self$compiled_loss(targets, predictions)
+    })
+    
+    # Compute and apply gradients
+    gradients <- tape$gradient(loss, model$trainable_weights)
+    optimizer$apply_gradients(zip_lists(gradients, model$trainable_weights))
+    
+    # Update compiled metrics
+    self$compiled_metrics$update_state(targets, predictions)
+    
+    # Collect and return metric results
+    results <- list()
+    for(metric in self$metrics)
+      results[[metric$name]] <- metric$result()
+    results
+  }
+)
+
+# Create optimizer
+optimizer <- optimizer_rmsprop()
+# Define model architecture (same as previous example)
+inputs <- layer_input(shape=c(28 * 28))
+features <- inputs %>%
+  layer_dense(512, activation="relu") %>%
+  layer_dropout(0.5)
+outputs <- features %>% layer_dense(10, activation="softmax")
+
+# Create model instance
+model <- CustomModel(inputs = inputs, outputs = outputs)
+
+# Compile with loss and metrics
+model %>% compile(
+  optimizer = optimizer_rmsprop(),
+  loss = loss_sparse_categorical_crossentropy(),
+  metrics = metric_sparse_categorical_accuracy()
+)
+
+# Fit the model
+model %>% fit(train_images, train_labels, epochs = 3)
+```
+
+Key Improvements in Second Example:
+- Uses `compiled_loss()` instead of manual loss calculation
+- Leverages `compiled_metrics$update_state()`
+- Allows more flexibility with pre-compiled loss and metrics
+- Demonstrates integration with Keras-style model compilation
+
+Main Concepts Demonstrated:
+1. Custom model class creation
+2. Overriding the training step
+3. Manual gradient computation
+4. Metric tracking
+5. Integration with TensorFlow's high-level training APIs
+
+Benefits of Custom Training Loops:
+- Fine-grained control over training process
+- Ability to implement custom training strategies
+- Flexible metric and loss calculations
+- Seamless integration with TensorFlow's ecosystem
+
+This approach provides a powerful way to create custom training workflows while maintaining the ease of use of high-level Keras-style APIs.
+

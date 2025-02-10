@@ -41,5 +41,6 @@ knitr::include_url('../../slides/ch07_Keras_deep_dive_slides.html#1')
 
 Different ways to build Keras models, [RMarkdown](../../slides/code/ch07_2_Keras_models_code.Rmd)
 
-<!-- Training and evaluation loops and metrics, [RMarkdown](../../slides/code/ch07_3_loops_metrics_code.Rmd) -->
+Training and evaluation loops and metrics, [RMarkdown](../../slides/code/ch07_3_loops_metrics_code.Rmd)
 
+Writing your own training and evaluation loops, [RMarkdown](../../slides/code/ch07_4_custom_training_evaluation_code.Rmd)

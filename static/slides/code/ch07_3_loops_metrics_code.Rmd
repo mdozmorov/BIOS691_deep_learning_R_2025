@@ -20,6 +20,7 @@ This code demonstrates the process of building, training, evaluating, and making
   - Output Layer: Softmax activation produces probabilities for 10 classes.
 
 ```{r}
+library(keras3)
 get_mnist_model <- function() {
   inputs <- layer_input(shape = c(28 * 28))  # Input layer for flattened 28x28 images
   outputs <- inputs %>%
@@ -145,6 +146,8 @@ metric_root_mean_squared_error <- new_metric_class(
   # model. You can ignore the sample_weight argument—we won’t use it here.
   update_state = function(y_true, y_pred, sample_weight = NULL) {
     # Update the state variables for each batch of data
+    # tf$shape(y_pred) returns tf.Tensor 
+    # y_pred$shape returns tf.TensorShape that won't work with tf_function()
     num_samples <- tf$shape(y_pred)[1]  # Number of samples in the current batch
     num_features <- tf$shape(y_pred)[2]  # Number of features in predictions
 
@@ -287,12 +290,10 @@ model %>%
   )
 ```
 
-**Explanation Summary**
-
 - These callbacks automate key aspects of training, such as saving models, adjusting learning rates, stopping early, or logging metrics.
 - They help improve training efficiency, model performance, and reproducibility.
 
-Here is the code with detailed comments explaining each part:
+Or combine them in a list
 
 ```{r}
 # Define a callback for saving the model checkpoint
@@ -303,7 +304,9 @@ callback_checkpoint <- callback_model_checkpoint(
 )
 
 # Create a list of callbacks to pass to the `fit` function
-callbacks_list <- list(callback_checkpoint)
+callbacks_list <- list(callback_checkpoint,
+                       callback_early_stopping(monitor = "val_loss", patience = 2),
+                       callback_csv_logger("training_log.csv"))
 
 # Initialize and compile the MNIST model
 model <- get_mnist_model()  # Function to create a simple MNIST model
@@ -324,7 +327,7 @@ model %>% fit(
 )
 
 # Load the best model saved during training from the specified checkpoint
-model <- load_model("checkpoint_path.keras")
+model <- load_model("checkpoint_path.keras") # Previously, load_model_tf()
 ```
 
 Explanation of Key Components:
@@ -451,6 +454,7 @@ callback_plot_per_batch_loss_history <- new_callback_class(
   on_train_begin = function(logs = NULL) {
     private$plots_dir <- tempfile()  # Create a temporary directory for storing plots
     dir.create(private$plots_dir)   # Ensure the directory exists
+    # Fast alternative to grow R vectors with c() or [[<-
     private$per_batch_losses <-
       fastmap::faststack(init = self$params$steps)  # Create a stack to store per-batch losses
   },
