@@ -1,9 +1,9 @@
 ---
 title: "Code 5"
-date: "2020-06-12"
-due_date: "2020-06-12"
+date: "2025-24-19"
+due_date: "2025-02-19"
 due_time: "11:59 PM"
-draft: true
+draft: false
 menu:
   assignment:
     parent: Code
@@ -17,24 +17,13 @@ editor_options:
   chunk_output_type: console
 ---
 
-# In-class, [deep-learning-with-r-notebooks](https://github.com/jjallaire/deep-learning-with-r-notebooks)
+# Computer Vision: MNIST revisted as a CNN
 
-- `6.2-understanding-recurrent-neural-networks.Rmd` - IMDB, RNN
-- `6.3-advanced-usage-of-recurrent-neural-networks.Rmd` - jena_climate temperature forecasting, baseline, regular RNN, LSTM, GRU, dropout, stacking layers, bidirectional RNN
-- `6.4-sequence-processing-with-convnets.Rmd` - CNN for text processing, IMDB, comparison with regular LSTM/GRU
+Convolutional neural network for MNIST handwritten digits classification.
 
-- `8.1-text-generation-with-lstm.Rmd` - Nietzsche text, LSTM text generation, the effect of temperature (section 8.1.3, p. 254). On GPU, each epoch takes ~5 min, demo possible
-
-### Technical issues
-
-- `8.2-deep-dream.Rmd` - Deep dream
-- `8.3-neural-style-transfer.Rmd` - neural style transfer
-- `8.4-generating-images-with-vaes.Rmd`
-- `8.5-introduction-to-gans.Rmd`
-
-# Self-study, [dl-keras-tf](https://github.com/rstudio-conf-2020/dl-keras-tf)
-
-- Review and run `08-NLP-LSTMs/01-intro-to-lstms.Rmd` - IMDB, RNN, LSTM
-
-
+- Download [ch08_1_MNIST_classification_CNN_code.Rmd](../../slides/code/ch08_1_MNIST_classification_CNN_code.Rmd). Modified from [dl-keras-tf](https://github.com/rstudio-conf-2020/dl-keras-tf).
+- Download [ch08_1_MNIST_classification_CNN_images.zip](../../slides/code/ch08_1_MNIST_classification_CNN_images.zip). Extract the `images` folder in the same directory as the `ch08_1_MNIST_classification_CNN_code.Rmd` file.
+- Read and run the code in the `ch08_1_MNIST_classification_CNN_code.Rmd` file. Consult ChatGPT in case of errors.
+- Answer questions in the code chunks labeled "Questions" and describe your observations.
+- Knit the document into an HTML format and submit the knitted document.
 
