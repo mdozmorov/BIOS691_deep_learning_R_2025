@@ -1,0 +1,963 @@
+---
+title: "Introduction to deep learning for computer vision"
+output: 
+  html_notebook: 
+    theme: cerulean
+    highlight: textmate
+editor_options: 
+  chunk_output_type: console
+---
+
+# 8.1 Introduction to convnets
+
+First practical look at a simple CNN example that classifies MNIST digits.
+
+```{r}
+# Load the Keras and TensorFlow libraries
+library(keras3)
+library(tensorflow)
+
+# `tensorflow::tf_function`: Converts an R function to a TensorFlow function.
+# `function(x) x + 1`: Example TensorFlow function, adding 1 to the input.
+# `(1)`: Applies the function to the value `1`, resulting in `2`.
+tensorflow::tf_function(function(x) x + 1)(1)  
+```
+
+1. **Convolutional Layers**:
+   - Learn local spatial features by applying filters over the image.
+   - ReLU activation introduces non-linearity.
+
+2. **Pooling Layers**:
+   - Reduce the spatial dimensions to improve computational efficiency and reduce overfitting.
+
+3. **Fully Connected Output Layer**:
+   - Classifies the features into one of the 10 classes using softmax.
+
+```{r}
+## -------------------------------------------------------------------------
+# Define the input shape for the convolutional neural network (ConvNet)
+# Input tensor for grayscale images with dimensions 28x28 and 1 channel.
+inputs <- layer_input(shape = c(28, 28, 1))  
+
+# Build the ConvNet architecture
+outputs <- inputs %>%
+  # First convolutional layer: 32 filters, 3x3 kernel, ReLU activation.
+  layer_conv_2d(filters = 32, kernel_size = 3, activation = "relu") %>% 
+  # First max-pooling layer: Reduces spatial dimensions by 2x2 pooling.
+  layer_max_pooling_2d(pool_size = 2) %>%
+  # Second convolutional layer: 64 filters, 3x3 kernel, ReLU activation.
+  layer_conv_2d(filters = 64, kernel_size = 3, activation = "relu") %>%
+  # Second max-pooling layer.
+  layer_max_pooling_2d(pool_size = 2) %>%
+  # Third convolutional layer: 128 filters, 3x3 kernel, ReLU activation.
+  layer_conv_2d(filters = 128, kernel_size = 3, activation = "relu") %>%
+  # Flatten the 3D feature maps to a 1D vector.
+  layer_flatten() %>%
+  # Fully connected output layer: 10 units (for 10 classes), softmax activation.
+  layer_dense(10, activation = "softmax")
+
+# Create the Keras model from the defined inputs and outputs
+model <- keras_model(inputs, outputs)
+# Display the model summary
+# Prints a summary of the model architecture, including the layers, parameters, and output shapes.
+model  
+```
+
+4. **Normalization**:
+   - Normalizing pixel values improves convergence by keeping the data scale consistent.
+
+```{r}
+# Load the MNIST dataset
+# `dataset_mnist()`: Downloads the MNIST dataset and splits it into training and test sets.
+# `train_images` and `train_labels`: Training data and labels.
+# `test_images` and `test_labels`: Test data and labels.
+c(c(train_images, train_labels), c(test_images, test_labels)) %<-%
+  dataset_mnist()
+
+# Reshape the data to include the channel dimension and normalize it
+# Reshape training images to 28x28x1 (grayscale channel) and normalize pixel values to [0, 1].
+train_images <- array_reshape(train_images, c(60000, 28, 28, 1)) / 255
+
+# Reshape and normalize test images.
+test_images <- array_reshape(test_images, c(10000, 28, 28, 1)) / 255
+```
+
+5. **Compilation**:
+   - Specifies how the model is optimized and evaluated during training.
+
+6. **Evaluation**:
+   - Measures the model's performance on unseen data using test accuracy.
+
+```{r}
+# Compile the model with optimizer, loss function, and metrics
+model %>% compile(
+  # RMSprop optimizer for training.
+  optimizer = "rmsprop",  
+  # Sparse categorical crossentropy loss for multi-class classification.
+  loss = "sparse_categorical_crossentropy",  
+  # Accuracy metric to evaluate the model's performance.
+  metrics = c("accuracy")  
+)
+
+# Train the model on the training data
+model %>% fit(
+  # Training inputs and labels.
+  train_images, train_labels,  
+  # Train for 5 epochs (full passes through the training data).
+  epochs = 5,  
+  # Use a batch size of 64 for mini-batch gradient descent.
+  batch_size = 64  
+)
+# Note each epoch processes 938 batches, from 60,000 total images divided into
+# batches of size 64. 60000/64 = 937.5
+
+# Compute loss and metrics on the test dataset.
+result <- evaluate(model, test_images, test_labels)  
+
+# Display the accuracy of the model on the test data.
+cat("Test accuracy:", result$accuracy, "\n")  
+```
+
+### 8.1.1 The convolution operation
+
+The convolution operation is the fundamental building block of convolutional neural networks (ConvNets). Here's an explanation of its mechanism:
+
+- **Purpose**: Convolutions extract spatial features from input data, such as edges, textures, and patterns in an image.
+- **Operation**:
+  1. A **kernel** (or filter), which is a small matrix, slides across the input image.
+  2. At each position, the kernel computes the dot product of its values with the corresponding patch of the input image (convolution).
+  3. The resulting value forms an element of the output feature map.
+- **Key Parameters**:
+  - `filters`: Number of kernels used, determining the depth of the output.
+  - `kernel_size`: Dimensions of the sliding window.
+  - `stride`: Step size of the kernel as it moves over the image.
+  - `padding`: Defines how to handle image boundaries (e.g., "same" padding preserves dimensions).
+- **Non-Linearity**: A non-linear activation function (e.g., ReLU) is applied to the output to introduce non-linearity.
+
+This operation enables ConvNets to learn hierarchical features, starting with low-level patterns and progressing to more complex ones.
+
+### 8.1.2 The Max-Pooling Operation
+
+Max-pooling is a down-sampling operation used to reduce the spatial dimensions of feature maps while retaining the most significant information. Here's an explanation of its mechanism:
+
+- **Purpose**: Reduce computational complexity, control overfitting, and retain the most salient features.
+- **Operation**:
+  1. A pooling window slides over the feature map.
+  2. For each position, the maximum value within the window is selected.
+- **Key Parameters**:
+  - `pool_size`: Dimensions of the pooling window.
+  - `stride`: Step size of the pooling operation.
+
+By applying max-pooling, feature maps become smaller, but their important characteristics remain.
+
+- **No Max-Pooling model**: The model retains the spatial dimensions throughout the convolutional layers, resulting in a larger number of parameters.
+- **Trade-Off**: While skipping max-pooling allows retaining more spatial information, it increases computational requirements and may lead to overfitting.
+
+
+# 8.2 Training a convnet from scratch on a small dataset
+
+**Setting Up the Kaggle API (Downloading Dataset)**
+
+To download a dataset from Kaggle (in this case, "Dogs vs. Cats", https://www.kaggle.com/c/dogs-vs-cats/data), 
+you must authenticate and configure the Kaggle API. Go to "Settings", "API", "Create New Token",
+download `kaggle.json` to your computer.
+
+```{r eval=FALSE}
+library(fs)
+# Creates the .kaggle directory in the user's home folder to store credentials.
+dir_create("~/.kaggle")
+
+# Moves the downloaded `kaggle.json` file (Kaggle API key) to the .kaggle directory.
+file_move("~/Downloads/kaggle.json", "~/.kaggle/")
+
+# Restricts permissions on the file to ensure security.
+file_chmod("~/.kaggle/kaggle.json", "0600")
+```
+
+**Installing Kaggle API via Python:**
+
+```r
+# reticulate::py_install("kaggle", pip = TRUE)  
+# Installs the `kaggle` Python package via pip using the reticulate package for R-Python integration.
+```
+
+**Downloading the Dataset from Kaggle:**
+
+```r
+# system('kaggle competitions download -c dogs-vs-cats')  
+# Downloads the "Dogs vs. Cats" dataset from Kaggle using the API.
+```
+
+---
+
+**4. Unzipping the Dataset**
+
+After downloading the dataset, you must extract the files:
+
+```r
+## unlink("dogs-vs-cats", recursive = TRUE)  
+# Removes any existing "dogs-vs-cats" directory to ensure reproducibility.
+
+zip::unzip('dogs-vs-cats.zip', exdir = "dogs-vs-cats", files = "train.zip")  
+# Extracts the "train.zip" file from the main zip archive into the "dogs-vs-cats" directory.
+
+zip::unzip("dogs-vs-cats/train.zip", exdir = "dogs-vs-cats")  
+# Extracts the training dataset from "train.zip" into the "dogs-vs-cats" directory.
+```
+
+---
+
+**Key Insights**
+1. **Custom Model**: The ConvNet defined does not include max-pooling layers, which may retain more spatial information but increases computational complexity.
+2. **Kaggle API Setup**: You need to authenticate and install the Kaggle API to download datasets. Proper file permissions (`0600`) ensure security.
+3. **Data Handling**: The `zip` package is used for unzipping to handle potential issues with the base `unzip()` function.
+4. **Dataset Preparation**: Extracting files step by step ensures the dataset is properly structured for further processing and training.
+
+**Code Explanation: Preparing a Smaller Subset of Data**
+
+This code creates a smaller dataset from the full "Dogs vs. Cats" dataset for faster experimentation and training. It splits the dataset into training, validation, and test subsets, each containing a defined range of images.
+
+---
+
+**1. Define Paths**
+
+```{r}
+library(fs)  # For file system manipulation functions.
+original_dir <- path("~/Downloads/dogs-vs-cats/train")  
+# Path to the original dataset containing all training images.
+
+new_base_dir <- path("cats_vs_dogs_small")  
+# Base directory for the smaller dataset to be created.
+```
+
+---
+
+**2. Function to Create Subsets**
+
+```{r}
+make_subset <- function(subset_name, start_index, end_index) {  
+  # Creates subsets (e.g., train, validation, test) for the dataset.
+  
+  for (category in c("dog", "cat")) {  
+    # Loop through the two categories: "dog" and "cat".
+    
+    file_name <- glue::glue("{category}.{ start_index:end_index }.jpg")  
+    # Generate the filenames for the images in the specified range (e.g., dog.1.jpg, cat.100.jpg).
+    
+    dir_create(new_base_dir / subset_name / category)  
+    # Create directories for each subset (train/validation/test) and each category.
+    
+    file_copy(original_dir / file_name,  
+              new_base_dir / subset_name / category / file_name)  
+    # Copy the selected files from the original dataset to the new subset directory.
+  }
+}
+```
+
+- **`glue::glue()`**: Constructs filenames dynamically for images in the specified range.
+- **`dir_create()`**: Ensures the directory structure exists for each subset and category.
+- **`file_copy()`**: Copies the image files from the original directory to the corresponding subset and category folders.
+
+---
+
+**3. Create the Subsets**
+
+```{r}
+make_subset("train", start_index = 1, end_index = 1000)  
+# Create the training subset with 1000 images from each category.
+
+make_subset("validation", start_index = 1001, end_index = 1500)  
+# Create the validation subset with 500 images from each category.
+
+make_subset("test", start_index = 1501, end_index = 2500)  
+# Create the test subset with 1000 images from each category.
+```
+
+**Directory Structure After Execution**
+
+The smaller dataset will be organized as follows:
+
+```
+cats_vs_dogs_small/
+  ├── train/
+  │   ├── dog/
+  │   │   ├── dog.1.jpg
+  │   │   ├── dog.2.jpg
+  │   │   └── ...  
+  │   └── cat/
+  │       ├── cat.1.jpg
+  │       ├── cat.2.jpg
+  │       └── ...
+  ├── validation/
+  │   ├── dog/
+  │   └── cat/
+  └── test/
+      ├── dog/
+      └── cat/
+```
+
+---
+
+**Key Insights**
+1. **Subset Splitting**: Helps in creating a manageable dataset for quick experimentation while retaining a similar class distribution.
+2. **Automation**: The `make_subset()` function automates the process for multiple categories and subsets, reducing manual effort.
+3. **Efficient File Handling**: The use of `fs` ensures seamless and robust directory and file operations across platforms.
+
+## 8.2.3 Building the model
+
+**Code Explanation: Building a Convolutional Neural Network Model for Binary Classification**
+
+**1. Model Input and Preprocessing**
+
+```{r}
+inputs <- layer_input(shape = c(180, 180, 3))  
+# Define the input layer for the model. The input shape is (180, 180, 3), representing 180x180 RGB images (3 color channels).
+
+outputs <- inputs %>%
+  layer_rescaling(1 / 255) %>%  
+  # Rescale pixel values from the range [0, 255] to [0, 1] for normalization.
+  
+  layer_conv_2d(filters = 32, kernel_size = 3, activation = "relu") %>%  
+  # Add a 2D convolutional layer with 32 filters and a 3x3 kernel. The ReLU activation introduces non-linearity.
+
+  layer_max_pooling_2d(pool_size = 2) %>%  
+  # Add a max pooling layer with a 2x2 pool size to down-sample the feature maps.
+
+  layer_conv_2d(filters = 64, kernel_size = 3, activation = "relu") %>%  
+  layer_max_pooling_2d(pool_size = 2) %>%  
+  # Add a second convolutional and max pooling layer, increasing the filter count to 64.
+
+  layer_conv_2d(filters = 128, kernel_size = 3, activation = "relu") %>%  
+  layer_max_pooling_2d(pool_size = 2) %>%  
+  # Add a third convolutional and pooling layer with 128 filters.
+
+  layer_conv_2d(filters = 256, kernel_size = 3, activation = "relu") %>%  
+  layer_max_pooling_2d(pool_size = 2) %>%  
+  # Add a fourth convolutional and pooling layer with 256 filters.
+
+  layer_conv_2d(filters = 256, kernel_size = 3, activation = "relu") %>%  
+  # Add a fifth convolutional layer with 256 filters but no pooling, enabling more detailed feature extraction.
+
+  layer_flatten() %>%  
+  # Flatten the 3D feature maps into a 1D vector to prepare for the dense layers.
+
+  layer_dense(1, activation = "sigmoid")  
+  # Add a dense output layer with a single unit (for binary classification) and a sigmoid activation function, 
+  # which outputs probabilities in the range [0, 1].
+```
+
+**4. Model Definition**
+
+```{r}
+model <- keras_model(inputs, outputs)  
+# Combine the input and output layers to define the complete model.
+```
+
+**5. Model Overview**
+
+```{r}
+model  
+# Displays the architecture of the model, including layer types, output shapes, and parameter counts.
+```
+
+**6. Compiling the Model**
+
+```{r}
+model %>% compile(loss = "binary_crossentropy",
+                  optimizer = "rmsprop",
+                  metrics = "accuracy")
+```
+
+- **`loss = "binary_crossentropy"`**: The binary cross-entropy loss function is used because this is a binary classification task (e.g., distinguishing between cats and dogs).
+- **`optimizer = "rmsprop"`**: The RMSprop optimizer is used to update model weights during training.
+- **`metrics = "accuracy"`**: The model's performance will be evaluated using accuracy during training and validation.
+
+**Summary**
+This convolutional neural network (CNN) processes images to extract features through multiple convolutional and pooling layers. The use of progressively increasing filters enables the model to learn both simple and complex patterns. The final dense layer with a sigmoid activation outputs a probability for the binary classification task. The model is well-suited for small datasets like "Dogs vs. Cats" due to its manageable complexity and adaptability.
+
+## 8.2.4 Data preprocessing
+
+**Code Explanation: Data Preprocessing**
+
+**1. Loading Image Datasets**
+
+```{r}
+train_dataset <- 
+  image_dataset_from_directory(new_base_dir / "train",  
+                               image_size = c(180, 180),  
+                               batch_size = 32)
+
+validation_dataset <- 
+  image_dataset_from_directory(new_base_dir / "validation",  
+                               image_size = c(180, 180),  
+                               batch_size = 32)
+
+test_dataset <- 
+  image_dataset_from_directory(new_base_dir / "test",  
+                               image_size = c(180, 180),  
+                               batch_size = 32)
+```
+
+- **`image_dataset_from_directory()`**: Loads image data from the specified directory.
+- **`new_base_dir / "train"`**: Path to the directory containing training images, similarly for validation and test directories.
+- **`image_size = c(180, 180)`**: Resizes all images to 180x180 pixels.
+- **`batch_size = 32`**: Splits the data into batches of 32 images for efficient processing during training and evaluation.
+
+**2. Demonstrating TensorFlow Datasets**
+
+**Creating a TensorFlow Dataset from an Array**
+
+```{r}
+library(tfdatasets)
+example_array <- array(seq(100*6), c(100, 6))  
+# Create a 100x6 array for demonstration purposes.
+head(example_array)  
+# Display the first few rows of the array.
+
+dataset <- tensor_slices_dataset(example_array)  
+# Convert the array into a TensorFlow dataset where each row is a dataset element.
+```
+
+**3. Iterating Over a Dataset**
+
+**Using an Iterator to Access Dataset Elements**
+
+```{r}
+dataset_iterator <- as_iterator(dataset)  
+# Create an iterator for the dataset.
+
+for(i in 1:3) {  
+  element <- iter_next(dataset_iterator)  
+  # Retrieve the next element from the dataset iterator.
+  print(element)  
+  # Print the element to inspect its contents.
+}
+```
+
+**Using `as_array_iterator()` for Array-Based Datasets**
+
+```{r}
+dataset_array_iterator <- as_array_iterator(dataset)  
+# Convert the dataset to an array iterator.
+
+for(i in 1:3) {  
+  element <- iter_next(dataset_array_iterator)  
+  # Access elements in array format.
+  str(element)  
+  # Display the structure of each element.
+}
+```
+
+**4. Batching a Dataset**
+
+```{r}
+batched_dataset <- dataset %>%
+  dataset_batch(3)  
+# Group the dataset elements into batches of size 3.
+
+batched_dataset_iterator <- as_iterator(batched_dataset)  
+# Create an iterator for the batched dataset.
+
+for(i in 1:3) {  
+  element <- iter_next(batched_dataset_iterator)  
+  # Access each batch of elements.
+  print(element)  
+  # Print the batched elements.
+}
+```
+
+**5. Transforming Dataset Elements**
+
+```{r}
+reshaped_dataset <- dataset %>%
+  dataset_map(function(element) tf$reshape(element, shape(2, 3)))  
+# Transform each element to reshape it into a 2x3 matrix.
+
+reshaped_dataset_iterator <- as_iterator(reshaped_dataset)  
+# Create an iterator for the reshaped dataset.
+
+for(i in 1:3) {  
+  element <- iter_next(reshaped_dataset_iterator)  
+  # Access reshaped elements.
+  print(element)  
+  # Print the reshaped elements.
+}
+```
+
+**6. Accessing Batches in Image Dataset**
+
+```{r}
+c(data_batch, labels_batch) %<-% iter_next(as_iterator(train_dataset))  
+# Retrieve a batch of image data and their corresponding labels.
+
+data_batch$shape  
+# Display the shape of the image data in the batch.
+
+labels_batch$shape  
+# Display the shape of the label batch.
+```
+
+- **`data_batch$shape`**: The image data batch will have a shape `(batch_size, height, width, channels)`, e.g., `(32, 180, 180, 3)`.
+- **`labels_batch$shape`**: The label batch will have a shape `(batch_size)`, e.g., `(32)`.
+
+**Summary**
+This code demonstrates how to prepare and manipulate datasets in TensorFlow/Keras using R. It includes steps for loading image datasets, creating and iterating over custom datasets, batching, and reshaping elements. These operations are fundamental for preprocessing data and preparing it for training deep learning models efficiently.
+
+**Explanation: Training with Callbacks**
+
+**1. Defining Callbacks**
+
+```{r}
+callbacks <- list(
+  callback_model_checkpoint(
+    filepath = "convnet_from_scratch.keras",  # File to save the best model.
+    save_best_only = TRUE,  # Only save the model if it improves on `val_loss`.
+    monitor = "val_loss"  # Monitor the validation loss to determine the best model.
+  )
+)
+```
+
+- **`callback_model_checkpoint()`**:
+  - Automatically saves the model during training whenever the validation loss improves.
+  - **`filepath`**: Specifies the path where the model will be saved.
+  - **`save_best_only = TRUE`**: Ensures only the best-performing model is saved.
+  - **`monitor`**: The metric to track for determining improvement.
+
+**2. Training the Model**
+
+```{r}
+history <- model %>%
+  fit(
+    train_dataset,  # Training dataset.
+    epochs = 30,  # Train for 30 epochs.
+    validation_data = validation_dataset,  # Validation dataset for evaluation during training.
+    callbacks = callbacks  # Pass the callback to save the best model.
+  )
+```
+
+- **`fit()`**:
+  - Trains the model on the `train_dataset` for 30 epochs.
+  - Validates performance using the `validation_dataset` after each epoch.
+  - Utilizes the specified callback to save the best model.
+
+**3. Visualizing Training History**
+
+```{r}
+plot(history)
+```
+
+- **`plot(history)`**: 
+  - Generates a plot showing training and validation performance (e.g., loss and accuracy) over epochs.
+  - Useful for analyzing model performance trends (e.g., overfitting or underfitting).
+
+**4. Evaluating the Best Model**
+
+```{r}
+test_model <- load_model("convnet_from_scratch.keras")  
+# Load the best-performing model saved during training.
+
+result <- evaluate(test_model, test_dataset)  
+# Evaluate the loaded model on the test dataset.
+
+cat(sprintf("Test accuracy: %.3f\n", result$accuracy))  
+# Display the test accuracy in a formatted string.
+```
+
+- **`load_model_tf()`**: Loads the model saved at the specified filepath (`convnet_from_scratch.keras`).
+- **`evaluate()`**: Computes the test accuracy and loss on the test dataset.
+- **`cat()`**: Outputs the test accuracy with formatting.
+
+**Summary**
+
+This code trains a convolutional neural network (convnet) from scratch using a callback to save the best model based on validation loss. After training, it evaluates the best model on a separate test dataset to report its performance. Key steps include defining callbacks, fitting the model, visualizing training history, and evaluating the final model.
+
+## 8.2.5 Using data augmentation
+
+**Explanation: Using Data Augmentation**
+
+**1. Data Augmentation**
+
+```{r}
+data_augmentation <- keras_model_sequential() %>%
+  layer_random_flip("horizontal") %>%
+  layer_random_rotation(0.1) %>%
+  layer_random_zoom(0.2)
+```
+
+- **Purpose**: Introduce variability into the training data by applying random transformations, making the model more robust to unseen data.
+- **`layer_random_flip("horizontal")`**: Randomly flips images horizontally, simulating mirrored variations.
+- **`layer_random_rotation(0.1)`**: Rotates images by up to 10% of 360 degrees randomly.
+- **`layer_random_zoom(0.2)`**: Zooms images randomly by up to 20%.
+
+**2. Visualizing Augmented Data**
+
+```{r}
+library(tfdatasets)
+batch <- train_dataset %>%
+  as_iterator() %>%
+  iter_next()
+
+c(images, labels) %<-% batch
+
+par(mfrow = c(3, 3), mar = rep(.5, 4))
+
+image <- images[1, , , ]
+plot(as.raster(as.array(image), max = 255))
+
+# plot augmented images
+for (i in 2:9) {
+  augmented_images <- data_augmentation(images)
+  augmented_image <- augmented_images[1, , , ]
+  plot(as.raster(as.array(augmented_image), max = 255))
+}
+```
+
+- **Step-by-step**:
+  - Extract a batch of images from the training dataset.
+  - Display the original image using `plot(as.raster(...))`.
+  - Apply the `data_augmentation` model to the batch of images.
+  - Plot augmented images to visualize how transformations are applied.
+
+**3. Augmentation in Model**
+
+```{r}
+inputs <- layer_input(shape = c(180, 180, 3))
+outputs <- inputs %>%
+  data_augmentation() %>%
+  layer_rescaling(1 / 255) %>%
+  layer_conv_2d(filters = 32, kernel_size = 3, activation = "relu") %>%
+  layer_max_pooling_2d(pool_size = 2) %>%
+  layer_conv_2d(filters = 64, kernel_size = 3, activation = "relu") %>%
+  layer_max_pooling_2d(pool_size = 2) %>%
+  layer_conv_2d(filters = 128, kernel_size = 3, activation = "relu") %>%
+  layer_max_pooling_2d(pool_size = 2) %>%
+  layer_conv_2d(filters = 256, kernel_size = 3, activation = "relu") %>%
+  layer_max_pooling_2d(pool_size = 2) %>%
+  layer_conv_2d(filters = 256, kernel_size = 3, activation = "relu") %>%
+  layer_flatten() %>%
+  layer_dropout(0.5) %>%
+  layer_dense(1, activation = "sigmoid")
+
+model <- keras_model(inputs, outputs)
+
+model %>% compile(loss = "binary_crossentropy",
+                  optimizer = "rmsprop",
+                  metrics = "accuracy")
+```
+
+- **Pipeline**:
+  - **Data Augmentation**: Applied as the first layer.
+  - **Rescaling**: Scales pixel values to the range `[0, 1]`.
+  - **Conv2D and Pooling Layers**: Extract features using convolution and downsample using pooling.
+  - **Dropout (0.5)**: Reduces overfitting by randomly deactivating 50% of neurons during training.
+  - **Dense Layer with Sigmoid Activation**: Outputs a probability for binary classification.
+
+**4. Training the Model with Callbacks**
+
+```{r}
+callbacks <- list(
+  callback_model_checkpoint(
+    filepath = "convnet_from_scratch_with_augmentation.keras",
+    save_best_only = TRUE,
+    monitor = "val_loss"
+  )
+)
+
+# Takes about an hour on a CPU
+history <- model %>% fit(
+  train_dataset,
+  epochs = 100,
+  validation_data = validation_dataset,
+  callbacks = callbacks
+)
+```
+
+- **100 Epochs**: A high number of epochs are used to train on small data with augmentation.
+- **Callback**: Saves the model achieving the lowest validation loss.
+
+**5. Visualizing Training History**
+
+```{r}
+plot(history)
+```
+
+- **Training vs. Validation Trends**: Visualize metrics (accuracy/loss) across epochs to detect issues like overfitting.
+
+**6. Evaluating the Augmented Model**
+
+```{r}
+test_model <- load_model("convnet_from_scratch_with_augmentation.keras")
+result <- evaluate(test_model, test_dataset)
+cat(sprintf("Test accuracy: %.3f\n", result$accuracy))
+```
+
+- **Model Evaluation**:
+  - Loads the best-performing model saved during training.
+  - Tests on the held-out `test_dataset` to measure generalization.
+- **Output**: Reports test accuracy, providing a final measure of the model’s performance.
+
+**Summary**
+
+This section demonstrates how to use data augmentation to improve model robustness for a small dataset. Data augmentation layers apply random transformations to images during training, while dropout mitigates overfitting. The process involves defining the model, training with callbacks, and evaluating performance on test data.
+
+# 8.3 Leveraging a pretrained model
+
+## 8.3.1 Feature extraction with a pretrained model
+
+**Explanation: Leveraging a Pretrained Model**
+
+**1. Using VGG16 as a Feature Extractor**
+
+```{r}
+conv_base <- application_vgg16(
+  weights = "imagenet",
+  include_top = FALSE,
+  input_shape = c(180, 180, 3)
+)
+```
+
+- **VGG16 Pretrained Model**: 
+  - **Weights**: Pretrained on ImageNet, providing robust feature extraction capabilities.
+  - **`include_top = FALSE`**: Removes the dense layers at the top to extract convolutional features only.
+  - **Input Shape**: Matches the input dimensions of our dataset (180x180x3).
+
+**2. Extracting Features and Labels**
+
+```{r}
+get_features_and_labels <- function(dataset) {
+  n_batches <- length(dataset)
+  all_features <- vector("list", n_batches)
+  all_labels <- vector("list", n_batches)
+  iterator <- as_array_iterator(dataset)
+  for (i in 1:n_batches) {
+    c(images, labels) %<-% iter_next(iterator)
+    preprocessed_images <- imagenet_preprocess_input(images)
+    features <- conv_base %>% predict(preprocessed_images)
+
+    all_labels[[i]] <- labels
+    all_features[[i]] <- features
+  }
+
+  all_features <- listarrays::bind_on_rows(all_features)
+  all_labels <- listarrays::bind_on_rows(all_labels)
+
+  list(all_features, all_labels)
+}
+
+c(train_features, train_labels) %<-% get_features_and_labels(train_dataset)
+c(val_features, val_labels) %<-% get_features_and_labels(validation_dataset)
+c(test_features, test_labels) %<-% get_features_and_labels(test_dataset)
+```
+
+- **Feature Extraction**:
+  - Pass images through the pretrained `conv_base`.
+  - Use `imagenet_preprocess_input` to normalize inputs as expected by VGG16.
+  - Aggregate extracted features and labels for all batches.
+
+**3. Training a Dense Classifier**
+
+```{r}
+inputs <- layer_input(shape = c(5, 5, 512))
+outputs <- inputs %>%
+  layer_flatten() %>%
+  layer_dense(256) %>%
+  layer_dropout(.5) %>%
+  layer_dense(1, activation = "sigmoid")
+
+model <- keras_model(inputs, outputs)
+
+model %>% compile(loss = "binary_crossentropy",
+                  optimizer = "rmsprop",
+                  metrics = "accuracy")
+
+callbacks <- list(
+  callback_model_checkpoint(
+    filepath = "feature_extraction.keras",
+    save_best_only = TRUE,
+    monitor = "val_loss"
+  )
+)
+
+history <- model %>% fit(
+  train_features, train_labels,
+  epochs = 20,
+  validation_data = list(val_features, val_labels),
+  callbacks = callbacks
+)
+```
+
+- **Architecture**: 
+  - A flattening layer followed by two dense layers (256 units, dropout 0.5).
+  - The output layer predicts probabilities for binary classification.
+- **Training**:
+  - Trained on precomputed features from the `conv_base`.
+  - Model checkpoint saves the best-performing weights.
+
+**4. Fine-Tuning the Pretrained Model**
+
+```{r}
+conv_base <- application_vgg16(weights = "imagenet", include_top = FALSE)
+freeze_weights(conv_base)
+```
+
+- **Freezing Weights**:
+  - Locks the weights of the `conv_base` during initial training to preserve pretrained features.
+  
+```{r}
+unfreeze_weights(conv_base)
+cat("This is the number of trainable weights",
+    "before freezing the conv base:",
+    length(conv_base$trainable_weights), "\n")
+
+freeze_weights(conv_base)
+cat("This is the number of trainable weights",
+    "after freezing the conv base:",
+    length(conv_base$trainable_weights), "\n")
+```
+
+- **Unfreezing Weights**:
+  - Selectively unfreezes layers of the `conv_base` to fine-tune the pretrained model for the current task.
+
+**5. Fine-Tuned Model with Data Augmentation**
+
+```{r}
+data_augmentation <- keras_model_sequential() %>%
+  layer_random_flip("horizontal") %>%
+  layer_random_rotation(0.1) %>%
+  layer_random_zoom(0.2)
+
+inputs <- layer_input(shape = c(180, 180, 3))
+outputs <- inputs %>%
+  data_augmentation() %>%
+  imagenet_preprocess_input() %>%
+  conv_base() %>%
+  layer_flatten() %>%
+  layer_dense(256) %>%
+  layer_dropout(0.5) %>%
+  layer_dense(1, activation = "sigmoid")
+model <- keras_model(inputs, outputs)
+
+model %>% compile(loss = "binary_crossentropy",
+                  optimizer = "rmsprop",
+                  metrics = "accuracy")
+
+callbacks <- list(
+  callback_model_checkpoint(
+    filepath = "feature_extraction_with_data_augmentation.keras",
+    save_best_only = TRUE,
+    monitor = "val_loss"
+  )
+)
+
+# Over 2 hours training
+history <- model %>% fit(
+  train_dataset,
+  epochs = 50,
+  validation_data = validation_dataset,
+  callbacks = callbacks
+)
+```
+
+- **End-to-End Training**:
+  - Augments raw images during training.
+  - The augmented images pass through the `conv_base` and additional layers for prediction.
+  - Fully trains the entire model, fine-tuning VGG16 weights.
+
+**6. Evaluation**
+
+```{r}
+test_model <- load_model("feature_extraction_with_data_augmentation.keras")
+result <- evaluate(test_model, test_dataset)
+cat(sprintf("Test accuracy: %.3f\n", result$accuracy))
+# Test accuracy: 0.979
+```
+
+- **Final Test**:
+  - Loads the best model saved during training.
+  - Evaluates on the held-out `test_dataset`.
+  - Reports final test accuracy.
+
+**Summary**
+
+This section illustrates how to leverage a pretrained model (VGG16) for feature extraction and fine-tuning. By combining data augmentation, pretrained feature maps, and additional dense layers, the approach efficiently adapts VGG16 to a custom binary classification task. Fine-tuning improves results by optimizing the pretrained weights for the specific dataset.
+
+## 8.3.2 Fine-tuning a pretrained model
+
+This section focuses on further optimizing a pretrained model by fine-tuning specific layers, allowing it to better adapt to the current task.
+
+**1. Examining the Pretrained Base**
+
+```{r}
+conv_base
+```
+
+- **Inspecting the Model**: Displays the architecture and number of trainable layers in the `conv_base` (VGG16 in this case).
+
+**2. Unfreezing Specific Layers**
+
+```{r}
+unfreeze_weights(conv_base, from = -4)
+conv_base
+```
+
+- **Fine-tuning**:
+  - Unfreezes the last 4 layers of the convolutional base (`from = -4`).
+  - These layers will be trainable, while the rest of the layers remain frozen to retain pretrained knowledge.
+
+**3. Compiling the Model**
+
+```{r}
+model %>% compile(
+  loss = "binary_crossentropy",
+  optimizer = optimizer_rmsprop(learning_rate = 1e-5),
+  metrics = "accuracy"
+)
+```
+
+- **Optimizer**: Uses a low learning rate (`1e-5`) to avoid large updates that might overwrite the pretrained weights.
+- **Loss Function**: `binary_crossentropy`, suitable for binary classification tasks.
+- **Metric**: Accuracy is used to evaluate model performance.
+
+**4. Training with Fine-tuning**
+
+```{r}
+callbacks <- list(
+  callback_model_checkpoint(
+    filepath = "fine_tuning.keras",
+    save_best_only = TRUE,
+    monitor = "val_loss"
+  )
+)
+
+# About 1.5h
+history <- model %>% fit(
+  train_dataset,
+  epochs = 30,
+  validation_data = validation_dataset,
+  callbacks = callbacks
+)
+```
+
+- **Callback**:
+  - `callback_model_checkpoint`: Saves the model weights that achieve the lowest validation loss during training.
+- **Training**:
+  - Fine-tunes the entire model, including the last 4 layers of the `conv_base` and the fully connected layers.
+  - Runs for 30 epochs, with validation performed on the `validation_dataset`.
+
+**5. Evaluating the Fine-tuned Model**
+
+```{r}
+model <- load_model("fine_tuning.keras")
+result <- evaluate(model, test_dataset)
+cat(sprintf("Test accuracy: %.3f\n", result$accuracy))
+```
+
+- **Loading the Best Model**:
+  - Reloads the model saved with the best validation performance.
+- **Evaluation**:
+  - Tests the fine-tuned model on the `test_dataset` to assess generalization.
+  - Prints the final test accuracy.
+
+**Summary**
+
+In this section, the model is fine-tuned by unfreezing specific layers of the convolutional base. Fine-tuning allows the model to adjust high-level features for the task at hand while retaining the general knowledge from the pretrained layers. A low learning rate ensures stability during training. This strategy typically yields higher accuracy than feature extraction alone, especially when the dataset size is moderate.
