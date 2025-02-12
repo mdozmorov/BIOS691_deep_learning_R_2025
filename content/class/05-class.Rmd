@@ -27,7 +27,7 @@ editor_options:
 knitr::include_url('../../slides/ch08_CNN.html#1')
 ```
 
-Introduction to deep learning for computer vision, [RMarkdown](../../slides/code/ch08_CNN_code.Rmd)
+<!-- Introduction to deep learning for computer vision, [RMarkdown](../../slides/code/ch08_CNN_code.Rmd) -->
 
 ### References
 
