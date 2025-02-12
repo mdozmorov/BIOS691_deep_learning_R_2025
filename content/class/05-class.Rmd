@@ -1,9 +1,9 @@
 ---
-title: "Day 5: Generative Adversarial Networks, Autoencoders, Recurrent Neural Networks, LSTM, GRU, sequence learning"
+title: "Week 5: Convolutional Neural Network"
 # linktitle: "1. Introduction to RStudio and Images"
-date: "2020-06-12"
-class_date: "2020-06-12"
-draft: true
+date: "2025-02-10"
+class_date: "2025-02-10"
+draft: false
 output:
   blogdown::html_page:
     toc: false
@@ -19,35 +19,22 @@ editor_options:
   chunk_output_type: console
 ---
 
+### Convolutional Neural Networks
 
-## Slides
-
-### Recurrent Neural Networks, LSTM, GRU, sequence learning
-
-<a href="../../slides/30_RNN.html#1" target="_blank">Lecture slides in HTML format</a>
-
-<a href="../../slides/30_RNN.pdf" target="_blank">Lecture handouts in PDF format</a>
+<a href="../../slides/ch08_CNN.html#1" target="_blank">Lecture slides in HTML format</a>
 
 ```{r echo=FALSE}
-knitr::include_url('../../slides/30_RNN.html#1')
+knitr::include_url('../../slides/ch08_CNN.html#1')
 ```
 
-### Generative Adversarial Networks, Autoencoders
+Convolution Neural Networks code, [RMarkdown](../../slides/code/ch08_CNN_code.Rmd)
 
-<a href="../../slides/31_GAN.html#1" target="_blank">Lecture slides in HTML format</a>
+### References
 
-<a href="../../slides/31_GAN.pdf" target="_blank">Lecture handouts in PDF format</a>
+- Computer vision & CNNs: MNIST revisted. by Brad Boehmke. [Slides](https://rstudio-conf-2020.github.io/dl-keras-tf/04-computer-vision-cnns.html#1)
 
-```{r echo=FALSE}
-knitr::include_url('../../slides/31_GAN.html#1')
-```
+- "How Convolutional Neural Networks work" - 26min video by Brandon Rohrer, https://youtu.be/FmpDIaiMIeA?feature=shared
 
-### Glossary
+- [Convolutional Neural Networks (CNNs / ConvNets)](https://cs231n.github.io/convolutional-networks/) - notes from the Stanford CS class CS231n: Convolutional Neural Networks for Visual Recognition. https://cs231n.github.io/
 
-<a href="../../slides/32_Glossary.html#1" target="_blank">Lecture slides in HTML format</a>
-
-<a href="../../slides/32_Glossary.pdf" target="_blank">Lecture handouts in PDF format</a>
-
-```{r echo=FALSE}
-knitr::include_url('../../slides/32_Glossary.html#1')
-```
+- [Convolution](https://leonardoaraujosantos.gitbook.io/artificial-inteligence/machine_learning/deep_learning/convolution) - detailed review of each operation and layer of a CNN
