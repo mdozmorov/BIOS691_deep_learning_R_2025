@@ -205,8 +205,6 @@ zip::unzip("dogs-vs-cats/train.zip", exdir = "dogs-vs-cats")
 # Extracts the training dataset from "train.zip" into the "dogs-vs-cats" directory.
 ```
 
----
-
 **Key Insights**
 1. **Custom Model**: The ConvNet defined does not include max-pooling layers, which may retain more spatial information but increases computational complexity.
 2. **Kaggle API Setup**: You need to authenticate and install the Kaggle API to download datasets. Proper file permissions (`0600`) ensure security.
@@ -216,8 +214,6 @@ zip::unzip("dogs-vs-cats/train.zip", exdir = "dogs-vs-cats")
 **Code Explanation: Preparing a Smaller Subset of Data**
 
 This code creates a smaller dataset from the full "Dogs vs. Cats" dataset for faster experimentation and training. It splits the dataset into training, validation, and test subsets, each containing a defined range of images.
-
----
 
 **1. Define Paths**
 
@@ -229,8 +225,6 @@ original_dir <- path("~/Downloads/dogs-vs-cats/train")
 new_base_dir <- path("cats_vs_dogs_small")  
 # Base directory for the smaller dataset to be created.
 ```
-
----
 
 **2. Function to Create Subsets**
 
@@ -257,8 +251,6 @@ make_subset <- function(subset_name, start_index, end_index) {
 - **`glue::glue()`**: Constructs filenames dynamically for images in the specified range.
 - **`dir_create()`**: Ensures the directory structure exists for each subset and category.
 - **`file_copy()`**: Copies the image files from the original directory to the corresponding subset and category folders.
-
----
 
 **3. Create the Subsets**
 
