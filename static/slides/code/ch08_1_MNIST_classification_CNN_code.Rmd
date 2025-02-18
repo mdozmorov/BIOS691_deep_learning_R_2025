@@ -153,7 +153,7 @@ model %>% evaluate(test_images, test_labels, verbose = FALSE)
 
 # Question
 
-Describe the effect of adjusting various CNN components in the last layer, keeping others as used before:
+Describe the effect of adjusting various CNN components in the last convolutional layer, keeping others as used before:
 
 1. Change the number of filters (16, 256)
 2. Change filter/kernel size (5x5, 7x7)
