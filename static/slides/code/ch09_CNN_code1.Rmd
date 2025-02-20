@@ -1,0 +1,451 @@
+---
+title: "Advanced deep learning
+for computer vision"
+output: 
+  html_notebook: 
+    theme: cerulean
+    highlight: textmate
+editor_options: 
+  chunk_output_type: console
+---
+
+##   9.2 An image segmentation example
+
+Downloading and Uncompressing the Oxford-IIIT Pets Dataset. This dataset, hosted at "http://www.robots.ox.ac.uk/~vgg/data/pets/data", contains images of cats and dogs along with their corresponding segmentation masks.
+
+*   **Loading the `fs` Package**: The `fs` package provides functions for interacting with the file system in R. This package is used for tasks such as creating directories and handling file paths.
+*   **Creating the Dataset Directory**: Create a directory named "pets\_dataset" using the `dir_create()` function from the `fs` package. This directory will serve as the storage location for the downloaded dataset.
+*   **Downloading and Extracting the Dataset**:
+    *   **Defining the Base URL**: The base URL for the Oxford-IIIT Pets dataset is http://www.robots.ox.ac.uk/~vgg/data/pets/data. 
+    *   **Downloading and Extracting Files**: Use a loop to iterate over the filenames "images.tar.gz" and "annotations.tar.gz". For each filename, download the corresponding file using `download.file()` and extract its contents into the `data_dir` using `untar()`. These files contain the images and segmentation masks for the dataset. 
+    *   **File Organization**: The input pictures are in JPG format and stored in the `images/` folder. The corresponding segmentation masks are PNG files located in the `annotations/trimaps/` folder.
+
+**Note**: The code is not evaluated due to differences in operating systems, computers, and internet speed. Download and uncompress the data manually from https://www.robots.ox.ac.uk/%7Evgg/data/pets/ if the automated code fails.
+
+```{r eval=FALSE}
+# Load the 'fs' package for file system operations
+library(fs) 
+# Increase timeout option for download.file()
+# getOption('timeout')
+options(timeout=200)
+
+# Create a directory named "pets_dataset" to store the dataset
+data_dir <- path("pets_dataset") 
+dir_create(data_dir)
+
+# Code to download and extract data - Not evaluated in this example
+data_url <- path("http://www.robots.ox.ac.uk/~vgg/data/pets/data")
+
+# Download and extract image and annotation files
+for (filename in c("images.tar.gz", "annotations.tar.gz")) {
+  download.file(url = data_url / filename,
+                destfile = data_dir / filename)
+  untar(data_dir / filename, exdir = data_dir)
+}
+```
+
+### Constructing a Dataframe of Image and Mask Paths
+
+```{r}
+# Load the 'fs' package for file system operations
+library(fs) 
+
+# Define the directory path for the input images (JPG files)
+data_dir <- path("pets_dataset") 
+input_dir <- data_dir / "images" 
+
+# Define the directory path for the segmentation masks (PNG files)
+target_dir <- data_dir / "annotations/trimaps/" 
+
+# Create a dataframe (tibble) to store the file paths
+image_paths <- tibble::tibble(
+  # List all JPG files in the input directory, sort them alphabetically
+  input = sort(dir_ls(input_dir, glob = "*.jpg")), 
+  # List all PNG files in the target directory, sort them alphabetically
+  target = sort(dir_ls(target_dir, glob = "*.png"))) 
+
+# Print a concise summary of the dataframe 
+tibble::glimpse(image_paths)
+```
+
+Explanation
+
+*   **Defining Input and Target Directories**: The code defines the paths to the directories containing the input images (`input_dir`) and the corresponding segmentation masks (`target_dir`) using the `data_dir` variable from the previous code snippet in our conversation. This assumes that the dataset has been downloaded and extracted into the "pets\_dataset" directory.&#x20;
+*   **Creating the Dataframe**: The `tibble::tibble()` function is used to create a dataframe (specifically a tibble, which is an enhanced dataframe provided by the `tibble` package). This dataframe will have two columns: "input" and "target".
+*   **Populating the Dataframe**:
+    *   The "input" column is populated with a sorted list of all files in the `input_dir` with the ".jpg" extension. This is achieved using `dir_ls()` from the `fs` package to list files in a directory and `glob = "*.jpg"` to specify the file extension pattern. The `sort()` function ensures that the image paths are arranged alphabetically.
+    *   The "target" column is populated similarly, but it lists all files in the `target_dir` with the ".png" extension.
+*   **Sorting for Path Matching**:  The `sort()` function is crucial in both columns to ensure that the input images and their corresponding masks are correctly paired in the dataframe. Since the filenames for the images and masks share the same base filename (e.g., "Abyssinian\_1.jpg" and "Abyssinian\_1.png"), sorting both lists alphabetically guarantees that the corresponding paths will be aligned in the dataframe.
+*   **Dataframe Summary**: The code within the `eval = FALSE` chunk is not executed when the RMarkdown document is rendered. This prevents the `tibble::glimpse(image_paths)` command from running. If this line were executed, it would print a concise summary of the dataframe, including the number of rows and columns and a preview of the data in each column.
+
+
+### Displaying an Image from the Oxford-IIIT Pets Dataset
+
+```{r}
+# Define a custom function to display image tensors
+display_image_tensor <- function(x, ..., max = 255, 
+                                 plot_margins = c(0, 0, 0, 0)) { 
+  if(!is.null(plot_margins))
+    # Set plot margins if provided
+    par(mar = plot_margins) 
+
+  x %>%
+    # Convert the input tensor (x) to an R array
+    as.array() %>% 
+    # Remove dimensions of size 1 (e.g., for single-channel grayscale images)
+    drop() %>% 
+    # Convert the array to a raster object with a specified maximum value
+    as.raster(max = max) %>% 
+    # Plot the raster object with optional arguments and disable interpolation
+    # Draw pixels with sharp edges, with no blending or interpolation of colors between pixels
+    plot(..., interpolate = FALSE) 
+}
+
+
+# Load the 'tensorflow' library
+library(tensorflow) 
+library(keras3)
+
+# Read the tenth image file path from the 'input' column of 'image_paths'
+image_tensor <- image_paths$input[10] %>% 
+  # Read the file contents into a tensor
+  tf$io$read_file() %>% 
+  # Decode the JPEG image data into a tensor
+  tf$io$decode_jpeg()
+
+# Display the structure of the image tensor
+str(image_tensor) 
+
+# Display the image using the custom 'display_image_tensor' function
+display_image_tensor(image_tensor) 
+```
+
+Explanation
+
+*   **`display_image_tensor()` Function**:
+    *   **Purpose**:  This function is designed to display an image represented as a TensorFlow tensor using R's plotting capabilities.&#x20;
+    *   **Parameters**:
+        *   `x`: The input TensorFlow tensor containing the image data.
+        *   `...`: Allows for passing additional arguments to the `plot()` function.
+        *   `max`: The maximum pixel value, defaulting to 255. This is used for scaling the pixel values to the range expected by the `as.raster()` function.
+        *   `plot_margins`:  A vector of four values specifying the margins of the plot (bottom, left, top, right). If not provided, default margins are used.
+    *   **Functionality**:
+        *   **Setting Plot Margins**: The function first checks if plot margins (`plot_margins`) are provided. If so, it sets the plot margins using `par(mar = plot_margins)`.
+        *   **Tensor to Array Conversion**: The input tensor `x` is converted into an R array using `as.array()`.
+        *   **Dimension Reduction**:  The `drop()` function removes any dimensions of size 1 from the array. This is useful for handling grayscale images, which often have a single color channel represented as a dimension of size 1.
+        *   **Array to Raster Conversion**: The array is converted to a raster object using `as.raster(max = max)`. The `max` argument specifies the maximum pixel value, which is typically 255 for images encoded with 8 bits per channel.
+        *   **Plotting the Raster**: Finally, the `plot()` function is used to display the raster object. The `interpolate = FALSE` argument disables interpolation, ensuring that the image is displayed with sharp pixel boundaries.
+*   **Loading the TensorFlow Library**: The code loads the `tensorflow` library, enabling the use of TensorFlow's functions for working with tensors and image data.
+*   **Reading and Decoding the Image**:
+    *   **Image Path Selection**: The code selects the tenth image file path from the "input" column of the `image_paths` dataframe. This dataframe, as we discussed previously in our conversation, contains the paths to the input images in the dataset.
+    *   **File Reading**: The `tf$io$read_file()` function reads the contents of the specified image file into a tensor.
+    *   **JPEG Decoding**: The `tf$io$decode_jpeg()` function decodes the JPEG-encoded image data from the tensor, producing a tensor representing the image.
+*   **Displaying the Image**:
+    *   **Structure Examination**: The `str(image_tensor)` command displays the structure of the `image_tensor`, revealing its dimensions, data type, and a preview of its content. 
+    *   **Image Visualization**: The `display_image_tensor(image_tensor)` call utilizes the custom `display_image_tensor()` function to display the image.
+
+**In Conclusion**: This code effectively loads and displays an image from the Oxford-IIIT Pets dataset. The custom `display_image_tensor()` function provides a convenient way to visualize image tensors using R's plotting functions, handling the necessary conversions and ensuring a faithful representation of the image data. 
+
+
+### Visualizing a Target Mask from the Oxford-IIIT Pets Dataset
+
+This mask, corresponding to an input image, provides pixel-level annotations that delineate the "foreground," (1) "background," (2) and "contour" (3) regions within the image.
+
+```{r}
+# Define a custom function to display target tensors
+display_target_tensor <- function(target) 
+  # Call the display_image_tensor function 
+  display_image_tensor(target - 1, max = 2) 
+
+# Select the path to the tenth target mask from 'image_paths' 
+target <- image_paths$target[10] %>% 
+  # Read the file content into a tensor
+  tf$io$read_file() %>% 
+  # Decode the PNG image data into a tensor
+  tf$io$decode_png() 
+
+# Print the structure of the target tensor
+str(target) 
+
+# Display the target mask using the custom function
+display_target_tensor(target)
+```
+
+Explanation
+
+*   **`display_target_tensor()` Function:** This function is designed specifically to display a target mask (segmentation mask) from the Oxford-IIIT Pets dataset.
+    *   **Input:** It takes a TensorFlow tensor (`target`) representing the target mask as input.
+    *   **Reusing `display_image_tensor()`:**  It internally calls the `display_image_tensor()` function (defined in the previous code snippet in our conversation) to handle the actual visualization process.
+    *   **Adjusting Pixel Values:**  It subtracts 1 from the input `target` tensor before passing it to `display_image_tensor()`. This adjustment is done because the original pixel values in the target mask range from 1 to 3, representing "foreground," "background," and "contour" respectively. Subtracting 1 shifts these values to 0 to 2, which aligns with the `max = 2` argument passed to `display_image_tensor()`. This ensures that the resulting visualization uses a color palette appropriate for displaying the three distinct regions of the mask (black for background, gray for contour, and white for foreground).
+*   **Loading the Target Mask:**
+    *   **Target Mask Path:** The code selects the tenth target mask file path from the "target" column of the `image_paths` dataframe. This dataframe, as constructed earlier, holds the file paths to the target masks.
+    *   **File Reading and Decoding:** The `tf$io$read_file()` function reads the content of the selected PNG file into a tensor, and then `tf$io$decode_png()` decodes the PNG-encoded image data, producing a tensor representation of the target mask.
+*   **Displaying the Target Mask:**
+    *   **Structure Display:** The `str(target)` command displays the structure of the target tensor, providing information about its dimensions, data type, and a preview of its content.
+    *   **Mask Visualization:** Finally, the `display_target_tensor(target)` call uses the custom function to visualize the target mask. This visualization uses the `display_image_tensor()` function with adjusted pixel values (0 to 2) and a `max` value of 2 to map these values to a suitable color palette, effectively highlighting the different regions of the mask.
+
+**In Summary**: The code snippet efficiently loads and visualizes a target mask from the Oxford-IIIT Pets dataset. The custom `display_target_tensor()` function leverages the existing `display_image_tensor()` function for image display, while applying necessary adjustments to the pixel values to ensure proper visualization of the segmentation mask regions.
+
+### Building Training and Validation Datasets for Image Segmentation
+
+**1. Image Reading and Resizing**
+
+```{r}
+library(tfdatasets)
+
+# Helper to read in and resize the image using TensorFlow operations.
+# Look up decode_image(), decode_jpeg(), or decode_png() from the tf$io submodule.
+# Each input image has three channels: RGB values.
+# Each target image has a single channel: integer labels for each pixel.
+tf_read_image <-
+  function(path, format = "image", resize = NULL, ...) {
+
+    img <- path %>%
+      tf$io$read_file() %>%
+      # Use TensorFlow utilities for reading the image, so we can get familiar with the API.
+      # Look up decode_image(), decode_jpeg(), or decode_png() from the tf$io submodule.
+      tf$io[[paste0("decode_", format)]](...) #
+		  # Look up decode_image(), decode_jpeg(), or decode_png() from the tf$io submodule.
+
+    if (!is.null(resize))
+      # We resize everything to 200 × 200.
+      # We make sure to call the tf module function with integers using as.integer().
+      img <- img %>%
+        tf$image$resize(as.integer(resize)) 
+
+    img
+  }
+
+img_size <- c(200, 200) 
+
+tf_read_image_and_resize <- function(..., resize = img_size)
+  tf_read_image(..., resize = resize)
+```
+
+- **`tf_read_image()` Function:**
+    - This function reads an image file from the specified `path` and decodes it based on the provided `format`.
+    - If a `resize` parameter is given, the image is resized using `tf$image$resize()`. The `as.integer()` function is used to ensure that the resize dimensions are integers.
+- **`tf_read_image_and_resize()` Function:**
+    - This function is a wrapper around `tf_read_image()`, setting the `resize` parameter to a default `img_size` of (200, 200).
+
+**2. Dataset Creation**
+
+```{r}
+make_dataset <- function(paths_df) {
+  # The R function passed to dataset_map() is called with symbolic tensors and must return symbolic tensors.
+  tensor_slices_dataset(paths_df) %>%
+    dataset_map(function(path) {
+      # dataset_map() receives a single argument here, a named list of two scalar string tensors, containing file paths to the input and target images.
+      image <- path$input %>%
+        tf_read_image_and_resize("jpeg", channels = 3L) # Each input image has three channels: RGB values.
+      target <- path$target %>%
+        tf_read_image_and_resize("png", channels = 1L) # Each target image has a single channel: integer labels for each pixel.
+      target <- target - 1 # Subtract 1 so that our labels become 0, 1, and 2.
+      list(image, target)
+    }) %>%
+    dataset_cache() %>% # Caching the dataset will store the full dataset in memory after the first run.
+    dataset_shuffle(buffer_size = nrow(paths_df)) %>% # Shuffle the images, using the total number of samples in the data as a buffer_size. We make sure to call shuffle after cache.
+    dataset_batch(32)
+}
+```
+
+- **`make_dataset()` Function:**
+    - This function takes a dataframe `paths_df` (presumably the `image_paths` dataframe from earlier in the sources) containing paths to input images and their corresponding target masks. 
+    - It creates a TensorFlow dataset using `tensor_slices_dataset()` from the input paths.
+    - **`dataset_map()`:**
+        - This function applies a function to each element in the dataset. Here, it reads and resizes both the input image (JPEG format, 3 channels) and the target mask (PNG format, 1 channel). It then subtracts 1 from the `target` tensor to shift the labels to the range of 0 to 2 for better visualization. 
+    - **`dataset_cache()`:**
+        - Caches the dataset in memory after the first iteration. This can speed up training if the dataset fits in memory.
+    - **`dataset_shuffle()`:**
+        - Shuffles the dataset to prevent ordering biases during training. The `buffer_size` is set to the number of samples in the dataset for thorough shuffling.
+    - **`dataset_batch()`:**
+        - Groups the dataset into batches of size 32.
+
+**3. Dataset Splitting**
+
+```{r}
+num_val_samples <- 1000 # Reserve 1,000 samples for validation.
+val_idx <- sample.int(nrow(image_paths), num_val_samples) # Reserve 1,000 samples for validation.
+
+val_paths <- image_paths[val_idx, ]
+train_paths <- image_paths[-val_idx, ] # Split the data into training and validation sets.
+
+validation_dataset <- make_dataset(val_paths)
+train_dataset <- make_dataset(train_paths) # Split the data into training and validation sets.
+```
+
+- The code first randomly selects 1000 samples for validation using `sample.int()`.
+- It then splits the `image_paths` dataframe into `val_paths` (validation set) and `train_paths` (training set) based on the selected indices.
+- Finally, it calls the `make_dataset()` function to create separate training and validation datasets.
+
+**In summary,** this code prepares data for training an image segmentation model, ensuring consistent image sizes, label adjustments, shuffling for randomness, and separation into training and validation sets for model evaluation.
+
+
+### Defining an Image Segmentation Model Using Keras
+
+The R code you provided defines a Keras model for image segmentation using a convolutional encoder-decoder architecture. This model is designed for semantic segmentation, where each pixel in an image is classified independently into a semantic category, such as "cat" or "dog," without differentiating individual instances of the same category within an image.
+
+```{r}
+get_model <- function(img_size, num_classes) {
+  # Define local functions for conv and conv_transpose layers with default parameters
+  conv <- function(..., padding = "same", activation = "relu")
+    layer_conv_2d(..., padding = padding, activation = activation)
+  
+  conv_transpose <- function(..., padding = "same", activation = "relu")
+    layer_conv_2d_transpose(..., padding = padding, activation = "relu")
+
+  # Define the input layer with the specified image size and 3 color channels
+  input <- layer_input(shape = c(img_size, 3)) 
+
+  # Define the model architecture
+  output <- input %>%
+    layer_rescaling(scale = 1/255) %>%  # Rescale input pixel values to 0-1 range
+    conv(64, 3, strides = 2) %>%        # Convolutional layers with increasing filter size and downsampling
+    conv(64, 3) %>%
+    conv(128, 3, strides = 2) %>%
+    conv(128, 3) %>%
+    conv(256, 3, strides = 2) %>%
+    conv(256, 3) %>%
+    conv_transpose(256, 3) %>%         # Transposed convolutional layers for upsampling
+    conv_transpose(256, 3, strides = 2) %>%
+    conv_transpose(128, 3) %>%
+    conv_transpose(128, 3, strides = 2) %>%
+    conv_transpose(64, 3) %>%
+    conv_transpose(64, 3, strides = 2) %>%
+    conv(num_classes, 3, activation="softmax")  # Final convolutional layer for pixel-wise classification
+
+  # Create and return the Keras model
+  keras_model(input, output) 
+}
+
+# Create the model with the image size (from previous code) and 3 classes
+model <- get_model(img_size = img_size, num_classes = 3) 
+
+# Print the model summary
+model 
+```
+
+The `get_model()` function defines a convolutional encoder-decoder architecture, which is commonly used for image segmentation tasks. Here's a detailed explanation:
+
+- **Input Layer:** The input layer (`layer_input()`) takes an image with the specified `img_size` (height and width) and three color channels (RGB).
+- **Encoder:**
+    - **Downsampling:** The first half of the model is the encoder, which gradually downsamples the input image using convolutional layers (`layer_conv_2d()`) with strides of 2.  Each convolutional layer extracts features from the input, and the strides reduce the spatial dimensions of the feature maps.
+    - **Feature Extraction:** The increasing number of filters in the convolutional layers (64, 128, 256) allows the model to learn increasingly complex and abstract features as it goes deeper. 
+- **Decoder:**
+    - **Upsampling:** The second half of the model is the decoder, which upsamples the feature maps back to the original image size using transposed convolutional layers (`layer_conv_2d_transpose()`). Transposed convolutions are essentially the inverse of convolutions, increasing the spatial dimensions of the feature maps.
+    - **Pixel-wise Classification:** The final convolutional layer uses a softmax activation function to output a probability distribution over the `num_classes` for each pixel in the image. This allows the model to classify each pixel independently. 
+
+Architectural Choices and Considerations
+
+* **Padding:** `padding = "same"` is used throughout the model to ensure that the output feature maps have the same spatial dimensions as the input feature maps, avoiding the influence of border effects. 
+* **Downsampling with Strides:** Instead of using `layer_max_pooling_2d()` for downsampling, the model uses strides in the convolutional layers. This preserves spatial information, which is crucial for image segmentation tasks.
+* **Rescaling:** `layer_rescaling(scale = 1/255)` is used to rescale the input image pixel values to the range of, which is a common practice in image processing for better model training.
+* **Softmax Activation:** The final layer uses a softmax activation to produce a probability distribution for each pixel over the different classes.
+
+This code provides a foundational architecture for image segmentation. Further improvements could involve incorporating architectural patterns like residual connections and batch normalization, which can enhance model performance, particularly for deeper networks. Additionally, visualizing intermediate activations and filters can aid in understanding the model's learning process.
+
+
+### Compiling, Training, and Evaluating the Image Segmentation Model
+
+The R code compiles, trains, and evaluates the image segmentation model defined earlier using the training and validation datasets. It also demonstrates how to load the best saved model and use it to make predictions on a test image.
+
+Very slow on CPU.
+
+```{r}
+# Compile the model
+model %>% 
+  compile(optimizer = "rmsprop", 
+          loss = "sparse_categorical_crossentropy")
+
+# Define callbacks
+callbacks <- list(
+  callback_model_checkpoint("oxford_segmentation.keras", save_best_only = TRUE)
+#  callback_early_stopping(monitor = "val_loss", patience = 2, restore_best_weights = TRUE)
+)
+
+if (file.exists("oxford_segmentation_history.RData") &
+    file.exists("oxford_segmentation.keras")) {
+  # Load the best saved model
+  model <- load_model("oxford_segmentation.keras")
+  # And history
+  load("oxford_segmentation_history.RData")
+} else {
+  # Train the model
+  history <- model %>% 
+    fit(
+      train_dataset, 
+      epochs = 50, 
+      callbacks = callbacks, 
+      validation_data = validation_dataset
+    )
+  # Save the history object
+  save(history, file = "oxford_segmentation_history.RData")
+}
+
+# Plot training history
+plot(history) 
+
+
+# Select a test image
+test_image <- val_paths$input[20] %>% 
+  tf_read_image_and_resize("jpeg", channels = 3L) 
+
+# Make a prediction on the test image
+# tf$newaxis adds a batch dimension, because our model expects batches
+# of images. model() returns a Tensor with shape=(1, 200, 200, 3), dtype=float32.
+predicted_mask_probs <- model(test_image[tf$newaxis, , , ]) 
+
+# Obtain the predicted mask (class indices)
+# tf$argmax() is similar to which.max() in R. A key difference is that tf$argmax()
+# returns 0-based values. 
+predicted_mask <- tf$argmax(predicted_mask_probs, axis = -1L) 
+# predicted_mask is a Tensor with shape=(1, 200, 200), dtype=int64.
+
+# Shift the predicted mask values to 1, 2, 3
+predicted_target <- predicted_mask + 1 
+
+# Display the test image and predicted mask
+par(mfrow = c(1, 2)) 
+display_image_tensor(test_image)
+display_target_tensor(predicted_target)
+```
+
+1. **Model Compilation:**
+   - `model %>% compile(...)`: This line compiles the model, preparing it for training.
+   - **`optimizer = "rmsprop"`:**  The RMSprop optimizer is used for training the model. RMSprop is an adaptive learning rate optimization algorithm that helps speed up the training process.
+   - **`loss = "sparse_categorical_crossentropy"`:** This loss function is appropriate for multi-class classification problems where the target labels are integers representing the class indices.
+
+2. **Callbacks:**
+   - `callbacks <- list(...)`: Callbacks are functions that can be applied at various stages of the training process (e.g., at the end of each epoch).
+   - **`callback_model_checkpoint(...)`:** This callback saves the model weights to a file ("oxford_segmentation.keras") at the end of each epoch. The `save_best_only = TRUE` argument ensures that only the model with the best performance on the validation set is saved, preventing overfitting.
+
+3. **Model Training:**
+   - `history <- model %>% fit(...)`: This line trains the model using the specified data and settings.
+   - **`train_dataset`:** The training dataset created earlier is used to train the model. 
+   - **`epochs = 50`:** The model will be trained for 50 epochs, meaning it will iterate over the entire training dataset 50 times.
+   - **`callbacks = callbacks`:** The defined callbacks are applied during training.
+   - **`validation_data = validation_dataset`:**  The validation dataset is used to evaluate the model's performance after each epoch.
+
+4. **Plotting Training History:**
+   - `plot(history)`: This will plot the training and validation loss curves from the `history` object. This visualization helps assess the model's learning progress and check for overfitting.
+
+5. **Loading the Best Model:**
+   - `model <- load_model_tf("oxford_segmentation.keras")`: This line loads the best-performing model (as determined by the validation loss during training) from the saved file.
+
+6. **Making Predictions:**
+   - **`test_image <- val_paths$input %>% ...`:** This line selects an image from the validation dataset (`val_paths`) and reads it into a tensor.
+   - **`predicted_mask_probs <- model(test_image[tf$newaxis, , , ])`:** The model is used to make a prediction on the test image. `tf$newaxis` adds a batch dimension to the input tensor, as the model expects batches of images.
+   - **`predicted_mask <- tf$argmax(predicted_mask_probs, axis = -1L)`:** The `tf$argmax()` function finds the index of the class with the highest probability for each pixel, producing the predicted mask. The `axis = -1L` argument specifies that the argmax should be computed along the last axis (the class dimension).
+   - **`predicted_target <- predicted_mask + 1`:** The predicted mask values (originally in the range of 0 to 2) are shifted up by 1 to match the original labels in the dataset (1, 2, 3).
+
+7. **Displaying Results:**
+   - **`par(mfrow = c(1, 2))`:** This sets the plotting layout to a 1x2 grid, so you can display the test image and the predicted mask side by side.
+   - **`display_image_tensor(test_image)` and `display_target_tensor(predicted_target)`:** These functions are used to display the test image and the predicted segmentation mask, respectively. 
+
+Key Points and Insights
+
+- The code demonstrates a standard workflow for training and evaluating an image segmentation model using Keras.
+- Saving the best model using `callback_model_checkpoint` is a crucial step to avoid overfitting and ensure that you are using the model with the best generalization capabilities.
+- Visualizing the training history (loss curves) can provide valuable information about the model's training dynamics.
+- The code for making predictions showcases how to use the trained model to segment a new image, highlighting the need for adding a batch dimension to the input tensor.
+
