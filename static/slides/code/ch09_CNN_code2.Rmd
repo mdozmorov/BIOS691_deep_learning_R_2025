@@ -1,0 +1,499 @@
+---
+title: "Advanced deep learning for computer vision"
+subtitle: "Modern convnet architecture patterns"
+output: 
+  html_notebook: 
+    theme: cerulean
+    highlight: textmate
+editor_options: 
+  chunk_output_type: console
+---
+
+## 9.3 Modern convnet architecture patterns
+### 9.3.1 Modularity, hierarchy, and reuse
+### 9.3.2 Residual connections
+
+#### Understanding Residual Connections in Deep Learning
+
+The code snippet represents the concept of **residual connections** in deep learning, a technique that helps address the **vanishing gradients** problem in deep neural networks.
+
+- Deep learning models often involve a chain of functions applied sequentially to the input data. Consider the function:  `y = f4(f3(f2(f1(x))))`. 
+- During training, the model learns by adjusting the parameters of these functions based on the error signal (loss) calculated at the output. This error signal is propagated backward through the network using **backpropagation**.
+- In deep networks, as the error signal travels through many layers, it can diminish significantly, leading to vanishing gradients. This makes it difficult for early layers to learn effectively. 
+
+The Solution: Residual Connections 
+
+- Residual connections add a shortcut path for the gradient information to flow directly from later layers to earlier layers, bypassing the potentially "noisy" or "destructive" intermediate layers. 
+- This is achieved by adding the input of a layer or a block of layers to its output.
+
+```{r eval=FALSE}
+x <- ... 
+residual <- x  # Save the input as the residual
+x <- block(x) # Apply a block of layers to x
+x <- layer_add(c(x, residual)) # Add the residual to the block's output
+```
+
+- The `layer_add()` function combines the original input (`residual`) with the output of the `block(x)`, ensuring that the final output retains information from the original input.
+- **Key Benefit:** This shortcut path allows the gradient information to flow more easily through the network, even in very deep architectures. 
+
+#### Handling Shape Mismatches
+
+- Adding the residual directly to the output requires that both tensors have the same shape. If the block of layers changes the shape of the input (e.g., due to convolutional layers with increased filters or max-pooling layers), the residual needs to be adjusted.
+- This can be achieved using a 1x1 convolutional layer (`layer_conv_2d()`) without activation to project the residual to the desired output shape. 
+
+#### Impact of Residual Connections
+
+- Residual connections have been a significant advancement in deep learning, enabling the training of much deeper networks. 
+- They were first introduced in the ResNet family of models, which achieved breakthrough results in image recognition tasks.
+
+#### Analogy to the Game of Telephone 
+
+- The analogy of the game of Telephone illustrates vanishing gradients. In this game, a message is whispered from one person to the next, and the final message often differs significantly from the original due to accumulated errors. 
+- Similarly, in a deep network, the error signal can get distorted as it propagates backward, leading to ineffective learning in early layers. 
+- Residual connections act as a way to "preserve" the original message by providing a direct path for information to flow.
+
+#### Implementing Residual Connections with Shape Adjustments
+
+These R code snippets demonstrate how to implement residual connections in convolutional neural networks (CNNs) when the shapes of the input and output tensors of a block might not match.
+
+**Handling Filter Count Changes**
+
+```{r}
+library(keras3)
+library(tensorflow)
+
+inputs <- layer_input(shape = c(32, 32, 3))
+x <- inputs %>% layer_conv_2d(32, 3, activation = "relu")
+# Set aside the residual.
+residual <- x
+residual$shape
+# This is the layer around which we create a residual connection: it increases the
+# number of output filers from 32 to 64. Note that we use padding = "same"
+# to avoid downsampling due to padding.
+x <- x %>% layer_conv_2d(64, 3, activation = "relu", padding = "same")
+x$shape
+# The residual had only 32 filters, so we use a 1 × 1 layer_conv_2d to project it to the correct shape.
+residual <- residual %>% layer_conv_2d(64, 1) 
+residual$shape
+# Now the block output and the residual have the same shape and can be added.
+x <- layer_add(c(x, residual))
+```
+
+* A residual connection is created around a `layer_conv_2d` layer that increases the number of filters from 32 to 64.
+* `padding = "same"` in the second convolutional layer ensures that the spatial dimensions of the output feature map remain the same as the input.
+* A 1x1 `layer_conv_2d` layer with 64 filters is applied to the `residual` to project it to the same shape as the output of the second convolutional layer. This allows the element-wise addition in `layer_add`.
+
+
+**Handling Max-Pooling Downsampling**
+
+```{r}
+inputs <- layer_input(shape = c(32, 32, 3))
+x <- inputs %>% layer_conv_2d(32, 3, activation = "relu")
+residual <- x
+residual$shape
+# This is the block that includes a 2 × 2 max pooling layer.
+x <- x %>% 
+  layer_conv_2d(64, 3, activation = "relu", padding = "same") %>% 
+  layer_max_pooling_2d(2, padding = "same") 
+x$shape
+# We use strides = 2 in the residual projection to match the downsampling created by the
+# max-pooling layer.
+residual <- residual %>% 
+  layer_conv_2d(64, 1, strides = 2) 
+residual$shape
+# Now the block output and the residual have the same shape and can be added.
+x <- layer_add(list(x, residual))
+```
+
+* A residual connection is created around a block that includes a `layer_max_pooling_2d` layer, which downsamples the feature map by a factor of 2.
+* `padding = "same"` is used in both the convolutional and max-pooling layers to maintain consistent spatial dimensions.
+* A 1x1 `layer_conv_2d` layer with `strides = 2` is used to downsample the `residual` to match the output of the max-pooling layer. 
+
+**Key Concepts and Insights**
+
+* **Shape Matching:** Residual connections require the input and output tensors of a block to have the same shape so they can be added together.
+* **1x1 Convolutions for Projection:** When a block changes the shape (number of filters or spatial dimensions) of the input, a 1x1 convolutional layer can be used to project the residual to the correct shape.
+* **Preserving Spatial Information:** Using `padding = "same"` in convolutional and pooling layers helps prevent the loss of spatial information at the edges of the feature maps. This is especially important in tasks like image segmentation where spatial information is crucial. 
+* **Strided Convolutions for Downsampling:**  Strided convolutions (like in the second snippet) can be used to downsample feature maps while preserving more spatial information compared to max-pooling. This is a common technique in models that require precise spatial localization.
+
+These code snippets illustrate how residual connections can be effectively implemented even when there are shape mismatches between the input and output of a convolutional block. The techniques shown here are fundamental building blocks for designing modern, deeper CNN architectures. 
+
+
+#### Enhanced CNN model
+
+A convolutional neural network (CNN) model that incorporates several important architectural best practices discussed in the sources, including residual connections, increasing filter counts with depth, and the use of global average pooling. 
+
+**1. Input Layer and Rescaling:**
+
+```{r}
+inputs <- layer_input(shape = c(32, 32, 3))
+x <- layer_rescaling(inputs, scale = 1/255)
+```
+
+*   An `input_layer` is defined to accept images with a shape of 32x32 pixels and 3 color channels (RGB).
+*   The input images are then rescaled by dividing by 255 to normalize the pixel values to the range, a common preprocessing step for CNNs.
+
+**2.  `residual_block` Function Definition:**
+
+```{r}
+# Utility function to apply a convolutional block with a residual connection, with
+# an option to add max pooling
+residual_block <- function(x, filters, pooling = FALSE) {
+  residual <- x
+  x <- x %>%
+    layer_conv_2d(filters, 3, activation = "relu", padding = "same") %>%
+    layer_conv_2d(filters, 3, activation = "relu", padding = "same")
+
+  # If we use max pooling, we add a strided convolution to project the
+  # residual to the expected shape.
+  if (pooling) {
+    x <- x %>% layer_max_pooling_2d(pool_size = 2, padding = "same")
+    residual <- residual %>% layer_conv_2d(filters, 1, strides = 2)
+  # If we don’t use max pooling, we project the residual only if the number of channels has changed.
+  } else if (filters != residual$shape[[4]]) { #  } else if (filters != dim(residual)[[4]]) {
+    residual <- residual %>% layer_conv_2d(filters, 1)
+  }
+
+  layer_add(list(x, residual))
+}
+```
+
+*   This function defines a reusable **residual block**, a key building block for modern CNN architectures. 
+*   Each residual block starts by saving a copy of the input (`x`) as the `residual`.
+*   Two consecutive `layer_conv_2d` layers with the specified number of `filters`, a kernel size of 3, "relu" activation, and `"same"` padding are applied to the input `x`. These layers extract features from the input while preserving spatial dimensions due to the `"same"` padding. 
+*   **Conditional Shape Adjustment:** 
+    *   **If `pooling = TRUE`:**
+        *   A `layer_max_pooling_2d` layer with a pool size of 2 and `"same"` padding downsamples the spatial dimensions of `x` by a factor of 2.
+        *   To match the shape of `x`, the `residual` is projected using a 1x1 `layer_conv_2d` with `strides = 2`, effectively downsampling it as well.
+    *   **If `filters != dim(residual)`:**
+        *   If the number of filters in the current block is different from the number of filters in the `residual`, a 1x1 `layer_conv_2d` is used to project the `residual` to the appropriate number of channels.
+*   Finally, `layer_add` combines the output of the convolutional block (`x`) with the adjusted `residual`, implementing the core concept of a residual connection.
+
+**3. Model Construction with Residual Blocks:**
+
+```{r}
+outputs <- x %>%
+  residual_block(filters = 32, pooling = TRUE) %>%
+  residual_block(filters = 64, pooling = TRUE) %>%
+  # The last block doesn’t need a max-pooling layer, because we will apply
+  # global average pooling right after it.
+  residual_block(filters = 128, pooling = FALSE) %>%
+  layer_global_average_pooling_2d() %>%
+  layer_dense(units = 1, activation = "sigmoid")
+
+model <- keras_model(inputs = inputs, outputs = outputs) 
+model
+```
+
+*   The rescaled input `x` is passed through a sequence of three residual blocks.
+*   The number of filters in each block increases (`filters = 32`, `64`, and `128`), creating a hierarchical feature representation.
+*   The first two blocks use `pooling = TRUE`, downsampling the feature maps, while the last block does not.
+*   `layer_global_average_pooling_2d`  computes the average value across the spatial dimensions of the feature maps, reducing them to a 1D vector. This approach replaces the use of `layer_flatten()` in the original dogs vs. cats model, likely for better generalization.
+*   A `layer_dense` with a single unit and a "sigmoid" activation function is added. This suggests the model is designed for a binary classification task (e.g., cat vs. dog), where the sigmoid activation outputs a probability between 0 and 1. 
+*   Finally, a Keras model (`keras_model`) is created, linking the `inputs` to the `outputs`.
+
+**Insights and Best Practices:**
+
+*   **Modularity, Hierarchy, and Reuse (MHR):**  The code follows the MHR formula by using reusable residual blocks, a hierarchical arrangement of layers, and modular design.
+*   **Increasing Filter Counts:** The use of increasing filter counts with depth aligns with the best practice of capturing more complex features as the spatial resolution of the feature maps decreases.
+*   **Residual Connections:**  The `residual_block` implementation effectively addresses the vanishing gradients problem by providing shortcut paths for gradient information to flow.
+*   **Shape Adjustment:** The use of 1x1 convolutional layers to project the residual tensor to the correct shape when necessary ensures the proper functioning of the residual connections.
+*   **Global Average Pooling:**  The use of global average pooling instead of flattening likely improves generalization and reduces the number of parameters in the final dense layer.
+
+
+### 9.3.3 Batch normalization
+
+**Batch normalization**, a technique for normalizing the outputs of layers within a convolutional neural network (CNN).
+
+**Formula for Data Normalization**
+
+```{r eval=FALSE}
+normalize_data <- apply(data, <axis>, function(x) (x - mean(x)) / sd(x)) 
+```
+
+* This formula demonstrates the standard approach to data normalization: subtracting the mean and dividing by the standard deviation. This centers the data around zero and scales it to have unit variance, assuming a normal (Gaussian) distribution. 
+
+**Batch Normalization without Bias**
+
+```{r eval=FALSE}
+x <- ...
+x <- x %>%
+  # Because the output of the layer_conv_2d() is normalized, the layer doesn’t need its own bias vector.
+  layer_conv_2d(32, 3, use_bias = FALSE) %>%
+  layer_batch_normalization() 
+```
+
+*  A convolutional layer (`layer_conv_2d`) is defined with 32 filters, a kernel size of 3, and  `use_bias = FALSE`.
+* `layer_batch_normalization()` is applied immediately after the convolutional layer.
+* The `use_bias = FALSE` argument in the convolutional layer is important because the batch normalization layer itself handles centering the output around zero. This makes the bias term in the convolutional layer redundant.
+
+**Batch Normalization with Activation Before**
+
+```{r eval=FALSE}
+x %>%
+  layer_conv_2d(32, 3, activation = "relu") %>%
+  layer_batch_normalization() 
+```
+
+* A ReLU activation function (`activation = "relu"`) is applied within the `layer_conv_2d`  **before**  the `layer_batch_normalization()`.  This might not be the optimal placement.
+
+**Batch Normalization with Activation After**
+
+```{r eval=FALSE}
+x %>%
+  layer_conv_2d(32, 3, use_bias = FALSE) %>%
+  layer_batch_normalization() %>% 
+  layer_activation("relu")
+```
+
+* The **recommended approach**: placing the activation function (`layer_activation("relu")`) **after** the batch normalization layer.
+
+**Why is the Placement of Activation Important?**
+
+* Batch normalization centers the layer's output around zero.
+* ReLU activation uses zero as the threshold for determining which activations to keep (values above zero are kept, and values below zero are set to zero).
+* **Applying batch normalization before ReLU ensures that the ReLU activation is operating on values that are already centered around zero. This maximizes the effectiveness of the ReLU activation and may lead to better performance**.
+
+**Key Insights about Batch Normalization:**
+
+* **Adaptive Normalization:** Batch normalization normalizes data during training using the mean and variance of the current batch. During inference, it uses an exponential moving average of these statistics calculated during training.
+* **Benefits:**  While the exact reasons are debated, batch normalization is thought to help with gradient propagation, enabling the training of deeper networks. It might also reduce internal covariate shift, which can make training more stable.
+* **Use Cases:** Batch normalization is widely used in modern CNN architectures like ResNet50, EfficientNet, and Xception.
+* **Fine-tuning:**  When fine-tuning a pre-trained model with batch normalization, it is generally recommended to **freeze** the batch normalization layers (`layer$trainable <- FALSE`) to prevent them from updating their internal statistics, which could interfere with the fine-tuning process.
+
+These code snippets and explanations highlight how to effectively use batch normalization within a CNN architecture. The placement of the activation function after batch normalization is generally considered a best practice, although it's not a strict rule.  Understanding these concepts is essential for building and training high-performing CNNs for image-related tasks. 
+
+#### Setting Batch Normalization Layers to Non-trainable in EfficientNet B0
+
+It is recommended to **freeze** (set to non-trainable) all the Batch Normalization layers. We will demonstrate it within a pre-trained EfficientNet B0 model in Keras. This is a common practice when fine-tuning pre-trained models.
+
+**1. Get the S3 Classname of a Batch Normalization Layer**
+
+```{r}
+batch_norm_layer_s3_classname <- class(layer_batch_normalization())
+batch_norm_layer_s3_classname
+```
+
+* This line creates a dummy batch normalization layer using `layer_batch_normalization()` and then extracts its S3 classname using the `class()` function.
+* The S3 classname is a string that uniquely identifies the type of layer. It might be something like  "keras.layers.normalization.batch_normalization.BatchNormalization," but the exact string can vary between TensorFlow versions.
+
+**2. Define a Function to Identify Batch Normalization Layers**
+
+```{r}
+is_batch_norm_layer <- function(x) 
+    inherits(x, batch_norm_layer_s3_classname)
+```
+
+* This function takes a layer object `x` as input and checks if it inherits from the previously determined `batch_norm_layer_s3_classname`. 
+* `inherits()` is an R function that tests whether an object is a subclass of a particular class. 
+* This function makes it easier to identify batch normalization layers within the model.
+
+**3. Load the EfficientNet B0 Model**
+
+```{r}
+model <- application_efficientnet_b0()
+model
+
+# Extract layer names and types
+layers_info <- lapply(model$layers, function(layer) {
+  list(name = layer$name, type = class(layer)[1])
+})
+
+# Print the first few layers
+print(layers_info[1:5])
+
+length(model$layers)
+
+trainable_layers <- sum(sapply(model$layers, function(layer) layer$trainable))
+non_trainable_layers <- length(model$layers) - trainable_layers
+
+cat("Trainable layers:", trainable_layers, "\n")
+cat("Non-trainable layers:", non_trainable_layers, "\n")
+
+```
+
+* This line loads a pre-trained EfficientNet B0 model using the  `application_efficientnet_b0()` function from Keras. EfficientNet models are known for their high accuracy and efficiency.
+
+**4. Freeze Batch Normalization Layers**
+
+```{r}
+for (layer in model$layers)
+  if (is_batch_norm_layer(layer))
+    layer$trainable <- FALSE
+```
+
+* This loop iterates through each layer (`layer`) in the loaded model (`model$layers`).
+* For each layer, it uses the `is_batch_norm_layer` function to check if the layer is a batch normalization layer. 
+* If it is a batch normalization layer, the code sets its `trainable` attribute to `FALSE`. This prevents the weights of the batch normalization layer from being updated during training (i.e., freezing the layer).
+
+**Why Freeze Batch Normalization Layers During Fine-tuning?**
+
+* **Prevent Interference:** Fine-tuning involves making small adjustments to the weights of a pre-trained model. If batch normalization layers are allowed to train, they would continue to update their internal mean and variance statistics, potentially interfering with the subtle weight updates in the convolutional layers.
+* **Preserve Pre-trained Statistics:** Batch normalization layers in pre-trained models have learned statistics (mean and variance) from a large dataset. These statistics are often beneficial and should be preserved during fine-tuning.
+
+**Key Takeaways**
+
+* **Freezing Specific Layers:** The code demonstrates how to target and modify specific types of layers within a Keras model.
+* **Importance of Fine-tuning:** This example highlights a crucial best practice for fine-tuning: freezing batch normalization layers to ensure a more stable and effective fine-tuning process. 
+* **Understanding Batch Normalization:**  The sources emphasize that batch normalization is a valuable technique for improving model training and performance. However, its behavior during fine-tuning requires special consideration.  
+* **Alternative Freezing Method:** The code comments mention that you could achieve the same freezing effect using `freeze_weights(model, which = is_batch_norm_layer)`. This function provides a more concise way to freeze layers based on a condition.
+
+
+### 9.3.4 Depthwise separable convolutions
+### 9.3.5 Putting it together: A mini Xception-like model
+
+We will implement a convolutional neural network (CNN) model for image classification using the "cats_vs_dogs_small" dataset.  It incorporates several architectural best practices discussed in the sources for improved performance. 
+
+Here's a breakdown of the key components and their significance:
+
+**1. Data Augmentation**
+
+```{r}
+data_augmentation <- keras_model_sequential() %>% 
+  layer_random_flip("horizontal") %>% 
+  layer_random_rotation(0.1) %>% 
+  layer_random_zoom(0.2) 
+```
+
+* This section defines a data augmentation pipeline using `keras_model_sequential()`. It includes:
+    * `layer_random_flip("horizontal")`: Randomly flips input images horizontally.
+    * `layer_random_rotation(0.1)`:  Randomly rotates images by a small angle (up to 10%).
+    * `layer_random_zoom(0.2)`: Randomly zooms in or out of images.
+
+* **Purpose of Data Augmentation:**
+    * Artificially expands the training dataset by creating modified versions of the original images. 
+    * Helps the model generalize better and become more robust by exposing it to variations in the data.
+    * Reduces overfitting, which is a common problem when training on small datasets.
+
+**2. Input Layer and Preprocessing**
+
+```{r}
+inputs <- layer_input(shape = c(180, 180, 3))
+
+x <- inputs %>% 
+  data_augmentation() %>% 
+  layer_rescaling(scale = 1 / 255) 
+```
+
+* `inputs <- layer_input(shape = c(180, 180, 3))`: Defines the input layer of the model, expecting color images of size 180x180 pixels (3 channels for RGB).
+* `x <- inputs %>% data_augmentation()`: Applies the data augmentation pipeline to the input images.
+* `layer_rescaling(scale = 1 / 255)`: Rescales the pixel values from the range  to.  This normalization is generally beneficial for training neural networks. 
+
+**3. Initial Convolutional Layer**
+
+```{r}
+# Note that the assumption that underlies separable convolution, “feature channels
+# are largely independent,” does not hold for RGB images! Red, green, and blue
+# color channels are actually highly correlated in natural images. As such,
+# the first layer in our model is a regular layer_conv_2d() layer. We’ll start using
+# layer_separable_conv_2d() afterward.
+x <- x %>% 
+  layer_conv_2d(32, 5, use_bias = FALSE)
+```
+
+* `layer_conv_2d(32, 5, use_bias = FALSE)`: A standard 2D convolutional layer:
+    * 32 filters (kernels) are used. 
+    * Kernel size is 5x5.
+    *  `use_bias = FALSE` is set because the subsequent batch normalization layer will handle centering. 
+
+**4. Convolutional Blocks with Best Practices**
+
+```{r}
+# We apply a series of convolutional blocks with increasing feature depth. Each
+# block consists of two batch-normalized depthwise separable convolution layers
+# and a max-pooling layer, with a residual connection around the entire block.
+for (size in c(32, 64, 128, 256, 512)) {
+  residual <- x
+
+  x <- x %>% 
+    layer_batch_normalization() %>% 
+    layer_activation("relu") %>% 
+    layer_separable_conv_2d(size, 3, padding = "same", use_bias = FALSE) %>% 
+
+    layer_batch_normalization() %>% 
+    layer_activation("relu") %>% 
+    layer_separable_conv_2d(size, 3, padding = "same", use_bias = FALSE) %>% 
+
+    layer_max_pooling_2d(pool_size = 3, strides = 2, padding = "same") 
+
+  residual <- residual %>% 
+    layer_conv_2d(size, 1, strides = 2, padding = "same", use_bias = FALSE) 
+
+  x <- layer_add(list(x, residual)) 
+}
+```
+
+* **Key Concepts:** This `for` loop defines a series of convolutional blocks, each with the following features:
+
+    * **Increasing Filter Depth:** The `size` variable, representing the number of filters, increases with each block (32, 64, 128, 256, 512). This creates a hierarchical structure where earlier layers learn simpler features and later layers learn more complex features. 
+    * **Residual Connections:** The `residual <- x` and `x <- layer_add(list(x, residual))` lines implement residual connections (also known as skip connections). These connections help with gradient flow during training, allowing for deeper networks. 
+    * **Batch Normalization:** `layer_batch_normalization()` is applied after each convolutional layer (except the initial one). Batch normalization helps stabilize training and may improve performance. 
+    * **ReLU Activation:**  `layer_activation("relu")` applies the ReLU (Rectified Linear Unit) activation function after batch normalization. The ReLU activation introduces non-linearity into the model.
+    * **Depthwise Separable Convolutions:**  `layer_separable_conv_2d()` is used instead of standard convolutions. These layers are more parameter-efficient and often perform better, particularly on smaller datasets.
+    * **Max Pooling:** `layer_max_pooling_2d()` is used for downsampling the feature maps.
+
+**5. Output Layers**
+
+```{r}
+outputs <- x %>%
+  # In the original model, we used a layer_flatten() before the layer_dense(). 
+  # Here, we go with a layer_global_average_pooling_2d().
+  layer_global_average_pooling_2d() %>% 
+  # A dropout layer for regularization.
+  layer_dropout(0.5) %>% 
+  layer_dense(1, activation = "sigmoid")
+
+model <- keras_model(inputs, outputs)
+model
+```
+
+* **Global Average Pooling:** `layer_global_average_pooling_2d()` reduces the spatial dimensions of the feature maps to a single value per channel. This simplifies the model and helps prevent overfitting. 
+* **Dropout:**  `layer_dropout(0.5)` randomly drops out 50% of the connections during training. This is a regularization technique to prevent overfitting.
+* **Dense Layer:**  `layer_dense(1, activation = "sigmoid")`: A dense layer with one output unit and a sigmoid activation function. This is used for binary classification (cats vs. dogs).
+
+**6. Compiling, Training, and Evaluation**
+
+```{r}
+# ... (code for dataset loading and compilation)
+train_dataset <- image_dataset_from_directory(
+  "cats_vs_dogs_small/train",
+  image_size = c(180, 180),
+  batch_size = 32
+)
+
+validation_dataset <- image_dataset_from_directory(
+  "cats_vs_dogs_small/validation",
+  image_size = c(180, 180),
+  batch_size = 32
+)
+
+model %>%
+  compile(
+    loss = "binary_crossentropy",
+    optimizer = "rmsprop",
+    metrics = "accuracy"
+  )
+
+# Very long on CPU
+history <- model %>% 
+  fit(
+    train_dataset, 
+    epochs=100, 
+    validation_data=validation_dataset)
+
+plot(history)
+```
+
+* The model is compiled with `binary_crossentropy` loss, `rmsprop` optimizer, and `accuracy` as the metric.
+* It is trained for 100 epochs using the `train_dataset` and validated using the `validation_dataset`.
+* The `plot(history)` function displays the training and validation metrics over time.
+
+**Key Takeaways**
+
+* The code exemplifies how to construct a CNN architecture that leverages best practices for improved performance.
+* Residual connections, batch normalization, and depthwise separable convolutions are powerful techniques for building deeper and more efficient CNNs.
+* Data augmentation is essential for preventing overfitting, especially on limited datasets.
+* Global average pooling and dropout help simplify the model and reduce overfitting in the final layers.
+* By combining these best practices, you can create a more effective image classification model.
+* The sources highlight that these best practices are applicable to other computer vision tasks beyond image classification, including image segmentation. 
+

@@ -1,6 +1,6 @@
 ---
-title: "Advanced deep learning
-for computer vision"
+title: "Advanced deep learning for computer vision"
+subtitle: "An image segmentation example"
 output: 
   html_notebook: 
     theme: cerulean

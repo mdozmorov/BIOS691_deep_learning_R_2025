@@ -1,0 +1,595 @@
+---
+title: "Advanced deep learning for computer vision"
+subtitle: "Interpreting what convnets learn"
+output: 
+  html_notebook: 
+    theme: cerulean
+    highlight: textmate
+editor_options: 
+  chunk_output_type: console
+---
+
+## 9.4 Interpreting what convnets learn
+### 9.4.1 Visualizing intermediate activations
+
+#### Visualizing Intermediate Activations of a CNN
+
+We will load a trained convolutional neural network (CNN) model and visualize the activations of its layers when given an input image of a cat.
+
+**Loading the Model and Input Image**
+
+*  `model <- load_model("convnet_from_scratch_with_augmentation.keras")`: This line loads a pre-trained CNN model named "convnet_from_scratch_with_augmentation.keras". This model is likely the one trained in your previous interaction, which incorporated best practices like data augmentation, residual connections, batch normalization, and depthwise separable convolutions.
+
+*  `img_path <- get_file(fname = "cat.jpg", origin = "https://img-datasets.s3.amazonaws.com/cat.jpg")`:  Downloads an image of a cat from the specified URL. This image will be used as input to the CNN to visualize how the different layers process it.
+
+* `img_tensor <- img_path %>% tf_read_image(resize = c(180, 180))`: Reads the image from the downloaded file path (`img_path`) and converts it into a TensorFlow tensor (`img_tensor`). It also resizes the image to 180x180 pixels to match the input dimensions expected by the model.
+
+* `display_image_tensor(img_tensor)`: Displays the image tensor using a helper function (presumably defined elsewhere in your code).
+
+```{r}
+library(keras3)
+library(tensorflow)
+
+model <- load_model("convnet_from_scratch_with_augmentation.keras")
+model <- load_model("oxford_segmentation.keras")
+model
+
+img_path <- get_file(
+  fname="cat.jpg",
+  origin="https://img-datasets.s3.amazonaws.com/cat.jpg")
+
+img_tensor <- img_path %>%
+  tf_read_image(resize = c(200, 200))
+
+
+## -------------------------------------------------------------------------
+display_image_tensor(img_tensor)
+
+```
+
+#### Creating an Activation Model
+
+* `conv_layer_s3_classname <- class(layer_conv_2d(NULL, 1, 1))`: and `pooling_layer_s3_classname <- class(layer_max_pooling_2d(NULL))`: These lines determine the class names of convolutional layers (`layer_conv_2d`) and pooling layers (`layer_max_pooling_2d`) in the TensorFlow/Keras environment. These class names will be used to identify these layers within the loaded model.
+
+*  `is_conv_layer()` and `is_pooling_layer()`:  These functions are defined to check if a given layer is a convolutional layer or a pooling layer, respectively. 
+
+*  `layer_outputs <- list()`:  Initializes an empty list to store the output tensors of the convolutional and pooling layers.
+
+* The `for` loop iterates through each layer in the loaded model (`model$layers`):
+    * `if (is_conv_layer(layer) || is_pooling_layer(layer))`:  If the current layer is a convolutional or pooling layer:
+        * `layer_outputs[[layer$name]] <- layer$output`: The output tensor of the layer (`layer$output`) is added to the `layer_outputs` list. The layer's name is used as the key in the list to identify the corresponding output. 
+
+```{r}
+conv_layer_s3_classname <- class(layer_conv_2d(NULL, 1, 1))[1]
+pooling_layer_s3_classname <- class(layer_max_pooling_2d(NULL))[1]
+
+is_conv_layer <- function(x) inherits(x, conv_layer_s3_classname)
+is_pooling_layer <- function(x) inherits(x, pooling_layer_s3_classname)
+
+layer_outputs <- list()
+for (layer in model$layers)
+  if (is_conv_layer(layer) || is_pooling_layer(layer))
+    layer_outputs[[layer$name]] <- layer$output
+```
+
+*  `activation_model <- keras_model(inputs = model$input, outputs = layer_outputs)`:  Creates a new Keras model (`activation_model`) with the following properties:
+    * **Inputs:** It takes the same inputs as the original model (`model$input`).
+    * **Outputs:** It produces the outputs of all the convolutional and pooling layers, stored in the `layer_outputs` list.
+
+* `activations <- activation_model %>% predict(img_tensor[tf$newaxis, , , ])`:  This line uses the `activation_model` to predict (or compute the outputs) for the input image tensor. 
+    *  `img_tensor[tf$newaxis, , , ]`: Adds a batch dimension to the `img_tensor` because the model expects the input to be a batch of images, not a single image. 
+    * `predict()`: Executes the `activation_model` on the input, generating a list of activation tensors. 
+
+* `str(activations)`:  Displays the structure of the `activations` list, which will show the output tensors from each convolutional and pooling layer.
+
+* `first_layer_activation <- activations[[ names(layer_outputs) ]]`:  Extracts the activation tensor for the first convolutional/pooling layer from the `activations` list.
+
+* `dim(first_layer_activation)`: Prints the dimensions of the `first_layer_activation` tensor. The dimensions will typically be in the form (batch_size, height, width, number_of_channels).
+
+```{r}
+activation_model <- keras_model(inputs = model$input,
+                                outputs = layer_outputs)
+
+activations <- activation_model %>%
+  predict(img_tensor[tf$newaxis, , , ])
+
+str(activations)
+
+first_layer_activation <- activations[[ names(layer_outputs)[1] ]]
+dim(first_layer_activation)
+```
+
+*  `plot_activations()`: This function visualizes the activation tensor of a layer. It converts the tensor to an R array, checks if the activation is all zeros (in which case it plots a gray rectangle), and then uses the `image()` function to display the activation as a 2D image. 
+
+* `plot_activations(first_layer_activation[, , , 5])`:  Visualizes the fifth channel of the activation tensor of the first convolutional/pooling layer.
+
+```{r}
+plot_activations <- function(x, ...) {
+
+  x <- as.array(x)
+
+  if(sum(x) == 0)
+    return(plot(as.raster("gray")))
+
+  rotate <- function(x) t(apply(x, 2, rev))
+  image(rotate(x), asp = 1, axes = FALSE, useRaster = TRUE,
+        col = terrain.colors(256), ...)
+}
+
+plot_activations(first_layer_activation[, , , 5])
+
+```
+
+**Key Insights from Activation Visualizations:**
+
+* **Feature Hierarchy:** As discussed in the sources, activation visualizations help us understand how a CNN processes an image hierarchically. The activations of higher layers carry less and less information about the specific input being seen and more and more information about the target. This concept is illustrated by the increasing abstraction of features as we move deeper into the network.
+
+* **Edge Detection in Early Layers:**  The visualizations often show that early convolutional layers act as edge detectors. 
+
+* **Increasing Abstraction:** Deeper layers capture more complex patterns and concepts. The activations become increasingly abstract and less visually interpretable. They begin to encode higher-level concepts such as “cat ear” and “cat eye.”
+
+* **Sparsity:** As we go deeper into the network, the activations become more sparse, more and more filters are blank.
+
+#### Visualizing all channels in every intermediate activation
+
+Here, we will visualize all channels in every intermediate activation of the trained CNN model for the input cat image. 
+
+* `for (layer_name in names(layer_outputs)) {` : This outer loop iterates through each layer name stored in `names(layer_outputs)`. These are the names of convolutional and pooling layers in the CNN model. 
+
+* `layer_output <- activations[[layer_name]]` : For each layer, the corresponding activation tensor is extracted from the `activations` list (which was computed earlier using `activation_model`).  
+
+* `n_features <- dim(layer_output) %>% tail(1)` : This line gets the number of features (or channels) in the `layer_output` tensor. The `tail(1)` function extracts the last element of the dimensions, which represents the number of channels.
+
+* `par(mfrow = n2mfrow(n_features, asp = 1.75), mar = rep(.1, 4), oma = c(0, 0, 1.5, 0))`:  This line sets up the plot layout using the `par()` function. It will create a grid of plots to display all channels of the current layer's activations:
+    * `n2mfrow()`:  Calculates the number of rows and columns for the plot grid based on the `n_features`. 
+    *  `asp = 1.75`:  Sets the aspect ratio of the plots (width-to-height ratio).
+    * `mar` and `oma`: Set the plot margins.
+
+*  `for (j in 1:n_features)`:  This inner loop iterates through each feature (or channel) in the `layer_output`.
+
+*  `plot_activations(layer_output[, , , j])`: The `plot_activations()` function (defined in the previous example) is used to display the j-th channel's activation as a 2D image.
+
+* `title(main = layer_name, outer = TRUE)` : Adds a title to the entire plot grid, indicating the name of the current layer.
+
+```{r}
+for (layer_name in names(layer_outputs)) {
+  layer_output <- activations[[layer_name]]
+
+  n_features <- dim(layer_output) %>% tail(1)
+  par(mfrow = n2mfrow(n_features, asp = 1.75),
+      mar = rep(.1, 4), oma = c(0, 0, 1.5, 0))
+  for (j in 1:n_features)
+    plot_activations(layer_output[, , ,j])
+  title(main = layer_name, outer = TRUE)
+}
+
+```
+
+This visualization technique helps illustrate the concept discussed in the sources about the hierarchical nature of feature learning in CNNs. Here's how it connects to specific points from the sources:
+
+* **Visualizing Intermediate Convnet Outputs (Activations):** The code you provided is a practical implementation of visualizing the intermediate outputs of a CNN. The loop through layers and channels directly aligns with the idea of examining the outputs at various stages of the network.
+
+* **Understanding How Layers Transform Input:**  By plotting the activations of different layers, we can visually observe how the input image is transformed as it passes through the network. The early layers often show edge-like patterns, while deeper layers capture more abstract representations.
+
+* **Gaining Insights into Filter Meaning:**  The visualizations can offer initial insights into what features individual filters in the CNN are detecting. For example, in our previous example, the fifth channel of the first layer appeared to act as a diagonal edge detector. 
+
+* **Information Distillation Pipeline:** The visualization of all channels across layers reinforces the idea of a CNN as an "information distillation pipeline". As we move deeper into the network, the visualizations demonstrate how the activations become more abstract, carrying less information about the specific input details and more information relevant to the target class.
+
+By iterating through the layers and visualizing all channels, this code creates a comprehensive overview of how the CNN processes the input image, helping us better understand how the network learns to extract relevant features and make predictions. 
+
+
+### 9.4.2 Visualizing convnet filters
+
+We will develop a feature extractor model using the pre-trained Xception model, excluding the top classification layers. Let's break down the code step by step:
+
+#### Loading the Xception Model (Without Classification Layers)
+
+* `model <- application_xception(weights = "imagenet", include_top = FALSE)`:  This line loads the Xception model from Keras, using pre-trained weights obtained from training on the ImageNet dataset. 
+    *  `include_top = FALSE`:  Specifies that you want to load only the convolutional base of the model, excluding the fully connected layers (the "top" of the model) that are typically used for classification. This is because you're interested in using the convolutional layers for feature extraction, not for making predictions on ImageNet classes.
+    
+```{r}
+library(keras3)
+library(tensorflow)
+library(tfdatasets)
+
+tf_read_image <-
+  function(path, format = "image", resize = NULL, ...) {
+
+    img <- path %>%
+      tf$io$read_file() %>%
+      tf$io[[paste0("decode_", format)]](...) #
+
+    if (!is.null(resize))
+      img <- img %>%
+        tf$image$resize(as.integer(resize)) 
+
+    img
+  }
+
+display_image_tensor <- function(x, ..., max = 255,
+                                 plot_margins = c(0, 0, 0, 0)) {
+  if(!is.null(plot_margins))
+    par(mar = plot_margins)
+
+  x %>%
+    as.array() %>%
+    drop() %>%
+    as.raster(max = max) %>%
+    plot(..., interpolate = FALSE)
+}
+
+img_path <- get_file(
+  fname="cat.jpg",
+  origin="https://img-datasets.s3.amazonaws.com/cat.jpg")
+
+img_tensor <- img_path %>%
+  tf_read_image(resize = c(200, 200))
+
+model <- application_xception(
+  weights = "imagenet",
+  include_top = FALSE
+)
+
+```
+
+#### Identifying Convolutional Layers
+
+*  The `for` loop iterates through each layer in the loaded `model` and prints the name of any layer that has "Conv2D" in its class name. This helps identify the specific convolutional layers within the Xception architecture:
+    * `if(any(grepl("Conv2D", class(layer))))`:  Checks if the string "Conv2D" is present in the class name of the layer. 
+    *  `print(layer$name)`:  If the condition is true, it prints the name of the layer.
+
+```{r}
+for (layer in model$layers)
+  if(any(grepl("Conv2D", class(layer))))
+    print(layer$name)
+
+```
+
+#### Selecting a Layer for Feature Extraction
+
+*  `layer_name <- "block3_sepconv1"`:  You assign the name "block3_sepconv1" to the variable `layer_name`. This is the specific convolutional layer you've chosen to extract features from.  It's worth noting that you could select any other convolutional layer from the list printed in the previous step. The sources you've provided don't explicitly mention why you've selected "block3_sepconv1".
+
+*  `layer <- model %>% get_layer(name = layer_name)`:  This line fetches the layer object corresponding to the name "block3_sepconv1" from the loaded `model`.  
+
+*  `feature_extractor <- keras_model(inputs = model$input, outputs = layer$output)`: Creates a new Keras model (`feature_extractor`) designed for feature extraction. 
+    * **Inputs:** It uses the same input as the original Xception model (`model$input`).
+    * **Outputs:**  It produces the output of the selected convolutional layer (`layer$output`), effectively extracting features from that layer.
+
+```{r}
+# You could replace this with the name of any layer in the Xception convolutional base.
+layer_name <- "block3_sepconv1"
+layer <- model %>% get_layer(name = layer_name)
+# We use model$input and layer$output to create a model that, 
+# given an input image, returns the output of our target layer.
+feature_extractor <- keras_model(inputs = model$input,
+                                 outputs = layer$output)
+
+```
+
+#### Applying the Feature Extractor
+
+*  `activation <- img_tensor %>% .[tf$newaxis, , , ] %>% xception_preprocess_input() %>% feature_extractor()`: This code snippet performs the following actions:
+    * Takes an existing `img_tensor` (likely an image tensor you have from a previous step).
+    *  `.[tf$newaxis, , , ]`:  Adds a batch dimension to the tensor, since Keras models expect input as batches.
+    *  `xception_preprocess_input()`: Preprocesses the image tensor using the specific preprocessing function required by the Xception model. This usually involves normalizing the pixel values.
+    *  Applies the `feature_extractor` model to the preprocessed image tensor, extracting the activations (feature maps) from the chosen layer. 
+    * The resulting activation tensor is stored in the `activation` variable.
+
+* `str(activation)`:  Prints the structure of the `activation` tensor, showing its dimensions and data type.
+
+```{r}
+activation <- img_tensor %>%
+  .[tf$newaxis, , , ] %>%
+  keras::xception_preprocess_input() %>%
+  # Note that this time we’re calling the model directly, 
+  # instead of using predict(), getting tf.Tensor, not an R array.
+  feature_extractor()
+
+str(activation)
+
+```
+
+#### Defining a Loss Function
+
+*  `compute_loss <- function(image, filter_index) { ... }`:  Defines a function called `compute_loss` that takes an image tensor (`image`) and a `filter_index` as input. This function is designed to calculate how strongly a specific filter in the selected layer is activated by the input image.
+    * Inside the function:
+        *  `activation <- feature_extractor(image)`:  It applies the `feature_extractor` model to the input image, obtaining the activations.
+        * `filter_index <- as_tensor(filter_index, "int32")`: Converts the `filter_index` into a TensorFlow tensor with an integer data type. 
+        * `filter_activation <- activation[, , , filter_index, style = "python"]`:  Extracts the activation values for the specific filter indicated by `filter_index`.
+        * `mean(filter_activation[, 3:-3, 3:-3])`:  Calculates and returns the mean of the activation values for the chosen filter, excluding the border pixels of the activation map.  This focuses on the central region of the activation, potentially reducing border artifacts.
+
+```{r}
+# The loss function quantifying how much a given input image 
+# “activates” a given filter in the layer, we need to maximize it.
+# The loss function takes an image tensor and the
+# index of the filter we are considering (an integer).
+compute_loss <- function(image, filter_index) {
+  activation <- feature_extractor(image)
+
+  filter_index <- as_tensor(filter_index, "int32")
+  # Tell [ that filter_index is zero-based with style="python".
+  filter_activation <- activation[, , , filter_index, style = "python"]
+  # Note that we avoid border artifacts by only involving 
+  # nonborder pixels in the loss; we discard the first 
+  # two pixels along the sides of the activation.
+  mean(filter_activation[,3:-3, 3:-3])
+}
+
+```
+
+#### Key Concepts and Insights
+
+* **Feature Extraction:** This code demonstrates the core idea of using convolutional layers of a pre-trained CNN as a feature extractor. Convolutional layers learn to detect spatial patterns and hierarchies of features, and their activations can be considered meaningful representations of the input image. 
+
+* **Transfer Learning:**  By utilizing a pre-trained model like Xception, you are employing transfer learning. The model has already learned rich feature representations from a large dataset (ImageNet), and you are leveraging this knowledge for your specific task, rather than training a CNN from scratch.
+
+* **Custom Feature Extraction:** You have control over which layer to use for feature extraction. Different layers capture different levels of features. Earlier layers detect basic patterns (edges, textures), while deeper layers represent more complex concepts.  Choosing the appropriate layer depends on the nature of your task.
+
+* **Analyzing Filter Activations:**  The `compute_loss` function provides a way to quantify how strongly a specific filter within the chosen layer responds to the input image. This information can be valuable for understanding what features the filter is sensitive to. This process is similar to the filter visualization technique you explored in the previous turn, where gradient ascent was used to generate patterns that maximally activate specific filters.
+
+This code sets the foundation for building applications that go beyond simple image classification. You can use extracted features for various tasks, such as:
+
+* **Image Similarity:**  Comparing the extracted features from different images can help determine how visually similar they are.
+* **Object Detection:** You can use features extracted from specific regions of an image to help identify and locate objects.
+* **Image Retrieval:**  Extracted features can be used to build an indexing system for efficient image retrieval based on visual content. 
+
+**Gradient Ascent for Filter Visualization:**
+
+*   **`gradient_ascent_step <- function(image, filter_index, learning_rate) { ... }`:** This function performs a single step of gradient ascent to modify the input image in a direction that maximizes the activation of the chosen filter.
+*   **Steps Involved in `gradient_ascent_step`:**
+    *   `with(tf$GradientTape() %as% tape, { ... })`: Creates a TensorFlow GradientTape to record the operations and compute gradients.
+    *   `tape$watch(image)`: Explicitly tells the tape to track the changes made to the `image` tensor during the gradient ascent process.
+    *   `loss <- compute_loss(image, filter_index)`: Calculates the loss (how strongly the current image activates the filter).
+    *   `grads <- tape$gradient(loss, image)`: Computes the gradients of the loss with respect to the image.
+    *   `grads <- tf$math$l2_normalize(grads)`: Normalizes the gradients by dividing them by their L2 norm to stabilize the gradient updates.
+    *   `image + (learning_rate * grads)`: Updates the image tensor by moving it in the direction of the normalized gradients (scaled by the `learning_rate`).
+*   **`generate_filter_pattern <- tf_function(function(filter_index) { ... })`:** This function executes the gradient ascent process over multiple iterations to generate a pattern that maximally activates the specified filter.
+*   **Inside `generate_filter_pattern`:**
+    *   `iterations <- 30`: Sets the number of gradient ascent steps.
+    *   `learning_rate <- 10`: Defines the step size for gradient ascent.
+    *   `image <- tf$random$uniform(...)`: Initializes a random image tensor within a specific range (0.4 to 0.6 in this case) as the starting point for gradient ascent.
+    *   The `for` loop repeatedly applies the `gradient_ascent_step` to iteratively refine the image tensor towards the desired pattern.
+    
+```{r}
+gradient_ascent_step <-
+  function(image, filter_index, learning_rate) {
+    with(tf$GradientTape() %as% tape, {
+      tape$watch(image) # Explicitly watch the image tensor
+      # Compute the loss scalar, indicating how much 
+      # the current image activates the filter.
+      loss <- compute_loss(image, filter_index)
+    })
+    # Compute the gradients of the loss with respect to the image.
+    grads <- tape$gradient(loss, image)
+    # Apply the “gradient normalization trick.”
+    grads <- tf$math$l2_normalize(grads)
+    # Move the image a little bit in a direction that
+    # activates our target filter more strongly.
+    # Return the updated image so we can run the
+    # step function in a loop.
+    image + (learning_rate * grads)
+  }
+```
+
+**Function to generate filter visualizations**
+
+*   The code generates a visual pattern that **maximizes the activation of a specific filter** in a convolutional layer.
+*   It uses **gradient ascent** to iteratively adjust the input image, increasing the filter's response.
+*   `tf_function` decorator is used to **speed up the execution** by compiling the function into a TensorFlow graph.
+*   The function initializes a random image and then refines it over multiple iterations to match the filter's characteristics.
+*   **The learning rate and number of iterations are key hyperparameters** that control the quality of the generated pattern.
+*   The initial image values are set between 0.4 and 0.6 because the Xception model expects inputs in the \ range.
+*   `gradient_ascent_step` function (not included in the snippet) is assumed to compute the gradient of the filter activation with respect to the image and update the image accordingly.
+*   The batch dimension is removed before returning the image because the visualization functions expect a single image, not a batch.
+
+```{r}
+# Set the image width and height for the filter pattern
+c(img_width, img_height) %<-% c(200, 200)
+
+# Define a TensorFlow function to generate a filter pattern for a given filter index
+generate_filter_pattern <- tf_function(function(filter_index) {
+  # Set the number of iterations for gradient ascent
+  iterations <- 30
+  # Set the learning rate for gradient ascent
+  learning_rate <- 10
+  # Initialize a random image tensor with values between 0.4 and 0.6
+  image <- tf$random$uniform(
+    minval = 0.4, maxval = 0.6,
+    shape = shape(1, img_width, img_height, 3)
+  )
+
+  # Perform gradient ascent for the specified number of iterations
+  for (i in seq(iterations))
+    image <- gradient_ascent_step(image, filter_index, learning_rate)
+
+  # Remove the batch dimension and return the generated image
+  image[1, , , ]
+})
+```
+
+**Post-processing and Visualization:**
+
+*   **`deprocess_image <- tf_function(function(image, crop = TRUE) { ... })`:** This function converts the generated image tensor (floating-point values) into a displayable image format (integer values within the  range).
+    *   **Key Steps in `deprocess_image`:**
+        *   `image <- image - mean(image)`: Centers the image values around zero.
+        *   `image <- image / tf$math$reduce_std(image)`: Scales the image values to have a unit standard deviation.
+        *   `image <- (image * 64) + 128`: Adjusts the image values to fit within the  range.
+        *   `image <- tf$clip_by_value(image, 0, 255)`: Ensures that all values are within the valid range for pixel intensities.
+        *   `image <- image[26:-26, 26:-26, ]`: Crops the image to remove potential border artifacts.
+*   **Visualizing Individual Filters:**
+    *   `generate_filter_pattern(...) %>% deprocess_image() %>% display_image_tensor()`: Generates the visualization for a specific filter (filter index 2 in this example).
+*   **Generating a Grid of Filter Visualizations:**
+    *   The `for` loop (from 0 to 63) iterates through the first 64 filters in the selected layer, generating and displaying their visualizations in an 8x8 grid.
+
+```{r}
+deprocess_image <- tf_function(function(image, crop = TRUE) {
+  # Normalize image values within the [0, 255] range.
+  image <- image - mean(image)
+  image <- image / tf$math$reduce_std(image)
+  image <- (image * 64) + 128
+  image <- tf$clip_by_value(image, 0, 255)
+  if(crop)
+    image <- image[26:-26, 26:-26, ]
+  image
+})
+
+
+generate_filter_pattern(filter_index = as_tensor(2L)) %>%
+  deprocess_image() %>%
+  display_image_tensor()
+
+par(mfrow = c(8, 8))
+for (i in seq(0, 63)) {
+  generate_filter_pattern(filter_index = as_tensor(i)) %>%
+    deprocess_image() %>%
+    display_image_tensor(plot_margins = rep(.1, 4))
+}
+```
+
+**Key Insights from Filter Visualizations:**
+
+*   **Hierarchical Feature Learning:** Visualizing filters provides insights into the hierarchical nature of feature learning in CNNs.
+*   **Early Layers:** Filters in the early layers tend to detect basic visual features such as edges, colors, and simple textures.
+*   **Intermediate Layers:** Filters in intermediate layers capture more complex patterns like combinations of edges and colors.
+*   **Deeper Layers:** Filters in deeper layers often resemble textures and patterns found in natural images, representing higher-level concepts.
+
+This technique is a valuable tool for understanding what visual features a CNN has learned to detect. It provides a more interpretable representation of the internal workings of a CNN compared to just looking at weights or activations.
+
+### 9.4.3 Visualizing heatmaps of class activation
+
+#### Loading and Predicting with Xception
+
+We load the Xception model with pre-trained weights from the ImageNet dataset, then load and preprocess an image of African elephants. Finally, we make predictions on the preprocessed image using the Xception model. The output is the top 3 predicted classes for the image and the index of the class with the highest predicted probability.
+
+*   The code you provided loads the Xception model with the `application_xception()` function, using the `weights = "imagenet"` argument to specify that the pre-trained weights from the ImageNet dataset should be used. The `include_top = FALSE` argument specifies that the top layers of the model, which are used for classification, should not be included.
+*   Next, the image is loaded using the `get_file()` function and resized to 299x299 pixels using the `tf_read_image()` function. The `img_tensor[tf$newaxis, , , ]` expression adds a new dimension to the array to represent the batch size, transforming the array into a batch of size (1, 299, 299, 3). The image is then preprocessed using the `xception_preprocess_input()` function, which performs channel-wise color normalization.
+*   Finally, the preprocessed image is passed to the `predict()` function of the Xception model to make predictions. The `imagenet_decode_predictions()` function is then used to decode the predictions into a human-readable format. The top 3 predicted classes for the image are printed along with their associated probabilities.
+*   The `which.max()` function is used to find the index of the class with the highest probability. In this case, the index is 387, which corresponds to the "African elephant" class.
+
+```{r}
+model <- application_xception(weights = "imagenet")
+
+img_path <- get_file(
+  fname="elephant.jpg",
+  origin="https://img-datasets.s3.amazonaws.com/elephant.jpg")
+
+img_tensor <- tf_read_image(img_path, resize = c(299, 299))
+# Add batch dimensions
+preprocessed_img <- keras::xception_preprocess_input(img_tensor[tf$newaxis, , , ])
+
+preds <- predict(model, preprocessed_img)
+str(preds)
+
+imagenet_decode_predictions(preds, top=3)[[1]]
+
+which.max(preds[1, ])
+
+```
+
+#### Creating a Feature Extractor Model
+
+We create a feature extractor model that returns the output of a specific layer in the Xception model. The output of this feature extractor model is used to define a loss function that measures how much a given input image activates a specific filter in the layer. This loss function will be maximized using gradient ascent to visualize the pattern that maximally activates the filter.
+
+*   First, identify the names of all convolutional layers in the Xception model by iterating over the layers and checking if the layer's class contains the string "Conv2D". This information is not used in the rest of the code you provided, but it can be helpful for understanding the structure of the model.
+*   Next, a feature extractor model is created by extracting the output of a specific layer in the Xception model. This is done using the `get_layer()` function to retrieve the layer object, and then passing the model's inputs and the layer's output to the `keras_model()` function. This new model takes an input image and returns the output of the specified layer.
+*   The layer used is "block3\_sepconv1", but you can replace this with the name of any other layer in the Xception model.
+*   The feature extractor model is then used to define a loss function that measures how much a given input image activates a specific filter in the layer. This loss function takes the output of the feature extractor model, selects the activation of the specified filter, and then computes the mean of the activation values, excluding the border pixels. This loss function will be used to perform gradient ascent in input space to visualize the pattern that maximally activates the filter.
+
+```{r}
+last_conv_layer_name <- "block14_sepconv2_act"
+classifier_layer_names <- c("avg_pool", "predictions")
+last_conv_layer <- model %>% get_layer(last_conv_layer_name)
+last_conv_layer_model <- keras_model(model$inputs,
+                                     last_conv_layer$output)
+
+```
+
+
+#### Building the Classifier Model and Visualizing Class Activation
+
+This code snippet builds upon the previous code to create a classifier model and visualize the class activation heatmap for the "African elephant" class. It uses the `last_conv_layer_model` from the previous code snippet, which outputs the activations of the last convolutional layer, and feeds these activations into a new model called `classifier_model` to get the final class predictions.
+
+*   First, a new input layer is created using `layer_input()` with the shape of the output of the `last_conv_layer_model`. 
+*   The output of this input layer is then passed through the layers specified in `classifier_layer_names` which are `"avg_pool"` and `"predictions"`. These layers are retrieved from the original Xception model using `get_layer()`. 
+*   Finally, the `classifier_model` is created using `keras_model()` with the new input layer and the output of the last layer in the loop.
+
+The code then calculates the gradients of the top predicted class (African elephant) with respect to the activations of the last convolutional layer.
+
+*   This is done using `tf$GradientTape()` to record the operations and calculate the gradients. 
+*   Inside the `tf$GradientTape()`, the `last_conv_layer_output` is calculated by calling `last_conv_layer_model()` on the preprocessed image. The `tape$watch()` function is used to tell the tape to watch the `last_conv_layer_output` for gradient calculations. 
+*   Next, the `classifier_model()` is called on `last_conv_layer_output` to get the predictions. 
+*   The index of the top predicted class is retrieved using `tf$argmax()`.
+*   Finally, the activation channel corresponding to the top predicted class is extracted from `preds` using Python-style indexing.
+
+After calculating the gradients, the code creates a heatmap of class activation.
+
+*   This is done by first calculating the mean of the gradients across the batch, height, and width dimensions, keeping the dimensions using `keepdims = TRUE`. This results in `pooled_grads`, a vector where each entry represents the mean intensity of the gradient for a given channel.
+*   Then, each channel in the `last_conv_layer_output` is multiplied by its corresponding importance in `pooled_grads`. 
+*   The channel-wise mean of the resulting feature map is calculated, resulting in a spatial map of "how intensely the input image activates the class".
+*   Finally, the batch dimension is dropped, resulting in a heatmap of shape (10, 10). This heatmap is then plotted using the `plot_activations()` function.
+
+The last part of the code snippet superimposes the heatmap onto the original image.
+
+*   This is done by first converting the heatmap into a color raster object. The `hcl.colors()` function is used to generate a color palette, and the `cut()` function is used to discretize the heatmap values into bins corresponding to the colors in the palette. The `as.raster()` function converts the resulting color matrix into a raster object.
+*   The original image is then loaded without resizing using `tf_read_image()`. 
+*   Finally, the heatmap is superimposed on the original image using `rasterImage()`, ensuring that the heatmap is drawn to match the size of the original image and that interpolation is turned off to clearly visualize the activation map pixel boundaries.
+
+```{r}
+classifier_input <- layer_input(batch_shape = last_conv_layer$output$shape)
+
+x <- classifier_input
+for (layer_name in classifier_layer_names)
+  x <- get_layer(model, layer_name)(x)
+
+classifier_model <- keras_model(classifier_input, x)
+
+with (tf$GradientTape() %as% tape, {
+  last_conv_layer_output <- last_conv_layer_model(preprocessed_img)
+  # Compute activations of the last conv layer and make the tape watch it. 
+  tape$watch(last_conv_layer_output)
+  preds <- classifier_model(last_conv_layer_output)
+  top_pred_index <- tf$argmax(preds[1, ])
+  # Retrieve the activation channel
+  # corresponding to the top predicted class.
+  top_class_channel <- preds[, top_pred_index, style = "python"]
+})
+
+# This is the gradient of the top predicted class with regard
+# to the output feature map of the last convolutional layer.
+grads <- tape$gradient(top_class_channel, last_conv_layer_output)
+
+# pooled_grads is a vector where each entry is the mean intensity of the gradient for a
+# given channel. It quantifies the importance of each channel with regard to the top predicted class.
+pooled_grads <- mean(grads, axis = c(1, 2, 3), keepdims = TRUE)
+
+# pooled_grads has shape (1, 1, 1, 2048).
+# grads and last_conv_layer_output have the same shape, (1, 10, 10, 2048).
+heatmap <-
+  (last_conv_layer_output * pooled_grads) %>%
+  mean(axis = -1) %>% # Shape: (1, 10, 10)
+  .[1, , ] # Drop batch dim; output shape: (10, 10).
+
+plot_activations <- function(x, ...) {
+
+  x <- as.array(x)
+
+  if(sum(x) == 0)
+    return(plot(as.raster("gray")))
+
+  rotate <- function(x) t(apply(x, 2, rev))
+  image(rotate(x), asp = 1, axes = FALSE, useRaster = TRUE,
+        col = terrain.colors(256), ...)
+}
+
+par(mfrow = c(1, 1), mar = c(0, 0, 0, 0))
+plot_activations(heatmap)
+
+pal <- hcl.colors(256, palette = "Spectral", alpha = .4, rev = TRUE)
+heatmap <- as.array(heatmap)
+heatmap[] <- pal[cut(heatmap, 256)]
+heatmap <- as.raster(heatmap)
+
+img <- tf_read_image(img_path, resize = NULL)
+display_image_tensor(img)
+rasterImage(heatmap, 0, 0, ncol(img), nrow(img), interpolate = FALSE)
+```
