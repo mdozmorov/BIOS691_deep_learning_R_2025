@@ -38,6 +38,8 @@ knitr::include_url('../../slides/ch09_CNN_slides.html#1')
 - Introduction to deep learning for computer vision, [RMarkdown, part 1](../../slides/code/ch08_CNN_code1.Rmd), [RMarkdown, part 2](../../slides/code/ch08_CNN_code2.Rmd)
 
 - Image segmentation example, [RMarkdown](../../slides/code/ch09_CNN_code1.Rmd)
+- Modern convnet architecture patterns, [RMarkdown](../../slides/code/ch09_CNN_code2.Rmd)
+- Interpreting what convnets learn, [RMarkdown](../../slides/code/ch09_CNN_code1.Rmd)
 
 
 ### References
