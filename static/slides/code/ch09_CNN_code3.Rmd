@@ -29,6 +29,33 @@ We will load a trained convolutional neural network (CNN) model and visualize th
 ```{r}
 library(keras3)
 library(tensorflow)
+library(tfdatasets)
+
+tf_read_image <-
+  function(path, format = "image", resize = NULL, ...) {
+
+    img <- path %>%
+      tf$io$read_file() %>%
+      tf$io[[paste0("decode_", format)]](...) #
+
+    if (!is.null(resize))
+      img <- img %>%
+        tf$image$resize(as.integer(resize)) 
+
+    img
+  }
+
+display_image_tensor <- function(x, ..., max = 255,
+                                 plot_margins = c(0, 0, 0, 0)) {
+  if(!is.null(plot_margins))
+    par(mar = plot_margins)
+
+  x %>%
+    as.array() %>%
+    drop() %>%
+    as.raster(max = max) %>%
+    plot(..., interpolate = FALSE)
+}
 
 model <- load_model("convnet_from_scratch_with_augmentation.keras")
 model <- load_model("oxford_segmentation.keras")
@@ -41,10 +68,7 @@ img_path <- get_file(
 img_tensor <- img_path %>%
   tf_read_image(resize = c(200, 200))
 
-
-## -------------------------------------------------------------------------
 display_image_tensor(img_tensor)
-
 ```
 
 #### Creating an Activation Model
@@ -188,36 +212,6 @@ We will develop a feature extractor model using the pre-trained Xception model, 
     *  `include_top = FALSE`:  Specifies that you want to load only the convolutional base of the model, excluding the fully connected layers (the "top" of the model) that are typically used for classification. This is because you're interested in using the convolutional layers for feature extraction, not for making predictions on ImageNet classes.
     
 ```{r}
-library(keras3)
-library(tensorflow)
-library(tfdatasets)
-
-tf_read_image <-
-  function(path, format = "image", resize = NULL, ...) {
-
-    img <- path %>%
-      tf$io$read_file() %>%
-      tf$io[[paste0("decode_", format)]](...) #
-
-    if (!is.null(resize))
-      img <- img %>%
-        tf$image$resize(as.integer(resize)) 
-
-    img
-  }
-
-display_image_tensor <- function(x, ..., max = 255,
-                                 plot_margins = c(0, 0, 0, 0)) {
-  if(!is.null(plot_margins))
-    par(mar = plot_margins)
-
-  x %>%
-    as.array() %>%
-    drop() %>%
-    as.raster(max = max) %>%
-    plot(..., interpolate = FALSE)
-}
-
 img_path <- get_file(
   fname="cat.jpg",
   origin="https://img-datasets.s3.amazonaws.com/cat.jpg")
