@@ -1,0 +1,306 @@
+---
+title: "Introduction to deep learning for computer vision"
+output: 
+  html_notebook: 
+    theme: cerulean
+    highlight: textmate
+editor_options: 
+  chunk_output_type: console
+---
+
+# 8.3 Leveraging a pretrained model
+
+## 8.3.1 Feature extraction with a pretrained model
+
+**0. Preparation from the previous code**
+
+```{r}
+library(keras3)
+library(tensorflow)
+library(tfdatasets)
+
+# Loading Image Datasets
+new_base_dir <- "/Users/mdozmorov/Documents/Work/Teaching/BIOS691_deep_learning_R.2025/static/slides/code/cats_vs_dogs_small/"
+
+train_dataset <- 
+  image_dataset_from_directory(file.path(new_base_dir, "train"),  
+                               image_size = c(180, 180),  
+                               batch_size = 32)
+
+validation_dataset <- 
+  image_dataset_from_directory(file.path(new_base_dir, "validation"),  
+                               image_size = c(180, 180),  
+                               batch_size = 32)
+
+test_dataset <- 
+  image_dataset_from_directory(file.path(new_base_dir, "test"),  
+                               image_size = c(180, 180),  
+                               batch_size = 32)
+```
+
+**1. Using VGG16 base as a Feature Extractor**
+
+```{r}
+conv_base <- application_vgg16(
+  weights = "imagenet",
+  include_top = FALSE,
+  input_shape = c(180, 180, 3)
+)
+conv_base
+```
+
+- **VGG16 Pretrained Model**: 
+  - **Weights**: Pretrained on ImageNet, providing robust feature extraction capabilities.
+  - **`include_top = FALSE`**: Removes the dense layers at the top to extract convolutional features only.
+  - **Input Shape**: Matches the input dimensions of our dataset (180x180x3).
+
+**2. Extracting Features and Labels**
+
+```{r}
+get_features_and_labels <- function(dataset) {
+  n_batches <- length(dataset)
+  all_features <- vector("list", n_batches)
+  all_labels <- vector("list", n_batches)
+  iterator <- as_array_iterator(dataset)
+  for (i in 1:n_batches) {
+    c(images, labels) %<-% iter_next(iterator)
+    preprocessed_images <- imagenet_preprocess_input(images)
+    features <- conv_base %>% predict(preprocessed_images)
+
+    all_labels[[i]] <- labels
+    all_features[[i]] <- features
+  }
+
+  # Combine a list of R arrays along the first axis, the batch dimension.
+  all_features <- listarrays::bind_on_rows(all_features)
+  all_labels <- listarrays::bind_on_rows(all_labels)
+
+  list(all_features, all_labels)
+}
+
+c(train_features, train_labels) %<-% get_features_and_labels(train_dataset)
+c(val_features, val_labels) %<-% get_features_and_labels(validation_dataset)
+c(test_features, test_labels) %<-% get_features_and_labels(test_dataset)
+
+dim(train_features)
+str(train_labels)
+```
+
+- **Feature Extraction**:
+  - Pass images through the pretrained `conv_base`.
+  - Use `imagenet_preprocess_input` to normalize inputs as expected by VGG16.
+  - Aggregate extracted features and labels for all batches.
+
+**3. Training a Dense Classifier**
+
+```{r}
+inputs <- layer_input(shape = c(5, 5, 512))
+outputs <- inputs %>%
+  # Note the use of the layer_flatten() before passing the features to a layer_dense().
+  layer_flatten() %>%
+  layer_dense(256) %>%
+  layer_dropout(.5) %>%
+  layer_dense(1, activation = "sigmoid")
+
+model <- keras_model(inputs, outputs)
+
+model %>% compile(loss = "binary_crossentropy",
+                  optimizer = "rmsprop",
+                  metrics = "accuracy")
+
+callbacks <- list(
+  callback_model_checkpoint(
+    filepath = "feature_extraction.keras",
+    save_best_only = TRUE,
+    monitor = "val_loss"
+  )
+)
+
+history <- model %>% fit(
+  train_features, train_labels,
+  epochs = 20,
+  validation_data = list(val_features, val_labels),
+  callbacks = callbacks
+)
+
+plot(history)
+```
+
+- **Architecture**: 
+  - A flattening layer followed by two dense layers (256 units, dropout 0.5).
+  - The output layer predicts probabilities for binary classification.
+- **Training**:
+  - Trained on precomputed features from the `conv_base`.
+  - Model checkpoint saves the best-performing weights.
+
+**4. Fine-Tuning the Pretrained Model**
+
+```{r}
+conv_base <- application_vgg16(weights = "imagenet", include_top = FALSE)
+conv_base
+freeze_weights(conv_base)
+conv_base
+```
+
+- **Freezing Weights**:
+  - Locks the weights of the `conv_base` during initial training to preserve pretrained features.
+  
+```{r}
+unfreeze_weights(conv_base)
+cat("This is the number of trainable weights",
+    "before freezing the conv base:",
+    length(conv_base$trainable_weights), "\n")
+
+freeze_weights(conv_base)
+cat("This is the number of trainable weights",
+    "after freezing the conv base:",
+    length(conv_base$trainable_weights), "\n")
+```
+
+- **Unfreezing Weights**:
+  - Selectively unfreezes layers of the `conv_base` to fine-tune the pretrained model for the current task. One set of kernel weights (for convolution) and one set of bias values from 13 layers, 26 weights total.
+
+**5. Fine-Tuned Model with Data Augmentation**
+
+```{r}
+data_augmentation <- keras_model_sequential() %>%
+  layer_random_flip("horizontal") %>%
+  layer_random_rotation(0.1) %>%
+  layer_random_zoom(0.2)
+
+inputs <- layer_input(shape = c(180, 180, 3))
+outputs <- inputs %>%
+  data_augmentation() %>%
+  imagenet_preprocess_input() %>%
+  conv_base() %>%
+  layer_flatten() %>%
+  layer_dense(256) %>%
+  layer_dropout(0.5) %>%
+  layer_dense(1, activation = "sigmoid")
+model <- keras_model(inputs, outputs)
+
+model %>% compile(loss = "binary_crossentropy",
+                  optimizer = "rmsprop",
+                  metrics = "accuracy")
+
+callbacks <- list(
+  callback_model_checkpoint(
+    filepath = "feature_extraction_with_data_augmentation.keras",
+    save_best_only = TRUE,
+    monitor = "val_loss"
+  )
+)
+
+# Over 2 hours training on CPU
+history <- model %>% fit(
+  train_dataset,
+  epochs = 50,
+  validation_data = validation_dataset,
+  callbacks = callbacks
+)
+```
+
+- **End-to-End Training**:
+  - Augments raw images during training.
+  - The augmented images pass through the `conv_base` and additional layers for prediction.
+  - Fully trains the entire model, fine-tuning VGG16 weights.
+
+**6. Evaluation**
+
+```{r}
+test_model <- load_model("feature_extraction_with_data_augmentation.keras")
+result <- evaluate(test_model, test_dataset)
+cat(sprintf("Test accuracy: %.3f\n", result$accuracy))
+# Test accuracy: 0.979
+```
+
+- **Final Test**:
+  - Loads the best model saved during training.
+  - Evaluates on the held-out `test_dataset`.
+  - Reports final test accuracy.
+
+**Summary**
+
+This section illustrates how to leverage a pretrained model (VGG16) for feature extraction and fine-tuning. By combining data augmentation, pretrained feature maps, and additional dense layers, the approach efficiently adapts VGG16 to a custom binary classification task. Fine-tuning improves results by optimizing the pretrained weights for the specific dataset.
+
+## 8.3.2 Fine-tuning a pretrained model
+
+This section focuses on further optimizing a pretrained model by fine-tuning specific layers, allowing it to better adapt to the current task.
+
+**1. Examining the Pretrained Base**
+
+```{r}
+conv_base
+```
+
+- **Inspecting the Model**: Displays the architecture and number of trainable layers in the `conv_base` (VGG16 in this case).
+
+**2. Unfreezing Specific Layers**
+
+```{r}
+unfreeze_weights(conv_base, from = -4)
+conv_base
+```
+
+- **Fine-tuning**:
+  - Unfreezes the last 4 layers of the convolutional base (`from = -4`).
+  - These layers will be trainable, while the rest of the layers remain frozen to retain pretrained knowledge.
+
+**3. Compiling the Model**
+
+```{r}
+model %>% compile(
+  loss = "binary_crossentropy",
+  optimizer = optimizer_rmsprop(learning_rate = 1e-5),
+  metrics = "accuracy"
+)
+```
+
+- **Optimizer**: Uses a low learning rate (`1e-5`) to avoid large updates that might overwrite the pretrained weights.
+- **Loss Function**: `binary_crossentropy`, suitable for binary classification tasks.
+- **Metric**: Accuracy is used to evaluate model performance.
+
+**4. Training with Fine-tuning**
+
+```{r}
+callbacks <- list(
+  callback_model_checkpoint(
+    filepath = "fine_tuning.keras",
+    save_best_only = TRUE,
+    monitor = "val_loss"
+  )
+)
+
+# About 1.5h on CPU
+history <- model %>% fit(
+  train_dataset,
+  epochs = 30,
+  validation_data = validation_dataset,
+  callbacks = callbacks
+)
+```
+
+- **Callback**:
+  - `callback_model_checkpoint`: Saves the model weights that achieve the lowest validation loss during training.
+- **Training**:
+  - Fine-tunes the entire model, including the last 4 layers of the `conv_base` and the fully connected layers.
+  - Runs for 30 epochs, with validation performed on the `validation_dataset`.
+
+**5. Evaluating the Fine-tuned Model**
+
+```{r}
+model <- load_model("fine_tuning.keras")
+result <- evaluate(model, test_dataset)
+cat(sprintf("Test accuracy: %.3f\n", result$accuracy))
+```
+
+- **Loading the Best Model**:
+  - Reloads the model saved with the best validation performance.
+- **Evaluation**:
+  - Tests the fine-tuned model on the `test_dataset` to assess generalization.
+  - Prints the final test accuracy.
+
+**Summary**
+
+In this section, the model is fine-tuned by unfreezing specific layers of the convolutional base. Fine-tuning allows the model to adjust high-level features for the task at hand while retaining the general knowledge from the pretrained layers. A low learning rate ensures stability during training. This strategy typically yields higher accuracy than feature extraction alone, especially when the dataset size is moderate.
+
