@@ -33,6 +33,13 @@ knitr::include_url('../../slides/ch08_CNN_slides.html#1')
 knitr::include_url('../../slides/ch09_CNN_slides.html#1')
 ```
 
+<a href="../../slides/ch08_Glossary_slides.html#1" target="_blank">Lecture slides in HTML format</a>
+
+```{r echo=FALSE}
+knitr::include_url('../../slides/ch08_Glossary_slides.html#1')
+```
+
+
 ### Code
 
 - Introduction to deep learning for computer vision, [RMarkdown, part 1](../../slides/code/ch08_CNN_code1.Rmd), [RMarkdown, part 2](../../slides/code/ch08_CNN_code2.Rmd)
