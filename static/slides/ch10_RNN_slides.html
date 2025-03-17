@@ -317,26 +317,21 @@ A single unidirectional hidden layer in LSTMs and GRUs may be insufficient to ca
 
 - Bidirectional RNN looks at its input sequence both ways, obtaining potentially richer representations and capturing patterns that may have been missed by the chronological-order version alone.
 
-.center[&lt;img src="img/lstm_bidirectional.png" height=350&gt;]
-
----
-## Bidirectional Recurrent Neural Networks
-
-.center[&lt;img src="img/lstm_bidirectional.png" height=350&gt;]
+.center[&lt;img src="img/lstm_bidirectional.jpg" height=400&gt;]
 
 ---
 ## Bidirectional Recurrent Neural Networks
 
 - In bidirectional recurrent neural networks, the hidden state for each timestep is simultaneously determined by the data prior to and after the current timestep.
 
-.center[&lt;img src="img/lstm_bidirectional.png" height=350&gt;]
+.center[&lt;img src="img/lstm_bidirectional.jpg" height=400&gt;]
 
 ---
 ## Bidirectional Recurrent Neural Networks
 
 - Bidirectional RNNs are exceedingly slow due to they require both a forward and a backward pass and that the backward pass is dependent on the outcomes of the forward pass. Hence, gradients will have a very long dependency chain.
 
-.center[&lt;img src="img/birnn.svg.png" height=450&gt;]
+.center[&lt;img src="img/birnn.svg.png" height=300&gt;] 
 
 .small[https://d2l.ai/chapter_recurrent-modern/bi-rnn.html]
 
