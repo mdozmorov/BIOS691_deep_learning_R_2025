@@ -1,5 +1,5 @@
 ---
-title: "Week 3: Data representations for neural network, Keras, Tensorflow"
+title: "Section 3: Data representations for neural network, Keras, Tensorflow"
 # linktitle: "1. Introduction to RStudio and Images"
 date: "2025-01-27"
 class_date: "2025-01-27"
