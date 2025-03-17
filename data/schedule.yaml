@@ -2,35 +2,41 @@ lessons:
   - title: '<span class="fake-header-table">Introduction to Deep Learning with R</span>'
     header: True
 
-  - title: '**Week 1: Fundamentals of Deep Learning I**'
+  - title: '**Section 1: Fundamentals of Deep Learning I**'
     date: "January 13"
     # reading: "01-reading"
     assignment: "01-problem-set"
     class: "01-class"
 
-  - title: '**Week 2: Fundamentals of Deep Learning II**'
+  - title: '**Section 2: Fundamentals of Deep Learning II**'
     date: "January 22"
     # reading: "02-reading"
     assignment: "02-problem-set"
     class: "02-class"
 
-  - title: '**Week 3: Data representations for neural network, Keras, Tensorflow**'
+  - title: '**Section 3: Data representations for neural network, Keras, Tensorflow**'
     date: "January 27"
     # reading: "03-reading"
     assignment: "03-problem-set"
     class: "03-class"
 
-  - title: '**Week 4: Deep dive into Keras**'
+  - title: '**Section 4: Deep dive into Keras**'
     date: "February 3"
     #reading: "04-reading"
     # assignment: "04-problem-set"
     class: "04-class"
 
-  - title: "**Week 5: Convolutional Neural Networks**"
+  - title: "**Section 5: Convolutional Neural Networks**"
     date: "February 10"
     # reading: "05-reading"
     assignment: "05-problem-set"
     class: "05-class"
+
+  - title: "**Section 6: Deep Learning for Time Series**"
+    date: "March 17"
+    # reading: "05-reading"
+    # assignment: "05-problem-set"
+    class: "06-class"
 
 #  - title: "**Notebook 2 due**"
 #    date: "April 16"

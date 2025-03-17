@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Deep learning for time series</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Mikhail Dozmorov" />
+    <meta name="date" content="2025-03-17" />
+    <script src="libs/header-attrs-2.29/header-attrs.js"></script>
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+    <link rel="stylesheet" href="xaringan-my.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+.title[
+# Deep learning for time series
+]
+.author[
+### Mikhail Dozmorov
+]
+.institute[
+### Virginia Commonwealth University
+]
+.date[
+### 2025-03-17
+]
+
+---
+
+
+
+
+
+&lt;!-- .center[&lt;img src="img/.png" height=450&gt;] --&gt;
+
+&lt;!-- .small[  ] --&gt;
+
+## Time series
+
+* **Time series data** involves measurements taken at regular intervals, exhibiting characteristics like periodic cycles, trends, and sudden spikes. 
+
+* Common tasks involving time series data include forecasting, classification, event detection, and anomaly detection.
+
+---
+## Time series
+
+* **Forecasting:** predicting future values in a time series. For example, predicting the temperature 24 hours in the future based on hourly measurements of various weather variables over the past five days.
+
+*   **Classification:** Assigning categorical labels to a time series. For example, determining whether the activity pattern of a website visitor corresponds to a human user or a bot.
+
+---
+## Time series
+
+*   **Event detection:** Identifying the occurrence of specific, predefined events within a continuous data stream.  
+  * Examples: "hotword detection" where a model monitors audio and detects specific phrases like "OK, Google" or "Hey, Alexa".
+
+*   **Anomaly detection:** Identifying unusual or unexpected patterns within a continuous data stream. This task often relies on unsupervised learning, as the specific nature of anomalies might be unknown in advance. 
+  * Examples: detecting unusual network activity that could signal an attack or identifying unusual sensor readings on a manufacturing line that might require human intervention.
+
+---
+## Weather forecasting
+
+* We will use a **weather dataset** recorded at the Max Planck Institute for Biogeochemistry in Jena, Germany.
+* It includes 14 quantities measured every 10 minutes over several years.
+.small[
+"Date Time" - Timestamp of the measurement
+1. "p (mbar)" - Atmospheric pressure in millibars
+2. "T (degC)" - Temperature in degrees Celsius
+3. "Tpot (K)" - Potential temperature in Kelvin
+4. "Tdew (degC)" - Dew point temperature in degrees Celsius
+5. "rh (%)" - Relative humidity percentage
+6. "VPmax (mbar)" - Maximum vapor pressure in millibars
+7. "VPact (mbar)" - Actual vapor pressure in millibars
+8. "VPdef (mbar)" - Vapor pressure deficit in millibars
+9. "sh (g/kg)" - Specific humidity in grams per kilogram
+10. "H2OC (mmol/mol)" - Water vapor concentration in millimoles per mole
+11. "rho (g/m**3)" - Air density in grams per cubic meter
+12. "wv (m/s)" - Wind velocity in meters per second
+13. "max. wv (m/s)" - Maximum wind velocity in meters per second
+14. "wd (deg)" - Wind direction in degrees]
+.small[ https://maps.app.goo.gl/geuAWQzfUtkmnKVW8 https://www.bgc-jena.mpg.de/wetter/ ]
+
+---
+## Weather forecasting data preparation
+
+* **Normalizing** each measurement independently to ensure they have similar scales, as different variables may have vastly different ranges.
+
+* **Splitting the data** into training, validation, and testing sets, with the validation and test sets containing more recent data than the training set to simulate real-world forecasting scenarios. 
+
+* **Creating a TF Dataset object** that generates batches of data.  This involves sampling data at hourly intervals, defining a sequence length of 120 hours (5 days), and setting a delay of 24 hours to predict the temperature one day ahead.
+
+---
+## Common sense baseline
+
+* Before applying complex models, it's essential to **establish a common-sense baseline** to evaluate the effectiveness of machine learning approaches. 
+
+* For the temperature forecasting task, a simple baseline is to predict the temperature in 24 hours will be the same as the current temperature, taking advantage of the continuous and periodic nature of temperature data. 
+
+* We will use **mean absolute error (MAE)** to evaluate the baseline and our methods.
+
+---
+## First deep learning models
+
+* **Densely connected networks**. 
+  * Disadvantage - flatten the time series, lose the inherent temporal information. 
+
+* **1D convolutional models**. 
+  * Advantages - can exploit patterns like daily cycles. 
+  * Disadvantages - struggle with the importance of order in time series data and the fact that weather data isn't strictly translation invariant (patterns may change depending on the time of day).
+
+- Fully connected networks and CNNs do not have memory - each input is processed independently.
+
+.small[https://machinelearningmastery.com/when-to-use-mlp-cnn-and-rnn-neural-networks/]
+
+---
+## Recurrent neural networks (RNN) 
+
+- RNNs are specifically designed to model space-temporal structures because they consider information from multiple previous layers. 
+
+- Used in time series forecasting, natural language processing (NLP), speech recognition, and more.
+
+.center[&lt;img src="img/rnn_example1.png" height=250&gt;]
+
+.small[ https://www.analyticsvidhya.com/blog/2017/12/introduction-to-recurrent-neural-networks/ ]
+
+---
+## Recurrent neural networks (RNN) 
+
+- The model maintains a hidden state across time steps, allowing it to capture dependencies in sequential data. 
+
+- The recurrence is unfolded over time to show how the same network unit is applied repeatedly at each step.
+
+.center[&lt;img src="img/rnn_example1.png" height=250&gt;]
+
+.small[ https://www.analyticsvidhya.com/blog/2017/12/introduction-to-recurrent-neural-networks/ ]
+
+---
+## Folded RNN Representation
+
+- Input `\(x\)`, Hidden state `\(h\)`, Output `\(o\)`.
+
+- The hidden state `\(h\)` has a **recurrent connection**, meaning it passes information from one time step to the next.
+
+- The weight matrices are labeled as: `\(U\)` for input-to-hidden connections; `\(V\)` for hidden-to-hidden connections; `\(W\)` for hidden-to-output connections.
+
+.center[&lt;img src="img/rnn_example1.png" height=250&gt;]
+.small[https://www.analyticsvidhya.com/blog/2020/04/comprehensive-popular-deep-learning-interview-questions-answers/]
+
+---
+## Unfolded RNN representation over time 
+
+The **unfolding process** illustrates how the recurrent unit processes sequential data across multiple time steps (`\(t-1, t, t+1, \dots\)`).
+- At each time step:
+ - The input `\(x_t\)` is processed to update the hidden state `\(h_t\)`.
+ - The hidden state `\(h_t\)` is computed based on the previous hidden state `\(h_{t-1}\)` and the current input `\(x_t\)`.
+ - The output `\(o_t\)` is generated from `\(h_t\)`.
+
+- The recurrence is modeled using:
+ - `\(h_t = f(U x_t + V h_{t-1})\)`, where `\(f\)` is an activation function (often tanh or ReLU).
+ - `\(o_t = g(W h_t)\)`, where `\(g\)` is usually a softmax or linear function.
+
+&lt;!--
+## RNN mathematical definition
+
+- The predicted output at time `\(t\)`, `\(\hat{y}^{(t)}\)`, is a nonlinear function of `\(h^{(t)}\)` and bias `\(b_1\)`, where `\(V\)` is a weight matrix
+
+`$$\hat{y}^{(t)} = g(V h^{(t)} + b_1 )$$`
+- The current hidden layer `\(h^{(t)}\)` is a nonlinear function of the previous layer `\(h^{(t - 1)}\)` of the current input `\((x)\)` and of bias, `\(b_0\)`
+`$$h^{(t)} = f(W h^{(t - 1)} + Ux^{(t)} + b_0)$$`
+
+- `\(W\)` and `\(U\)` are weight matrices to be estimated. If `\(x\)` represents a sequence-like dataset, `\(x^{(t)}\)` refers to the value of `\(x\)` at time `\(t\)` 
+--&gt;
+
+---
+## Word-level RNN language model
+
+.center[&lt;img src="img/0_Text.svg.png" height=450&gt;]
+
+.small[https://d2l.ai/chapter_recurrent-neural-networks/rnn.html]
+
+---
+## Backpropagation through time
+
+- **Expansion of the RNN**: Backpropagation through time involves unrolling the recurrent neural network over the entire sequence length. 
+- This unrolling process allows us to visualize the dependencies between model variables and parameters at each timestep.
+&lt;br&gt;&lt;br&gt;
+- **Application of the Chain Rule**: Once the network is unrolled, we apply the chain rule to compute gradients.
+- This involves calculating the gradients at each timestep and then propagating them backward through the network to update the weights.
+
+.small[https://d2l.ai/chapter_recurrent-neural-networks/bptt.html]
+
+&lt;!---
+## Backpropagation through time
+
+**Handling Long Sequences**: Since sequences can be long, the dependencies can become extensive, leading to issues like vanishing or exploding gradients. To address these issues, several methods have been proposed:
+
+- **Long Short-Term Memory (LSTM)**: Introduced by Hochreiter &amp; Schmidhuber in 1997, LSTMs are designed to capture long-term dependencies by using gates to control the flow of information.
+
+- **Gated Recurrent Unit (GRU)**: Proposed by Cho et al. in 2014, GRUs are a streamlined variant of LSTMs that often offer comparable performance while being faster to compute.
+
+.small[https://d2l.ai/chapter_recurrent-neural-networks/bptt.html]
+--&gt;
+
+---
+## RNN limitations
+
+* The **vanishing gradient problem** in RNNs occurs when gradients become very small during backpropagation through time. 
+
+* This happens because gradients are multiplied across time steps, and they can shrink exponentially if weights are small or activation function derivatives are less than 1. 
+
+* As a result, the RNN struggles to learn long-term dependencies because early time steps have little influence on weight updates.
+
+---
+## RNN improvements
+
+- Sequence elements are not created equal - some may be more important than the other. E.g., introductory words may be highly predictive of a future story. Need _memory cell_ to store such information.
+
+- Some elements may be not important at all, e.g., HTML formatting tags around the actual text. Need _skipping mechanism_ to forget such elements.
+
+- Some parts of the sequence may be disjoint, e.g., book chapters. Need _reset_ mechanism to refresh internal state representations.
+
+---
+## Long Short-Term Memory (LSTM)
+
+- **Long Short-Term Memory (LSTM)**: Introduced by Hochreiter &amp; Schmidhuber in 1997, LSTMs are designed to capture long-term dependencies by using gates to control the flow of information.
+
+* LSTMs can effectively retain information from earlier time steps using a "conveyor belt" mechanism that selectively carries information across time.
+.center[&lt;img src="img/LSTM3-chain.png" height=250&gt;]
+.small[https://colah.github.io/posts/2015-08-Understanding-LSTMs/]
+
+---
+## Sequence-aware models: LSTMs
+
+- The key idea behind LSTM is to introduce a **memory mechanism** that allows the network to selectively **retain or forget information over time**.
+
+- LSTM incorporates a **cell state**, which acts as a "conveyor belt" carrying information through time. This cell state can be updated or preserved based on gates that regulate the flow of information.
+.center[&lt;img src="img/LSTM3-C-line.png" height=250&gt;]
+.small[https://colah.github.io/posts/2015-08-Understanding-LSTMs/]
+
+---
+## Sequence-aware models: LSTMs
+
+* LSTMs have three types of gates: input gates, forget gates, and output gates which control the flow of information.
+
+*   **Forget Gate:** Determines what information from the previous cell state should be forgotten. It takes the current input and the previous hidden state as input, and outputs a value between 0 and 1. A value close to 0 means forget, while a value close to 1 means retain.
+.center[&lt;img src="img/LSTM3-focus-f.png" height=250&gt;]
+.small[https://colah.github.io/posts/2015-08-Understanding-LSTMs/]
+
+---
+## Sequence-aware models: LSTMs
+
+* The gates are implemented using sigmoid activation functions, which output values between 0 and 1, representing the degree to which information is allowed to pass through. 
+
+*   **Input Gate:** Decides what new information should be added to the cell state. It considers the current input and the previous hidden state to determine the relevance of the current input.
+.center[&lt;img src="img/LSTM3-focus-i.png" height=250&gt;]
+.small[https://colah.github.io/posts/2015-08-Understanding-LSTMs/]
+
+---
+## Sequence-aware models: LSTMs
+
+- The hidden layer output of LSTM includes hidden states and memory cells. Only hidden states are passed into the output layer. Memory cells are entirely internal.
+
+*   **Output Gate:** Controls what information from the cell state should be outputted to the next hidden state.
+.center[&lt;img src="img/LSTM3-focus-o.png" height=250&gt;]
+.small[https://colah.github.io/posts/2015-08-Understanding-LSTMs/]
+
+---
+## Sequence-aware models: LSTMs
+
+* The combination of these gates allows LSTM to learn complex relationships between elements in a sequence, even those separated by long distances. 
+
+* By selectively updating and preserving information, LSTM effectively captures long-term dependencies, making it suitable for tasks like language modeling, machine translation, and time series forecasting.
+
+---
+## Sequence-aware models: GRUs
+
+- **Gated Recurrent Unit (GRU)**: Proposed by Cho et al. in 2014, GRUs are a streamlined variant of LSTMs that often offer comparable performance while being faster to compute.
+
+- The GRU, combines the forget and input gates into a single "update gate." It also merges the cell state and hidden state, and makes some other changes. 
+
+.center[&lt;img src="img/LSTM3-var-GRU.png" height=250&gt;]
+.small[https://colah.github.io/posts/2015-08-Understanding-LSTMs/]
+
+---
+## Sequence-aware models: GRUs
+
+1. The update gate `\(z_t\)` controls how much of the previous hidden state `\(h_{t-1}\)` should be updated.
+2. The reset gate `\(r_t\)` determines how much of the previous hidden state to forget.
+3. The candidate hidden state `\(h̃_t\)` is calculated using the reset gate.
+4. The final hidden state `\(h_t\)` is a linear interpolation between the previous hidden state and the candidate hidden state, controlled by the update gate.
+.center[&lt;img src="img/LSTM3-var-GRU.png" height=250&gt;]
+.small[https://colah.github.io/posts/2015-08-Understanding-LSTMs/]
+
+---
+## Overfitting in RNNs
+
+- **Recurrent dropout** is a specialized dropout technique specifically designed for recurrent neural networks.
+
+- The time-constant (or consistent) dropout mask is a key distinguishing feature - the same units are dropped at each time step within a sequence, rather than randomly changing which units are dropped at each step.
+
+- This approach provides regularization to prevent overfitting while preserving the temporal dependencies in the network, which is crucial for effective error signal propagation through time.
+
+---
+## Deep Recurrent Neural Networks
+
+A single unidirectional hidden layer in LSTMs and GRUs may be insufficient to capture the full complexity of sequences. Several strategies to increase the flexibility.
+
+- Add nonlinearity to the gating mechanisms.
+
+- Increase the number of units in the hidden layer.
+
+- Stack multiple layers on top of each other. The intermediate layers should return the full sequence of outputs (hidden state information), not the outputs at the last time step. Highly computationally intensive.
+
+---
+## Bidirectional Recurrent Neural Networks
+
+- Bidirectional RNN looks at its input sequence both ways, obtaining potentially richer representations and capturing patterns that may have been missed by the chronological-order version alone.
+
+.center[&lt;img src="img/lstm_bidirectional.png" height=350&gt;]
+
+---
+## Bidirectional Recurrent Neural Networks
+
+.center[&lt;img src="img/lstm_bidirectional.png" height=350&gt;]
+
+---
+## Bidirectional Recurrent Neural Networks
+
+- In bidirectional recurrent neural networks, the hidden state for each timestep is simultaneously determined by the data prior to and after the current timestep.
+
+.center[&lt;img src="img/lstm_bidirectional.png" height=350&gt;]
+
+---
+## Bidirectional Recurrent Neural Networks
+
+- Bidirectional RNNs are exceedingly slow due to they require both a forward and a backward pass and that the backward pass is dependent on the outcomes of the forward pass. Hence, gradients will have a very long dependency chain.
+
+.center[&lt;img src="img/birnn.svg.png" height=450&gt;]
+
+.small[https://d2l.ai/chapter_recurrent-modern/bi-rnn.html]
+
+---
+## CNNs for sequence processing
+
+- CNNs extract features from local input patches, which can be time periods, sequence chunks.
+    - Not sensitive to time order.
+
+- Much faster than RNNs, but inferior performance.
+    - Use a 1D convnet as a preprocessing step before an RNN.
+
+- Used for machine translation (sequence-to-sequence), document classification, spelling correction.
+
+---
+## 1D convolution
+
+- Use 1D convolutions, extracting local 1D patches (sub-sequences) from sequences.
+- The convnet will turn the long input sequence into much shorter (downsampled) sequences of higher-level features.
+
+.center[&lt;img src="img/1d_convolution.png" height=350&gt;]
+
+---
+## 1D pooling
+
+- CNNs for sequence processing have a similar structure like regular convnets - they consist of stacks of `layer_conv_1d()` and `layer_max_pooling_1d()`, ending in a global pooling operation or flattening operation.
+
+- 1D pooling extracts 1D patches (subsequences) from the input and outputs the maximum value (max pooling) or average value (average pooling).
+
+- For 2D convnets, we used kernel size equal to 3, so a `\(3 \times 3\)` convolution window contains 9 feature vectors. For 1D, we use one dimension, so our window size (kernel) can be 7 or 9.
+
+---
+## RNNs vs. 1D convnets
+
+- If global order matters in your sequence data, then it’s preferable to use a recurrent network. This is typically the case for time series, where the recent past is likely to be more informative than the distant past.
+
+- If global ordering isn’t fundamentally meaningful, then 1D convnets will turn out to work at least as well and are cheaper. This is often the case for text data, where a keyword found at the beginning of a sentence is just as meaningful as a keyword found at the end.
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+  "ratio": "16:9",
+  "highlightStyle": "github",
+  "highlightLines": true,
+  "countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
