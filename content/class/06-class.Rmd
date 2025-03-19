@@ -29,7 +29,7 @@ knitr::include_url('../../slides/ch10_RNN_slides.html#1')
 
 ### Code
 
-- Introduction to deep learning for sequence (time series) analysis, [RMarkdown](../../slides/code/ch08_CNN_code1.Rmd), [RMarkdown, part 2](../../slides/code/ch10_RNN_code.Rmd)
+- Introduction to deep learning for sequence (time series) analysis, [RMarkdown](../../slides/code/ch10_RNN_code.Rmd)
 
 
 ### References
