@@ -27,15 +27,10 @@ editor_options:
 knitr::include_url('../../slides/ch10_RNN_slides.html#1')
 ```
 
-<!--
 ### Code
 
-- Introduction to deep learning for computer vision, [RMarkdown, part 1](../../slides/code/ch08_CNN_code1.Rmd), [RMarkdown, part 2](../../slides/code/ch08_CNN_code2.Rmd)
+- Introduction to deep learning for sequence (time series) analysis, [RMarkdown](../../slides/code/ch08_CNN_code1.Rmd), [RMarkdown, part 2](../../slides/code/ch10_RNN_code.Rmd)
 
-- Image segmentation example, [RMarkdown](../../slides/code/ch09_CNN_code1.Rmd)
-- Modern convnet architecture patterns, [RMarkdown](../../slides/code/ch09_CNN_code2.Rmd)
-- Interpreting what convnets learn, [RMarkdown](../../slides/code/ch09_CNN_code1.Rmd)
--->
 
 ### References
 
