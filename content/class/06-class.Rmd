@@ -31,6 +31,16 @@ knitr::include_url('../../slides/ch10_RNN_slides.html#1')
 
 - Introduction to deep learning for sequence (time series) analysis, [RMarkdown](../../slides/code/ch10_RNN_code.Rmd)
 
+### Datasets 
+
+<!-- - [Daily Climate time series data](https://www.kaggle.com/datasets/sumanthvrao/daily-climate-time-series-data) -->
+
+- [Netflix | Stock Market Analysis | Founding Years](https://www.kaggle.com/datasets/whenamancodes/netflix-stock-market-analysis-founding-years)
+
+<!-- - [Airbnb, Inc. Stock Market Analysis](https://www.kaggle.com/datasets/whenamancodes/airbnb-inc-stock-market-analysis) -->
+<!-- - [META | Stock Market Analysis | Founding Years](https://www.kaggle.com/datasets/whenamancodes/meta-stock-market-analysis-founding-years) -->
+<!-- - [TESLA Inc | Stock Market Analysis | Founding Years](https://www.kaggle.com/datasets/whenamancodes/tesla-inc-stock-market-analysis-founding-years) -->
+<!-- - [Dogecoin Historical Data](https://www.kaggle.com/datasets/dhruvildave/dogecoin-historical-data) -->
 
 ### References
 
