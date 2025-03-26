@@ -1,35 +1,42 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Deep Learning with R</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Mikhail Dozmorov" />
+    <meta name="date" content="2025-03-25" />
+    <script src="libs/header-attrs-2.29/header-attrs.js"></script>
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+    <link rel="stylesheet" href="xaringan-my.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+.title[
+# Deep Learning with R
+]
+.subtitle[
+## Working with text
+]
+.author[
+### Mikhail Dozmorov
+]
+.institute[
+### Virginia Commonwealth University
+]
+.date[
+### 2025-03-25
+]
+
 ---
-title: "Deep Learning with R"
-subtitle: "Working with text"
-author: "Mikhail Dozmorov"
-institute: "Virginia Commonwealth University"
-date: 2025-03-25 # "`r Sys.Date()`"
-output:
-  xaringan::moon_reader:
-    lib_dir: libs
-    css: ["xaringan-themer.css", "xaringan-my.css"]
-    nature:
-      ratio: '16:9'
-      highlightStyle: github
-      highlightLines: true
-      countIncrementalSlides: false
----
 
-```{r xaringan-themer, include = FALSE}
-library(xaringanthemer)
-mono_light(
-  base_color = "midnightblue",
-  header_font_google = google_font("Josefin Sans"),
-  text_font_google   = google_font("Montserrat", "500", "500i"),
-  code_font_google   = google_font("Droid Mono"),
-  link_color = "#8B1A1A", #firebrick4, "deepskyblue1"
-  text_font_size = "28px"
-)
-```
 
-<!-- .center[<img src="img/.png" height=450>] -->
 
-<!-- .small[  ] -->
+
+&lt;!-- .center[&lt;img src="img/.png" height=450&gt;] --&gt;
+
+&lt;!-- .small[  ] --&gt;
 
 ## Introduction to NLP and Text Analysis
 
@@ -65,7 +72,7 @@ mono_light(
 
 - **1990s–2010s:** Statistical models (logistic regression, decision trees, Hidden Markov Models, SVMs). Need extensive feature engineering, struggled with complex language tasks (e.g., context and sentiment). 
 
-.center[<img src="img/nlp_timeline.png" height=250>]
+.center[&lt;img src="img/nlp_timeline.png" height=250&gt;]
 .small[ https://blog.dataiku.com/nlp-metamorphosis ]
 
 ---
@@ -175,7 +182,7 @@ mono_light(
 ## One-hot encoding
 
 One-hot encoding is a method used in NLP to convert **categorical data** (words or tokens) into **numerical vectors** that can be used as input for machine learning models.
-.center[<img src="img/one_hot_encoding.png" height=250>]
+.center[&lt;img src="img/one_hot_encoding.png" height=250&gt;]
 .small[
 * A fundamental assumption in one-hot encoding that the different tokens are all independent from each other, which is not correct.
 *   One-hot vectors are all orthogonal, which is not ideal for words that typically form a structured space and share information with each other.
@@ -219,17 +226,18 @@ https://www.kaggle.com/dansbecker/using-categorical-data-with-one-hot-encoding]
     *   `"count"`: returns token counts.
     *   `"tf_idf"`: returns TF-IDF outputs.
 
-```{r eval=FALSE}
+
+``` r
 # Can be placed in a TF Dataset pipeline for asynchronous preprocessing on the CPU
-int_sequence_dataset <- string_dataset %>% dataset_map(text_vectorization,
+int_sequence_dataset &lt;- string_dataset %&gt;% dataset_map(text_vectorization,
  num_parallel_calls = 4)
 
 # Can be included as a layer in a Keras model
-text_input <- layer_input(shape = shape(), dtype = "string")
-vectorized_text <- text_vectorization(text_input)
-embedded_input <- vectorized_text %>% layer_embedding(...)
-output <- embedded_input %>% ...
-model <- keras_model(text_input, output)
+text_input &lt;- layer_input(shape = shape(), dtype = "string")
+vectorized_text &lt;- text_vectorization(text_input)
+embedded_input &lt;- vectorized_text %&gt;% layer_embedding(...)
+output &lt;- embedded_input %&gt;% ...
+model &lt;- keras_model(text_input, output)
 ```
 
 ---
@@ -252,7 +260,7 @@ model <- keras_model(text_input, output)
 1.  **Term Frequency (TF)**: Measures how often a term appears in a document.
     *   **The more a given term appears in a document, the more important that term is for understanding what the document is about**.
 
-    $$TF(t) = \frac{\text{Number of times } t \text{ appears in a document}}{\text{Total words in the document}}$$
+    `$$TF(t) = \frac{\text{Number of times } t \text{ appears in a document}}{\text{Total words in the document}}$$`
 
 ---
 ## TF-IDF Normalization
@@ -261,14 +269,14 @@ model <- keras_model(text_input, output)
     *   **Terms that appear in almost every document aren’t particularly informative, while terms that appear only in a small subset of all texts are very distinctive and, thus, important**.
     *   N = Total number of documents
 
-    $$IDF(t) = \log \left(\frac{N}{1 + \text{Number of documents containing } t} \right)$$
+    `$$IDF(t) = \log \left(\frac{N}{1 + \text{Number of documents containing } t} \right)$$`
 
 ---
 ## TF-IDF Normalization
 
 3.  **TF-IDF Score**:
 
-    $$TF-IDF(t) = TF(t) \times IDF(t)$$
+    `$$TF-IDF(t) = TF(t) \times IDF(t)$$`
 
 *   It would be typical to see a one-percentage-point increase when using TF-IDF compared to plain binary encoding for many text-classification datasets.
 
@@ -292,9 +300,9 @@ model <- keras_model(text_input, output)
   - Ranges from **-1 (opposite meanings)** to **1 (identical meanings)**.  
 
 $$  \text{cosine similarity} = \frac{\mathbf{A} \cdot \mathbf{B}}{\|\|\mathbf{A}\|\| \|\|\mathbf{B}\|\|}$$
-where $\mathbf{A} \cdot \mathbf{B}$ is the dot product of the two vectors, and 
-$\|\mathbf{A}\|$ and $\|\mathbf{B}\|$ are their magnitudes (norms), e.g.,
-$\|\mathbf{A}\| = \sqrt{\sum_{i=1}^{n} A_i^2}$
+where `\(\mathbf{A} \cdot \mathbf{B}\)` is the dot product of the two vectors, and 
+`\(\|\mathbf{A}\|\)` and `\(\|\mathbf{B}\|\)` are their magnitudes (norms), e.g.,
+`\(\|\mathbf{A}\| = \sqrt{\sum_{i=1}^{n} A_i^2}\)`
 
 - Captures **semantic similarity** between words.  
 - Works well in **high-dimensional spaces** like word embeddings.  
@@ -326,7 +334,7 @@ https://machinelearningmastery.com/what-are-word-embeddings/]
 
 The embedding matrix captures similarity among words in a multi-dimensional space. It can be visualized using dimensionality reduction techniques like t-SNE
 
-.center[<img src="img/embedding.png" height=350>]
+.center[&lt;img src="img/embedding.png" height=350&gt;]
 
 .small[ https://machinelearningmastery.com/what-are-word-embeddings/ ]
 
@@ -350,14 +358,14 @@ The embedding matrix captures similarity among words in a multi-dimensional spac
 
 - Continuous Skip-Gram Model. Learns by predicting the surrounding words given a current word.
 
-.center[<img src="img/Word2Vec-Training-Models.png" height=350>]
+.center[&lt;img src="img/Word2Vec-Training-Models.png" height=350&gt;]
 
 .small[ https://machinelearningmastery.com/what-are-word-embeddings/ ]
 
 ---
 ## Embedding Projector
 
-.center[<img src="img/embedding_projector.png" height=450>]
+.center[&lt;img src="img/embedding_projector.png" height=450&gt;]
 
 .small[ https://projector.tensorflow.org/ ]
 
@@ -366,7 +374,7 @@ The embedding matrix captures similarity among words in a multi-dimensional spac
 
 Co-ocurrence matrices (count based method)
 
-.center[<img src="img/coocmat.png" height=350>]
+.center[&lt;img src="img/coocmat.png" height=350&gt;]
 
 Dimensionality can be reduced using SVD ( singular value decomposition). We then use the result of SVD as our word vectors.
 
@@ -392,22 +400,22 @@ Dimensionality can be reduced using SVD ( singular value decomposition). We then
 
 | Probability and Ratio       | k = solid | k = gas | k = water | k = fashion |
 |----------------------------|-----------|---------|-----------|-------------|
-| P(k-ice)                | 1.9 × 10<sup>-4</sup> | 6.6 × 10<sup>-5</sup> | 3.0 × 10<sup>-3</sup> | 1.7 × 10<sup>-5</sup> |
-| P(k-steam)              | 2.2 × 10<sup>-5</sup> | 7.8 × 10<sup>-4</sup> | 2.2 × 10<sup>-3</sup> | 1.8 × 10<sup>-5</sup> |
-| P(k-ice)/P(k-steam)     | 8.9 | 8.5 × 10<sup>-2</sup> | 1.36 | 0.96 |
+| P(k-ice)                | 1.9 × 10&lt;sup&gt;-4&lt;/sup&gt; | 6.6 × 10&lt;sup&gt;-5&lt;/sup&gt; | 3.0 × 10&lt;sup&gt;-3&lt;/sup&gt; | 1.7 × 10&lt;sup&gt;-5&lt;/sup&gt; |
+| P(k-steam)              | 2.2 × 10&lt;sup&gt;-5&lt;/sup&gt; | 7.8 × 10&lt;sup&gt;-4&lt;/sup&gt; | 2.2 × 10&lt;sup&gt;-3&lt;/sup&gt; | 1.8 × 10&lt;sup&gt;-5&lt;/sup&gt; |
+| P(k-ice)/P(k-steam)     | 8.9 | 8.5 × 10&lt;sup&gt;-2&lt;/sup&gt; | 1.36 | 0.96 |
 
 ---
 ## How GloVe Works
 
-- $P(k | ice)$ represents the probability of word $k$ occurring in the context of the word "ice," and $P(k | steam)$ represents the probability of word $k$ occurring in the context of the word "steam." 
+- `\(P(k | ice)\)` represents the probability of word `\(k\)` occurring in the context of the word "ice," and `\(P(k | steam)\)` represents the probability of word `\(k\)` occurring in the context of the word "steam." 
 
-- By comparing the ratio $P(k | ice) / P(k | steam)$, we can determine the association of word $k$ with either ice or steam. 
+- By comparing the ratio `\(P(k | ice) / P(k | steam)\)`, we can determine the association of word `\(k\)` with either ice or steam. 
 
 | Probability and Ratio       | k = solid | k = gas | k = water | k = fashion |
 |----------------------------|-----------|---------|-----------|-------------|
-| P(k-ice)                | 1.9 × 10<sup>-4</sup> | 6.6 × 10<sup>-5</sup> | 3.0 × 10<sup>-3</sup> | 1.7 × 10<sup>-5</sup> |
-| P(k-steam)              | 2.2 × 10<sup>-5</sup> | 7.8 × 10<sup>-4</sup> | 2.2 × 10<sup>-3</sup> | 1.8 × 10<sup>-5</sup> |
-| P(k-ice)/P(k-steam)     | 8.9 | 8.5 × 10<sup>-2</sup> | 1.36 | 0.96 |
+| P(k-ice)                | 1.9 × 10&lt;sup&gt;-4&lt;/sup&gt; | 6.6 × 10&lt;sup&gt;-5&lt;/sup&gt; | 3.0 × 10&lt;sup&gt;-3&lt;/sup&gt; | 1.7 × 10&lt;sup&gt;-5&lt;/sup&gt; |
+| P(k-steam)              | 2.2 × 10&lt;sup&gt;-5&lt;/sup&gt; | 7.8 × 10&lt;sup&gt;-4&lt;/sup&gt; | 2.2 × 10&lt;sup&gt;-3&lt;/sup&gt; | 1.8 × 10&lt;sup&gt;-5&lt;/sup&gt; |
+| P(k-ice)/P(k-steam)     | 8.9 | 8.5 × 10&lt;sup&gt;-2&lt;/sup&gt; | 1.36 | 0.96 |
 
 ---
 ## How GloVe Works
@@ -418,19 +426,19 @@ Dimensionality can be reduced using SVD ( singular value decomposition). We then
 
 | Probability and Ratio       | k = solid | k = gas | k = water | k = fashion |
 |----------------------------|-----------|---------|-----------|-------------|
-| P(k-ice)                | 1.9 × 10<sup>-4</sup> | 6.6 × 10<sup>-5</sup> | 3.0 × 10<sup>-3</sup> | 1.7 × 10<sup>-5</sup> |
-| P(k-steam)              | 2.2 × 10<sup>-5</sup> | 7.8 × 10<sup>-4</sup> | 2.2 × 10<sup>-3</sup> | 1.8 × 10<sup>-5</sup> |
-| P(k-ice)/P(k-steam)     | 8.9 | 8.5 × 10<sup>-2</sup> | 1.36 | 0.96 |
+| P(k-ice)                | 1.9 × 10&lt;sup&gt;-4&lt;/sup&gt; | 6.6 × 10&lt;sup&gt;-5&lt;/sup&gt; | 3.0 × 10&lt;sup&gt;-3&lt;/sup&gt; | 1.7 × 10&lt;sup&gt;-5&lt;/sup&gt; |
+| P(k-steam)              | 2.2 × 10&lt;sup&gt;-5&lt;/sup&gt; | 7.8 × 10&lt;sup&gt;-4&lt;/sup&gt; | 2.2 × 10&lt;sup&gt;-3&lt;/sup&gt; | 1.8 × 10&lt;sup&gt;-5&lt;/sup&gt; |
+| P(k-ice)/P(k-steam)     | 8.9 | 8.5 × 10&lt;sup&gt;-2&lt;/sup&gt; | 1.36 | 0.96 |
 
 .small[https://towardsdatascience.com/word2vec-glove-and-fasttext-explained-215a5cd4c06f/]
 
 ---
 ## GloVe
 
-- Instead of SVD, the goal is to minimize a new loss function $J(\Theta)$ between $u$ and $v$ word vectors
+- Instead of SVD, the goal is to minimize a new loss function `\(J(\Theta)\)` between `\(u\)` and `\(v\)` word vectors
 
-$$J(\Theta) = \frac{1}{2} \sum_{i,j=1}^W f(P_{ij})(u_i^Tv_j -logP_{i,j})^2$$
-$P$ is the co-occurence matrix.
+`$$J(\Theta) = \frac{1}{2} \sum_{i,j=1}^W f(P_{ij})(u_i^Tv_j -logP_{i,j})^2$$`
+`\(P\)` is the co-occurence matrix.
 
 - The training objective of GloVe is to learn word vectors such that their dot product equals the logarithm of the words’ probability of co-occurrence.
 
@@ -457,8 +465,8 @@ https://leonardoaraujosantos.gitbook.io/artificial-inteligence/artificial_intell
 - **Uses subword information** instead of treating words as whole units.  
 - Splits words into **character n-grams** (e.g., 3-grams to 6-grams).  
 - Example: **город** (*gorod*) → Subword units:  
-  - `<гор`, `оро`, `род`, `од>`  
-  - `<горо`, `ород`, `род>`  
+  - `&lt;гор`, `оро`, `род`, `од&gt;`  
+  - `&lt;горо`, `ород`, `род&gt;`  
 
 - Each subword (n-gram) is assigned a **vector**.  
 - The final word embedding is **an aggregation of subword vectors**.  
@@ -467,7 +475,7 @@ https://leonardoaraujosantos.gitbook.io/artificial-inteligence/artificial_intell
 ---
 ## Advantages of FastText
 
-- Captures **word structure & root similarities**.  
+- Captures **word structure &amp; root similarities**.  
 - Handles **rare words** by leveraging subwords.  
 - Works well for **languages with complex morphology**, such as **Russian, Turkish, Arabic**.  
 
@@ -505,3 +513,140 @@ https://leonardoaraujosantos.gitbook.io/artificial-inteligence/artificial_intell
    - Useful when fine-tuning is needed for task-specific improvements.  
 
 
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+  "ratio": "16:9",
+  "highlightStyle": "github",
+  "highlightLines": true,
+  "countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

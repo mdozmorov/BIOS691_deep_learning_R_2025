@@ -1,0 +1,43 @@
+---
+title: "Section 7: Deep Learning for Text"
+# linktitle: "1. Introduction to RStudio and Images"
+date: "2025-03-25"
+class_date: "2025-03-25"
+draft: false
+output:
+  blogdown::html_page:
+    toc: false
+menu:
+  class:
+    parent: Class sessions
+    weight: 7
+type: docs
+weight: 1
+# pdf: 
+# thumb: 
+editor_options: 
+  chunk_output_type: console
+---
+
+### Deep Learning for Text
+
+<a href="../../slides/ch11a_Text_encoding.html#1" target="_blank">Lecture slides in HTML format</a>
+
+```{r echo=FALSE}
+knitr::include_url('../../slides/ch11a_Text_encoding.html#1')
+```
+
+<!-- - Introduction to deep learning for sequence (time series) analysis, [RMarkdown](../../slides/code/ch10_RNN_code.Rmd) -->
+
+<!-- - [Daily Climate time series data](https://www.kaggle.com/datasets/sumanthvrao/daily-climate-time-series-data) -->
+
+<!-- - [Netflix | Stock Market Analysis | Founding Years](https://www.kaggle.com/datasets/whenamancodes/netflix-stock-market-analysis-founding-years) -->
+
+<!-- - [Airbnb, Inc. Stock Market Analysis](https://www.kaggle.com/datasets/whenamancodes/airbnb-inc-stock-market-analysis) -->
+<!-- - [META | Stock Market Analysis | Founding Years](https://www.kaggle.com/datasets/whenamancodes/meta-stock-market-analysis-founding-years) -->
+<!-- - [TESLA Inc | Stock Market Analysis | Founding Years](https://www.kaggle.com/datasets/whenamancodes/tesla-inc-stock-market-analysis-founding-years) -->
+<!-- - [Dogecoin Historical Data](https://www.kaggle.com/datasets/dhruvildave/dogecoin-historical-data) -->
+
+<!-- ### References -->
+
+<!-- - [Understanding LSTM Networks](https://colah.github.io/posts/2015-08-Understanding-LSTMs/) -->
