@@ -1,0 +1,1117 @@
+---
+title: "Deep learning for text"
+output: 
+  html_notebook: 
+    theme: cerulean
+    highlight: textmate
+editor_options: 
+  chunk_output_type: console
+---
+
+### 11.2.2 Text splitting (tokenization)
+
+Tokenization is the process of breaking standardized text into units called tokens.
+
+-   **Word-level tokenization**: Tokens are typically separated by spaces or punctuation. This can also involve splitting words into subwords (e.g., "staring" to "star+ing").
+-   **N-gram tokenization**: Tokens are sequences of N consecutive words. For example, "the cat" is a 2-gram (bigram).
+-   **Character-level tokenization**: Each individual character becomes a token. This is less common and usually used in specialized contexts like text generation.
+
+**N-grams** and the **bag-of-words** approach to representing text.
+
+-   **N-grams** are defined as **groups of N (or fewer) consecutive words** that can be extracted from a sentence. The same concept can also be applied to characters instead of words.
+
+    -   For example, given the sentence "the cat sat on the mat," the following **2-grams (bigrams)** can be extracted: "the", "the cat", "cat", "cat sat", "sat", "sat on", "on", "on the", "the mat", "mat".
+    -   Similarly, the **3-grams** from the same sentence would be: "the", "the cat", "cat", "cat sat", "the cat sat", "sat", "sat on", "on", "cat sat on", "on the", "sat on the", "the mat", "mat", "on the mat".
+
+-   A set of these N-grams is called a **bag-of-2-grams** or **bag-of-3-grams**, and more generally, a **bag-of-words (or bag-of-N-grams)**.
+
+-   The term "**bag**" signifies that you are dealing with a **set of tokens rather than a list or sequence**; therefore, **the tokens have no specific order**.
+
+-   Because the **bag-of-words method is not order-preserving**, meaning the sequence of words in the original sentence is lost, it tends to be used in **shallow language-processing models** rather than in deep learning sequence models.
+
+-   Extracting N-grams is considered a form of **feature engineering**. Deep learning sequence models, such as one-dimensional convolutional neural networks (convnets), recurrent neural networks (RNNs), and Transformers, aim to move away from this manual approach. These models are capable of **learning representations for groups of words and characters automatically** by looking at continuous sequences, without being explicitly told about the existence of such groups. They achieve this through **hierarchical feature learning**.
+
+### 11.2.3 Vocabulary indexing
+
+```{r}
+# Load the Keras library for deep learning operations
+library(keras3)
+library(tensorflow)
+library(tfdatasets)
+
+# Convert the number 1 into a TensorFlow tensor
+# This is useful for deep learning operations that require tensor inputs
+tensorflow::as_tensor(1)
+```
+
+**Vocabulary Construction:**
+
+-   This loop processes each string in `text_dataset`.
+-   Each string is standardized (converting to lowercase, removing punctuation) and tokenized (splitting into individual words or subwords).
+-   The vocabulary is built by iteratively appending unique tokens.
+
+```{r eval=FALSE}
+# Initialize an empty character vector to store unique tokens
+vocabulary <- character()
+
+# Iterate through each string in the text dataset
+for (string in text_dataset) {
+    # Process each string:
+    # 1. standardize() - Normalize the text (e.g., lowercase, remove punctuation)
+    # 2. tokenize() - Split text into individual tokens (words/subwords)
+    tokens <- string %>%
+        standardize() %>%
+        tokenize()
+    
+    # Add new unique tokens to vocabulary
+    # unique() ensures no duplicates are added
+    vocabulary <- unique(c(vocabulary, tokens))
+}
+```
+
+-   Ensure that the `tokenize` function handles edge cases like contractions (`don't` -\> `do n ' t`) and special characters. Consider using a more sophisticated tokenizer like the `tokenizers` R package.
+-   To avoid an overly large vocabulary, you can limit the number of tokens by frequency:
+
+```{r eval=FALSE}
+token_counts <- table(unlist(tokenize(text_dataset)))
+vocabulary <- names(sort(token_counts, decreasing = TRUE)[1:15000])
+```
+
+**One-Hot Encoding:**
+
+-   One-hot encoding is a fundamental concept in NLP for converting categorical data (words) to numerical format.
+-   This function takes a token and returns a one-hot encoded vector.
+-   The vector is of length equal to the vocabulary size, with a `1` at the token's index and `0` elsewhere.
+
+```{r eval=FALSE}
+# Function to convert a single token into a one-hot encoded vector
+one_hot_encode_token <- function(token) {
+    # Create a zero vector with length equal to vocabulary size
+    vector <- array(0, dim = length(vocabulary))
+    
+    # Find the position of the token in vocabulary
+    token_index <- match(token, vocabulary)
+    
+    # Set the corresponding position to 1
+    # This creates a sparse vector with a single 1 and all other elements 0
+    vector[token_index] <- 1
+    
+    return(vector)
+}
+```
+
+-   One-hot encoding creates sparse vectors.
+-   For large vocabularies, this might not be memory-efficient.
+
+The **"out of vocabulary" (OOV) index** is a special index used to represent words or tokens that were **not present in the vocabulary** created during the processing of the training data. When new text is encountered, any word that doesn't have a corresponding index in the vocabulary is assigned this **OOV index**, which is commonly **1**. During decoding, this index is often mapped back to a special token like **"\[UNK\]"** to indicate an unknown word. This ensures that the model can still process unseen words, even if it doesn't have a specific learned representation for them. The OOV index is distinct from the **mask token (index 0)**, which is used for padding sequences.
+
+-   This code represent token indices for different sentences or sequences.  
+-   The second row has padding (0s), likely indicating shorter sequences padded to a uniform length.
+
+```{r eval=FALSE}
+rbind(c(5,  7, 124, 4, 89),
+      c(8, 34,  21, 0,  0))
+```
+
+### 11.2.4 Using layer_text_vectorization
+
+Custom Vectorizer Class Definition:
+
+```{r}
+# Define a custom text vectorization class using R's environment-based OOP
+new_vectorizer <- function() {
+  # Create new environment with no parent to store our methods and state
+  self <- new.env(parent = emptyenv())
+  attr(self, "class") <- "Vectorizer"
+  
+  # Initialize vocabulary with Unknown token [UNK]
+  # Similar to how we handle unknown sequences in biological data
+  self$vocabulary <- c("[UNK]")
+  
+  # Text standardization method
+  # Converts to lowercase and removes punctuation
+  self$standardize <- function(text) {
+    text <- tolower(text)
+    gsub("[[:punct:]]", "", text)
+  }
+  
+  # Tokenization method - splits text on whitespace
+  self$tokenize <- function(text) {
+    unlist(strsplit(text, "[[:space:]]+"))
+  }
+  
+  # Build vocabulary from input dataset
+  # text_dataset will be a vector of strings, that is, an R character vector.
+  self$make_vocabulary <- function(text_dataset) {
+    tokens <- text_dataset %>%
+      self$standardize() %>%
+      self$tokenize()
+    self$vocabulary <- unique(c(self$vocabulary, tokens))
+  }
+  
+  # Encode text to integer sequences
+  # Maps tokens to indices, with unknown tokens mapping to 1 ([UNK])
+  self$encode <- function(text) {
+    tokens <- text %>%
+      self$standardize() %>%
+      self$tokenize()
+    match(tokens, table = self$vocabulary, nomatch = 1)
+  }
+  
+  # Decode integer sequences back to text
+  # Important for interpreting model outputs
+  self$decode <- function(int_sequence) {
+    vocab_w_mask_token <- c("", self$vocabulary)
+    # The mask token is typically encoded as a 0 integer, and decoded as an empty string: "".
+    vocab_w_mask_token[int_sequence + 1]
+  }
+  
+  self
+}
+```
+
+Vectorizer Usage Example:
+
+-   A small haiku-like dataset is used to build the vocabulary.  
+-   The encoding and decoding methods are tested on a new sentence.
+
+```{r}
+# Create vectorizer instance
+vectorizer <- new_vectorizer()
+
+# A Poppy Blooms, haiku by Katsushika Hokusai
+# ‘A Poppy Blooms’ by Katsushika Hokusai is a thoughtful poem about writing.
+dataset <- c(
+    "I write, erase, rewrite",
+    "Erase again, and then",
+    "A poppy blooms."
+)
+
+# Build vocabulary from dataset
+vectorizer$make_vocabulary(dataset)
+
+# Test encoding and decoding
+test_sentence <- "I write, rewrite, and still rewrite again"
+encoded_sentence <- vectorizer$encode(test_sentence)
+encoded_sentence
+decoded_sentence <- vectorizer$decode(encoded_sentence)
+decoded_sentence
+```
+
+Keras Text Vectorization Layer:
+
+-   A higher-level approach using TensorFlow/Keras.  
+-   `layer_text_vectorization` automates standardization, tokenization, and mapping to integer sequences.
+
+```{r eval=FALSE}
+# Configure the layer to return sequences of words encoded as integer indices.
+# Other options include "multi_hot", "count", "tf_idf".
+text_vectorization <- layer_text_vectorization(output_mode = "int")
+```
+
+```{r}
+library(tensorflow)
+library(keras3)
+
+# Define custom standardization function for TensorFlow
+custom_standardization_fn <- function(string_tensor) {
+  string_tensor %>%
+    tf$strings$lower() %>%
+    tf$strings$regex_replace("[[:punct:]]", "")
+}
+
+# Define custom splitting function
+custom_split_fn <- function(string_tensor) {
+  tf$strings$split(string_tensor) # Split strings on whitespace.
+}
+
+# Create text vectorization layer with custom functions
+text_vectorization <- layer_text_vectorization(
+  output_mode = "int",
+  standardize = custom_standardization_fn,
+  split = custom_split_fn
+)
+```
+
+The `adapt` function in **Keras** (for R) is used to compute and store statistics from a dataset within a preprocessing layer. When applied to a **text vectorization layer**, `adapt` allows the layer to analyze the dataset, build a vocabulary, and prepare for tokenization.
+
+- The function takes a dataset (or tensor input) and **updates the layer's internal state** based on the provided data.
+- For a **text vectorization layer**, this means:
+  - Creating a **vocabulary** from the dataset.
+  - Learning the **word frequencies** and determining which words to keep.
+  - Mapping words to integer indices for tokenization.
+
+**Why Use `adapt()`?**
+
+- The vocabulary needs to be learned before the layer can map words to integer tokens.
+- It ensures the layer **remembers the words** it has seen and assigns consistent integer mappings.
+- Allows dynamic adaptation to **different datasets**.
+
+```{r}
+# Adapt the layer to the dataset. 
+# Fits the state of the preprocessing layer to the data being passed.
+adapt(text_vectorization, dataset)
+
+# Get vocabulary from the layer
+vocabulary <- text_vectorization %>% get_vocabulary()
+```
+
+Using `layer_text_vectorization()` in a TF Dataset pipeline or as part of a model:
+
+```{r eval=FALSE}
+# Example of integrating vectorization into a dataset pipeline
+# num_parallel_calls=4 enables parallel processing
+int_sequence_dataset <- string_dataset %>%
+  dataset_map(text_vectorization, num_parallel_calls = 4)
+
+# Example of building a model with text vectorization layer
+# Create a symbolic input that expects strings.
+text_input <- layer_input(shape = shape(), dtype = "string")
+# Apply the text vectorization layer to it.
+vectorized_text <- text_vectorization(text_input)
+embedded_input <- vectorized_text %>% layer_embedding(...)
+# You can keep chaining new layers on top—just your regular Functional API model.
+output <- embedded_input %>% ...
+model <- keras_model(text_input, output)
+```
+
+## 11.3 Two approaches for representing groups of words: Sets and sequences
+
+### 11.3.1 Preparing the IMDB movie reviews data
+
+Data Preparation and Directory Structure:
+
+```{r eval=FALSE}
+url <- "https://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz"
+filename <- basename(url)
+options(timeout = 60*10)
+download.file(url, destfile = filename)
+
+# Remove existing directory and extract dataset
+unlink("aclImdb", recursive = TRUE)
+untar(filename)
+
+# Remove unsupervised training data as we'll focus on supervised learning
+fs::dir_delete("aclImdb/train/unsup/")
+```
+
+```{r}
+# Display directory structure
+fs::dir_tree("aclImdb", recurse = 1)
+
+# Read and display a sample positive review
+writeLines(readLines("aclImdb/train/pos/4071_10.txt", warn = FALSE))
+```
+
+Train-Validation datasets:
+
+```{r}
+library(fs)
+set.seed(1337)  # Set random seed for reproducibility
+base_dir <- path("aclImdb")
+
+# Create validation set by moving 20% of training data
+for (category in c("neg", "pos")) {
+    # Get all files in current category
+    filepaths <- dir_ls(base_dir / "train" / category)
+    
+    # Calculate number of validation samples (20% of data)
+    num_val_samples <- round(0.2 * length(filepaths))
+    
+    # Randomly select files for validation
+    val_files <- sample(filepaths, num_val_samples)
+    
+    # Create validation directory and move files
+    dir_create(base_dir / "val" / category)
+    file_move(val_files, base_dir / "val" / category)
+}
+```
+
+Dataset Creation using Keras:
+
+```{r}
+# Create dataset objects for train, validation, and test sets
+# These will automatically handle labeling based on directory structure
+train_ds <- text_dataset_from_directory("aclImdb/train")
+val_ds <- text_dataset_from_directory("aclImdb/val")
+test_ds <- text_dataset_from_directory("aclImdb/test")
+
+# Examine the structure of the dataset
+c(inputs, targets) %<-% iter_next(as_iterator(train_ds))
+str(inputs)   # Text input structure
+str(targets)  # Target labels structure
+```
+
+The default batch_size is 32. If you encounter out-of-memory errors when
+training models on your machine, you can try a smaller batch_size:
+`text_dataset_from_directory("aclImdb/train", batch_size = 8)`.
+
+### 11.3.2 Processing words as a set: The bag-of-words approach
+
+```{r}
+# Create text vectorization layer with multi-hot encoding
+# Limit the vocabulary to the 20,000 most frequent words. 
+text_vectorization <- layer_text_vectorization(
+    max_tokens = 20000,    # Maximum vocabulary size
+    output_mode = "multi_hot"  # One-hot encoding for bag-of-words
+)
+
+# Create dataset with only text (no labels) for vectorization
+text_only_train_ds <- train_ds %>%
+    dataset_map(function(x, y) x)
+
+# Adapt vectorization layer to the training data
+adapt(text_vectorization, text_only_train_ds)
+
+# Create vectorized datasets with parallel processing
+binary_1gram_train_ds <- train_ds %>%
+    dataset_map(~ list(text_vectorization(.x), .y),
+                num_parallel_calls = 4)
+binary_1gram_val_ds <- val_ds %>%
+    dataset_map(~ list(text_vectorization(.x), .y),
+                num_parallel_calls = 4)
+binary_1gram_test_ds <- test_ds %>%
+    dataset_map(~ list(text_vectorization(.x), .y),
+                num_parallel_calls = 4)
+```
+
+When using `dataset_map()`, the `map_func` argument can be a formula (defined with `~`) instead of a traditional function. This formula is then converted into a function.
+
+*   For a function that takes **a single argument**, you refer to that argument as **`.x`**. For example, `~ .x + 2` would be equivalent to a function that takes one argument and adds 2 to it.
+*   If the function takes **two arguments**, you refer to them as **`.x`** and **`.y`** respectively.
+*   For functions with **more than two arguments**, you use **`..1` for the first argument, `..2` for the second, `..3` for the third**, and so on.
+
+This syntax allows for creating **very compact anonymous functions**. For more details and examples, the source refers to the `?purrr::map()` help page in R.
+
+
+The `iter_next` function from the TensorFlow dataset API fetches a batch of data from an iterator (`binary_1gram_train_ds`), unpacking it into `inputs` and `targets`.
+
+```{r}
+# Extract a single batch of inputs and targets from the iterator over the dataset
+c(inputs, targets) %<-% iter_next(as_iterator(binary_1gram_train_ds))
+
+# Check the structure of the 'inputs' object
+str(inputs)
+
+# Check the structure of the 'targets' object
+str(targets)
+
+# View the first row of inputs
+inputs[1, ]
+
+# View the first target (label) corresponding to the first input
+targets[1]
+
+```
+
+Model Architecture Definition:
+
+```{r}
+# Function to create a simple feed-forward neural network
+get_model <- function(max_tokens = 20000, hidden_dim = 16) {
+    # Define input layer with shape matching vocabulary size
+    inputs <- layer_input(shape = c(max_tokens))
+    
+    # Build model architecture
+    outputs <- inputs %>%
+        # Hidden layer with ReLU activation
+        layer_dense(hidden_dim, activation = "relu") %>%
+        # Dropout layer for regularization (prevents overfitting)
+        layer_dropout(0.5) %>%
+        # Output layer with sigmoid activation for binary classification
+        layer_dense(1, activation = "sigmoid")
+    
+    # Create and compile model
+    model <- keras_model(inputs, outputs)
+    model %>% compile(
+        optimizer = "rmsprop",
+        loss = "binary_crossentropy",  # Standard loss for binary classification
+        metrics = "accuracy"
+    )
+    model
+}
+```
+
+Training Setup and Model Training (Unigrams):
+
+Approximately 7 min on CPU
+
+```{r}
+# Create model instance
+model <- get_model()
+
+# Setup model checkpointing to save best model
+callbacks = list(
+    callback_model_checkpoint("binary_1gram.keras", save_best_only = TRUE)
+)
+
+# Record start time
+start_time <- Sys.time()
+
+# Train model with unigram features
+model %>% fit(
+    dataset_cache(binary_1gram_train_ds),  # Cache dataset for faster training
+    validation_data = dataset_cache(binary_1gram_val_ds),
+    epochs = 10,
+    callbacks = callbacks
+)
+
+# Record end time
+end_time <- Sys.time()
+
+# Calculate and print the elapsed time
+training_time <- end_time - start_time
+print(paste("Training Time:", training_time))
+
+# Load best model and evaluate
+model <- load_model("binary_1gram.keras")
+cat(sprintf("Test acc: %.3f\n", 
+    evaluate(model, binary_1gram_test_ds)["accuracy"]))
+# Test acc: 0.886
+```
+
+Bigram Processing and Training:
+
+Approx. 4 min on CPU
+
+```{r}
+# Create text vectorization layer for bigrams
+text_vectorization <- layer_text_vectorization(
+    ngrams = 2,  # Use bigrams instead of unigrams
+    max_tokens = 20000,
+    output_mode = "multi_hot"
+)
+
+# Adapt vectorization layer to training data
+adapt(text_vectorization, text_only_train_ds)
+
+# Helper function for dataset vectorization
+dataset_vectorize <- function(dataset) {
+    dataset %>%
+        dataset_map(~ list(text_vectorization(.x), .y),
+                    num_parallel_calls = 4)
+}
+
+# Create vectorized datasets for bigrams
+binary_2gram_train_ds <- train_ds %>% dataset_vectorize()
+binary_2gram_val_ds <- val_ds %>% dataset_vectorize()
+binary_2gram_test_ds <- test_ds %>% dataset_vectorize()
+
+# Train model with bigram features
+model <- get_model()
+callbacks = list(
+    callback_model_checkpoint("binary_2gram.keras",
+                            save_best_only = TRUE)
+)
+
+# Record start time
+start_time <- Sys.time()
+
+model %>% fit(
+    dataset_cache(binary_2gram_train_ds),
+    validation_data = dataset_cache(binary_2gram_val_ds),
+    epochs = 10,
+    callbacks = callbacks
+)
+
+# Record end time
+end_time <- Sys.time()
+
+# Calculate and print the elapsed time
+training_time <- end_time - start_time
+print(paste("Training Time:", training_time))
+
+# Load best model and evaluate
+model <- load_model("binary_2gram.keras")
+cat(sprintf("Test acc: %.3f\n", 
+    evaluate(model, binary_1gram_test_ds)["accuracy"]))
+# Test acc: 0.895
+```
+
+Bigrams with TF-IDF encoding
+
+"The cat sat on the mat" to bigrams:
+
+c("the" = 2, "the cat" = 1, "cat" = 1, "cat sat" = 1, "sat" = 1,
+"sat on" = 1, "on" = 1, "on the" = 1, "the mat" = 1, "mat" = 1)
+
+```{r}
+# Configure text vectorization for bigrams with count-based output
+text_vectorization <- layer_text_vectorization(
+    ngrams = 2,
+    max_tokens = 20000,
+    output_mode = "count"
+)
+```
+
+TF-IDF Implementation:
+
+**TF-IDF**, which stands for **Term Frequency-Inverse Document Frequency**, is a metric used to **weigh the importance of words** within a collection of documents. It works by considering two main factors:
+
+*   **Term Frequency (TF)**: This measures **how often a specific term appears in a single document**. The more a term appears in a document, the more likely it is to be important for understanding that document's content.
+
+*   **Inverse Document Frequency (IDF)**: This measures **how rare or common a term is across the entire dataset of documents**. Terms that appear in almost every document (like "the" or "a") have a low IDF because they are not very distinctive. Conversely, terms that appear in only a few documents have a high IDF, indicating they are more unique and potentially more informative. The IDF is calculated by taking the logarithm of the total number of documents divided by the number of documents containing the term.
+
+**TF-IDF combines these two measures** to assign a weight to each term in each document. The TF-IDF value for a term in a document is calculated as:
+
+**TF-IDF = Term Frequency (TF) × Inverse Document Frequency (IDF)**
+
+**Key points about TF-IDF:**
+
+*   It helps to **normalize word counts** by reducing the impact of very common but less informative words.
+*   It **boosts the importance of rare and distinctive words** that are more likely to be indicative of a document's topic.
+*   In the context of the provided source, **TF-IDF normalization is built into the `layer_text_vectorization()`** Keras layer and can be enabled by setting the `output_mode` argument to `"tf_idf"`. When this is done, the `adapt()` method of the layer will learn the TF-IDF weights.
+
+```{r}
+# Custom TF-IDF function implementation
+tf_idf <- function(term, document, dataset) {
+    # Calculate term frequency in current document
+    term_freq <- sum(document == term)
+    
+    # Calculate document frequency across dataset
+    doc_freqs <- sapply(dataset, function(doc) sum(doc == term))
+    doc_freq <- log(1 + sum(doc_freqs))
+    
+    # Return TF-IDF score
+    term_freq / doc_freq
+}
+```
+
+Model Training with TF-IDF Features:
+
+Approx. 6 min on CPU
+
+```{r}
+# Helper function for dataset vectorization
+dataset_vectorize <- function(dataset) {
+    dataset %>%
+        dataset_map(~ list(text_vectorization(.x), .y),
+                    num_parallel_calls = 4)
+}
+
+rm(text_vectorization)
+# Configure vectorization layer for TF-IDF
+text_vectorization <- layer_text_vectorization(
+    ngrams = 2,
+    max_tokens = 20000,
+    output_mode = "tf_idf"
+)
+
+# Adapt vectorization layer on CPU (memory efficient)
+with(tf$device("CPU"), {
+    adapt(text_vectorization, text_only_train_ds)
+})
+
+# Create TF-IDF vectorized datasets
+tfidf_2gram_train_ds <- train_ds %>% dataset_vectorize()
+tfidf_2gram_val_ds <- val_ds %>% dataset_vectorize()
+tfidf_2gram_test_ds <- test_ds %>% dataset_vectorize()
+
+# Initialize model and callbacks
+model <- get_model()
+callbacks <- list(
+    callback_model_checkpoint("tfidf_2gram.keras",
+                            save_best_only = TRUE)
+)
+
+# Record start time
+start_time <- Sys.time()
+
+# Train model
+model %>% fit(
+    dataset_cache(tfidf_2gram_train_ds),
+    validation_data = dataset_cache(tfidf_2gram_val_ds),
+    epochs = 10,
+    callbacks = callbacks
+)
+
+# Record end time
+end_time <- Sys.time()
+
+# Calculate and print the elapsed time
+training_time <- end_time - start_time
+print(paste("Training Time:", training_time))
+
+# Load best model and evaluate
+model <- load_model("tfidf_2gram.keras")
+cat(sprintf("Test acc: %.3f\n", 
+    evaluate(model, binary_1gram_test_ds)["accuracy"]))
+# Test acc: 0.504
+# From the book: Test acc: 0.896
+```
+
+Exporting a model that processes raw strings
+
+To include text preprocessing within a trained Keras model, create a new model that takes raw string input, applies the **`layer_text_vectorization()` layer** used during training, and then passes the vectorized output to the previously trained classification model.
+
+```{r}
+# Create inference model combining vectorization and prediction
+inputs <- layer_input(shape = c(1), dtype = "string")
+outputs <- inputs %>%
+    text_vectorization() %>%  # Vectorize input text
+    model()                   # Make prediction
+inference_model <- keras_model(inputs, outputs)
+
+# Test inference on raw text
+raw_text_data <- "That was an excellent movie, I loved it." %>%
+    as_tensor(shape = c(-1, 1))
+
+# Make prediction and format output
+predictions <- inference_model(raw_text_data)
+cat(sprintf("%.2f percent positive\n",
+            as.numeric(predictions) * 100))
+```
+
+### 11.3.3 Processing words as a sequence: The sequence model approach
+
+Text Vectorization Setup:
+
+```{r}
+# Define key parameters
+max_length <- 600    # Maximum sequence length to consider
+max_tokens <- 20000  # Maximum vocabulary size
+
+# Configure text vectorization layer for integer encoding
+text_vectorization <- layer_text_vectorization(
+    max_tokens = max_tokens,
+    output_mode = "int",  # Integer encoding instead of one-hot
+    output_sequence_length = max_length  # Pad/truncate to fixed length
+)
+
+# Adapt vectorization layer and create datasets
+adapt(text_vectorization, text_only_train_ds)
+
+# Create integer-encoded datasets
+int_train_ds <- train_ds %>% dataset_vectorize()
+int_val_ds <- val_ds %>% dataset_vectorize()
+int_test_ds <- test_ds %>% dataset_vectorize()
+```
+
+Bidirectional LSTM Model Architecture:
+
+```{r}
+library(keras3)
+
+# Define the input layer
+inputs <- layer_input(shape = list(NULL), dtype = "int64")
+
+# Define the embedding layer
+embedded <- inputs %>%
+  layer_embedding(input_dim = max_tokens, output_dim = 256)
+
+# Define the rest of the model
+outputs <- embedded %>%
+  bidirectional(layer_lstm(units = 32)) %>%
+  layer_dropout(rate = 0.5) %>%
+  layer_dense(units = 1, activation = "sigmoid")
+
+# Create the model
+model <- keras_model(inputs = inputs, outputs = outputs)
+
+# Compile the model
+model %>%
+  compile(optimizer = optimizer_rmsprop(),
+          loss = "binary_crossentropy",
+          metrics = list("accuracy"))
+
+# Summarize the model
+summary(model)
+
+# Setup model checkpointing
+callbacks <- list(
+    callback_model_checkpoint("one_hot_bidir_lstm.keras",
+                            save_best_only = TRUE)
+)
+```
+
+Reduce batch_size to avoid out-of-memory errors
+
+Approx. 35 min on CPU
+
+```{r eval=FALSE}
+# Create smaller batches for memory efficiency
+int_train_ds_smaller <- int_train_ds %>%
+    dataset_unbatch() %>%
+    dataset_batch(16)  # Reduce batch size to 16
+
+# Record start time
+start_time <- Sys.time()
+
+# Train model
+model %>% fit(
+    int_train_ds_smaller, 
+    validation_data = int_val_ds,
+    epochs = 10, 
+    callbacks = callbacks
+)
+
+# Record end time
+end_time <- Sys.time()
+
+# Calculate and print the elapsed time
+training_time <- end_time - start_time
+print(paste("Training Time:", training_time))
+
+# Load best model and evaluate
+model <- load_model("one_hot_bidir_lstm.keras")
+sprintf("Test acc: %.3f", evaluate(model, int_test_ds)["accuracy"])
+# "Test acc: 0.859"
+# From the book: "Test acc: 0.873"
+```
+
+#### Understanding Word Embeddings
+
+Learning Word Embeddings with the Embedding Layer
+
+```{r}
+# Create an embedding layer with specified dimensions
+embedding_layer <- layer_embedding(
+    input_dim = max_tokens,  # Size of vocabulary
+    output_dim = 256        # Dimension of embedding space
+)
+```
+
+Model Architecture with Embeddings:
+
+```{r}
+# Define input layer
+inputs <- layer_input(shape(NA), dtype = "int64")  # Variable length input
+
+# Build model architecture
+embedded <- inputs %>%
+    # Convert integer tokens to dense vectors
+    layer_embedding(
+        input_dim = max_tokens,  # Vocabulary size
+        output_dim = 256         # Embedding dimensions
+    )
+
+outputs <- embedded %>%
+    # Bidirectional LSTM layer
+    bidirectional(layer_lstm(units = 32)) %>%
+    # Dropout for regularization
+    layer_dropout(0.5) %>%
+    # Output layer for binary classification
+    layer_dense(1, activation = "sigmoid")
+
+# Create and compile model
+model <- keras_model(inputs, outputs)
+model %>%
+    compile(
+        optimizer = "rmsprop",
+        loss = "binary_crossentropy",
+        metrics = "accuracy"
+    )
+
+# Setup model checkpointing
+callbacks = list(
+    callback_model_checkpoint("embeddings_bidir_lstm.keras",
+                            save_best_only = TRUE)
+)
+```
+
+Model Training and Evaluation:
+
+Approx. 24 min on CPU
+
+```{r}
+# Record start time
+start_time <- Sys.time()
+
+# Train the model
+model %>% fit(int_train_ds,
+        validation_data = int_val_ds,
+        epochs = 10,
+        callbacks = callbacks)
+
+# Record end time
+end_time <- Sys.time()
+
+# Calculate and print the elapsed time
+training_time <- end_time - start_time
+print(paste("Training Time:", training_time))
+
+# Load best model and evaluate
+model <- load_model("embeddings_bidir_lstm.keras")
+evaluate(model, int_test_ds)["accuracy"] %>%
+    sprintf("Test acc: %.3f\n", .) %>% cat("\n")
+# Test acc: 0.856
+# From the book: Test acc: 0.842
+```
+
+Understanding Padding and Masking
+
+**Padding** is the process of **adding placeholder values (typically zeros)** to the end of shorter sequences in a batch so that all sequences in the batch have the **same length**. 
+
+**Masking** is a technique used to **inform the model which parts of the input sequence are actual data and which parts are padding**. When an embedding layer is configured with `mask_zero = TRUE`, it can generate a **mask**, which is a tensor of ones and zeros (or TRUE/FALSE booleans) with the same shape as the input sequence. In this mask, a **zero or a FALSE value indicates a time step that corresponds to padding** and should be ignored by subsequent layers. Keras automatically propagates these masks to layers that are capable of processing them, such as RNN layers, allowing them to effectively **skip or disregard the padded portions** of the input sequences during computation. This prevents the model from learning from the meaningless padding values and can lead to **improved model performance**.
+
+```{r}
+# Create embedding layer with masking enabled
+embedding_layer <- layer_embedding(
+    input_dim = 10,         # Vocabulary size
+    output_dim = 256,       # Embedding dimensions
+    mask_zero = TRUE        # Enable masking for value 0
+)
+
+# Example input sequences with padding (zeros)
+some_input <- rbind(
+    c(4, 3, 2, 1, 0, 0, 0),    # Sequence 1
+    c(5, 4, 3, 2, 1, 0, 0),    # Sequence 2
+    c(2, 1, 0, 0, 0, 0, 0)     # Sequence 3
+)
+
+# Compute mask for the input
+mask <- embedding_layer$compute_mask(some_input)
+mask
+```
+
+Model Architecture with Masking:
+
+```{r}
+# Define input layer for variable length sequences
+inputs <- layer_input(c(NA), dtype = "int64")
+
+# Create embedding layer with masking
+embedded <- inputs %>%
+    layer_embedding(
+        input_dim = max_tokens,
+        output_dim = 256,
+        mask_zero = TRUE    # Enable masking for padded sequences
+    )
+
+# Build model architecture
+outputs <- embedded %>%
+    # Bidirectional LSTM processes masked sequences
+    bidirectional(layer_lstm(units = 32)) %>%
+    layer_dropout(0.5) %>%
+    layer_dense(1, activation = "sigmoid")
+
+# Create and compile model
+model <- keras_model(inputs, outputs)
+model %>% compile(
+    optimizer = "rmsprop",
+    loss = "binary_crossentropy",
+    metrics = "accuracy"
+)
+```
+
+Training with Masked Sequences:
+
+Approx. 30 min on CPU
+
+```{r}
+# Setup checkpointing
+callbacks = list(
+    callback_model_checkpoint("embeddings_bidir_lstm_with_masking.keras",
+                            save_best_only = TRUE)
+)
+
+# Record start time
+start_time <- Sys.time()
+
+# Train model
+model %>% fit(
+    int_train_ds,
+    validation_data = int_val_ds,
+    epochs = 10,
+    callbacks = callbacks
+)
+
+# Record end time
+end_time <- Sys.time()
+
+# Calculate and print the elapsed time
+training_time <- end_time - start_time
+print(paste("Training Time:", training_time))
+
+# Evaluate model
+model <- load_model("embeddings_bidir_lstm_with_masking.keras")
+cat(sprintf("Test acc: %.3f\n",
+            evaluate(model, int_test_ds)["accuracy"]))
+# Test acc: 0.868
+```
+
+Using Pretrained Word Embeddings
+
+**Pre-trained Embeddings**: Leverage existing semantic knowledge; Reduce training time; Better generalization; Handle rare words effectively
+
+Loading GloVe Embeddings:
+
+```{r eval=FALSE}
+options(timeout = 60*10)
+download.file("http://nlp.stanford.edu/data/glove.6B.zip",
+              destfile = "glove.6B.zip")
+zip::unzip("glove.6B.zip")
+```
+
+```{r}
+# Download and read GloVe embeddings
+path_to_glove_file <- "glove.6B.100d.txt"
+embedding_dim <- 100
+
+# Read embeddings file into a dataframe
+df <- readr::read_table(
+    path_to_glove_file,
+    col_names = FALSE,
+    col_types = paste0("c", strrep("n", 100))  # First col is word, rest are numbers
+)
+
+# Convert to matrix format with word indices
+embeddings_index <- as.matrix(df[, -1])
+rownames(embeddings_index) <- df[[1]]
+colnames(embeddings_index) <- NULL # Discard the column names that read_table() automatically created
+rm(df)  # Clean up memory
+
+# Check the structure of the embedding_index
+str(embeddings_index)
+```
+
+Creating Embedding Matrix:
+
+```{r}
+# Get vocabulary from vectorization layer
+vocabulary <- text_vectorization %>% get_vocabulary()
+
+# Select tokens up to max_tokens
+tokens <- head(vocabulary[-1], max_tokens)
+
+# Match vocabulary tokens with GloVe embeddings
+# i is an integer vector of the row- number in embeddings_index that matched to each 
+# corresponding word in vocabulary, and 0 if there was no matching word.
+i <- match(vocabulary, rownames(embeddings_index),
+           nomatch = 0)
+
+# Create embedding matrix
+# Prepare a matrix of all zeros that we’ll fill with the GloVe vectors.
+embedding_matrix <- array(0, dim = c(max_tokens, embedding_dim))
+# 0s in indexes passed to [ for R arrays are ignored. For example: 
+# (1:10)[c(1,0,2,0,3)] returns c(1, 2, 3).
+embedding_matrix[i != 0, ] <- embeddings_index[i, ]
+```
+
+```{r}
+library(ggplot2)
+library(Rtsne)  # For t-SNE dimensionality reduction
+
+# Define words and their categories
+word_list <- data.frame(
+  Word = c(
+    # Animals
+    "dog", "wolf", "cat", "tiger", "elephant",
+    
+    # Colors
+    "red", "blue", "green", "yellow", "purple",
+    
+    # Emotions
+    "happy", "sad", "angry", "excited", "bored",
+    
+    # Opposites
+    "big", "small", "fast", "slow", "hot", "cold",
+    
+    # Common objects
+    "car", "plane", "train", "ship", "bicycle"
+  ),
+  Category = c(
+    rep("Animal", 5),
+    rep("Color", 5),
+    rep("Emotion", 5),
+    rep("Opposite", 6),
+    rep("Object", 5)
+  )
+)
+
+# Get word embeddings
+indices <- match(word_list$Word, rownames(embeddings_index), nomatch = 0)
+valid_indices <- indices[indices != 0]
+valid_words <- word_list$Word[indices != 0]
+valid_categories <- word_list$Category[indices != 0]
+
+# Extract embedding vectors
+word_embeddings <- embeddings_index[valid_indices, ]
+
+# Reduce dimensionality to 2D using PCA
+pca_result <- prcomp(word_embeddings, center = TRUE, scale. = TRUE)
+
+# Create data frame for plotting
+embedding_2D <- data.frame(
+  Word = valid_words,
+  Category = valid_categories,
+  X = pca_result$x[, 1],
+  Y = pca_result$x[, 2]
+)
+
+# Plot embeddings with color by category
+ggplot(embedding_2D, aes(x = X, y = Y, label = Word, color = Category)) +
+  geom_point(size = 4) +
+  geom_text(vjust = 1.5, hjust = 1, size = 5) +
+  scale_color_manual(values = c("Animal" = "red", "Color" = "blue", 
+                                "Emotion" = "green", "Opposite" = "purple",
+                                "Object" = "orange")) +
+  theme_minimal() +
+  ggtitle("2D Visualization of Word Embeddings (PCA)")
+
+```
+
+Model Architecture with Pre-trained Embeddings:
+
+```{r}
+# Create embedding layer with pre-trained weights
+embedding_layer <- layer_embedding(
+    input_dim = max_tokens,
+    output_dim = embedding_dim,
+    embeddings_initializer = initializer_constant(embedding_matrix),
+    trainable = FALSE,  # Freeze pre-trained embeddings
+    mask_zero = TRUE    # Enable masking for variable length
+)
+
+# Build model architecture
+inputs <- layer_input(shape(NA), dtype="int64")
+embedded <- embedding_layer(inputs)
+outputs <- embedded %>%
+    bidirectional(layer_lstm(units = 32)) %>%
+    layer_dropout(0.5) %>%
+    layer_dense(1, activation = "sigmoid")
+
+# Create and compile model
+model <- keras_model(inputs, outputs)
+model %>% compile(
+    optimizer = "rmsprop",
+    loss = "binary_crossentropy",
+    metrics = "accuracy"
+)
+summary(model)
+```
+
+```{r}
+# Define a list of callbacks to monitor the training process
+callbacks <- list(
+  # Save the model to a file (glove_embeddings_sequence_model.keras) 
+  # after each epoch, but only if the validation loss improves.
+  callback_model_checkpoint("glove_embeddings_sequence_model.keras",
+                            save_best_only = TRUE)
+)
+
+# Record start time
+start_time <- Sys.time()
+
+# Train the model using the training dataset (int_train_ds)
+# Validate using the validation dataset (int_val_ds)
+# Train for 10 epochs and apply the callback to save the best model.
+model %>%
+  fit(int_train_ds, validation_data = int_val_ds,
+      epochs = 10, callbacks = callbacks)
+
+# Record end time
+end_time <- Sys.time()
+
+# Calculate and print the elapsed time
+training_time <- end_time - start_time
+print(paste("Training Time:", training_time))
+
+# Load the best model (with the lowest validation loss) from the saved file.
+model <- load_model("glove_embeddings_sequence_model.keras")
+
+# Evaluate the model on the test dataset (int_test_ds) and print the accuracy.
+cat(sprintf(
+  "Test acc: %.3f\n", evaluate(model, int_test_ds)["accuracy"]))
+```
+

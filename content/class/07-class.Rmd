@@ -27,7 +27,9 @@ editor_options:
 knitr::include_url('../../slides/ch11a_Text_encoding.html#1')
 ```
 
-<!-- - Introduction to deep learning for sequence (time series) analysis, [RMarkdown](../../slides/code/ch10_RNN_code.Rmd) -->
+### Code
+
+- Text vectorization, embedding, [RMarkdown](../../slides/code/ch11_Text_encoding_code.Rmd)
 
 <!-- - [Daily Climate time series data](https://www.kaggle.com/datasets/sumanthvrao/daily-climate-time-series-data) -->
 
@@ -38,6 +40,8 @@ knitr::include_url('../../slides/ch11a_Text_encoding.html#1')
 <!-- - [TESLA Inc | Stock Market Analysis | Founding Years](https://www.kaggle.com/datasets/whenamancodes/tesla-inc-stock-market-analysis-founding-years) -->
 <!-- - [Dogecoin Historical Data](https://www.kaggle.com/datasets/dhruvildave/dogecoin-historical-data) -->
 
-<!-- ### References -->
+### References
+
+- [Text analysis pipeline](https://text2vec.org/vectorization.html) - text2vec tutorials
 
 <!-- - [Understanding LSTM Networks](https://colah.github.io/posts/2015-08-Understanding-LSTMs/) -->
