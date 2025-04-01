@@ -524,7 +524,7 @@ print(paste("Training Time:", training_time))
 # Load best model and evaluate
 model <- load_model("binary_2gram.keras")
 cat(sprintf("Test acc: %.3f\n", 
-    evaluate(model, binary_1gram_test_ds)["accuracy"]))
+    evaluate(model, binary_2gram_test_ds)["accuracy"]))
 # Test acc: 0.895
 ```
 
@@ -635,7 +635,7 @@ print(paste("Training Time:", training_time))
 # Load best model and evaluate
 model <- load_model("tfidf_2gram.keras")
 cat(sprintf("Test acc: %.3f\n", 
-    evaluate(model, binary_1gram_test_ds)["accuracy"]))
+    evaluate(model, tfidf_2gram.keras)["accuracy"]))
 # Test acc: 0.504
 # From the book: Test acc: 0.896
 ```
