@@ -30,6 +30,7 @@ knitr::include_url('../../slides/ch11a_Text_encoding.html#1')
 ### Code
 
 - Text vectorization, embedding, [RMarkdown](../../slides/code/ch11_Text_encoding_code.Rmd)
+<!-- - word2vec demo, [Rmarkdown](../../slides/code/ch11_word2vec.Rmd) -->
 
 <!-- - [Daily Climate time series data](https://www.kaggle.com/datasets/sumanthvrao/daily-climate-time-series-data) -->
 
@@ -43,5 +44,6 @@ knitr::include_url('../../slides/ch11a_Text_encoding.html#1')
 ### References
 
 - [Text analysis pipeline](https://text2vec.org/vectorization.html) - text2vec tutorials
+- [NLP Illustrated, Part 3: Word2Vec](https://towardsdatascience.com/nlp-illustrated-part-3-word2vec-5b2e12b6a63b/) - word2vec illustrated guide
 
 <!-- - [Understanding LSTM Networks](https://colah.github.io/posts/2015-08-Understanding-LSTMs/) -->
