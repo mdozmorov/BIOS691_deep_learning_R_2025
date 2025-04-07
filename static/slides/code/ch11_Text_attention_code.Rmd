@@ -1,0 +1,78 @@
+---
+title: "Demo of self-attention"
+output: 
+  html_notebook: 
+    theme: cerulean
+    highlight: textmate
+editor_options: 
+  chunk_output_type: console
+---
+
+In **self-attention**, we compute **how much each token attends to every other token**.
+
+Each token (e.g., word) is transformed into:
+
+- **Query vector** $Q$
+- **Key vector** $K$
+- **Value vector** $V$
+
+Then, we compute:
+  
+$$\text{Attention}(Q, K, V) = \text{softmax}\left( \frac{Q K^\top}{\sqrt{d_k}} \right) V$$
+
+- $Q K^\top$: **raw similarity** (dot product) between each query and all keys
+- Scaling: $\sqrt{d_k}$ prevents large values
+- Softmax: turns similarity into **weights**
+- Multiply by $V$: use those weights to create **weighted sum of values**
+
+```{r}
+# Set seed for reproducibility
+set.seed(42)
+
+# Simulate 3 tokens, each with 4-dim embeddings
+n_tokens <- 3
+d_k <- 4
+
+# Simulate Q, K, V matrices (normally learned projections of input embeddings)
+Q <- matrix(rnorm(n_tokens * d_k), nrow = n_tokens)
+K <- matrix(rnorm(n_tokens * d_k), nrow = n_tokens)
+V <- matrix(rnorm(n_tokens * d_k), nrow = n_tokens)
+
+rownames(Q) <- rownames(K) <- rownames(V) <- paste0("Token", 1:3)
+
+cat("Query matrix Q:\n")
+print(Q)
+
+cat("\nKey matrix K:\n")
+print(K)
+
+# Step 1: Dot product between Q and K^T (raw similarity)
+similarity <- Q %*% t(K)
+
+cat("\nRaw dot product Q %*% t(K):\n")
+print(similarity)
+
+# Step 2: Scale by sqrt(d_k)
+scaled_similarity <- similarity / sqrt(d_k)
+
+cat("\nScaled similarity (QK^T / sqrt(d_k)):\n")
+print(scaled_similarity)
+
+# Step 3: Apply softmax row-wise to get attention weights
+softmax <- function(x) {
+  exp_x <- exp(x - max(x))  # stability trick
+  exp_x / sum(exp_x)
+}
+
+attention_weights <- t(apply(scaled_similarity, 1, softmax))
+rownames(attention_weights) <- paste0("Token", 1:3)
+
+cat("\nAttention weights (after softmax):\n")
+print(attention_weights)
+
+# Step 4: Multiply attention weights with V
+attention_output <- attention_weights %*% V
+
+cat("\nFinal attention output:\n")
+print(attention_output)
+```

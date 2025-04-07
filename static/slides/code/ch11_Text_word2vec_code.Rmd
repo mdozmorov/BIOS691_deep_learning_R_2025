@@ -1,0 +1,405 @@
+---
+title: "Untitled"
+output: html_document
+date: "2025-03-10"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### **Setting Up the Environment for Word2Vec in R**  
+
+This code sets up the necessary environment for demonstrating **Word2Vec embeddings** using Keras and TensorFlow in R.  
+
+1. **Load Required Libraries:**  
+   - `keras3` and `tensorflow` provide deep learning functionality.  
+   - `text`, `dplyr`, and `stringr` support text processing and data manipulation.  
+   - `reticulate` allows seamless integration between R and Python.  
+
+2. **Install Required Python Libraries:**  
+   - `gensim` is a popular Python library for topic modeling and word embeddings.  
+   - `nltk` (Natural Language Toolkit) provides tools for text preprocessing, such as tokenization.  
+
+3. **Initialize NLTK Resources:**  
+   - The script downloads the **'punkt' tokenizer**, which is essential for splitting text into words and sentences before training Word2Vec models.  
+
+```{r}
+# Load required libraries
+library(keras3)
+library(tensorflow)
+library(text)
+library(dplyr)
+library(stringr)
+library(reticulate)
+
+# First, ensure we have the necessary Python modules
+# Gensim - a Python library for topic modeling, https://radimrehurek.com/gensim
+# nltk - Natural Language Toolkit, https://www.nltk.org/
+reticulate::py_install(c("gensim", "nltk")) # , envname = "r-keras"
+
+# Initialize NLTK resources
+reticulate::py_run_string("
+import nltk  # Import the Natural Language Toolkit (NLTK) library
+nltk.download('punkt')  # Download the 'punkt' tokenizer, used for sentence and word tokenization
+")
+```
+
+### **Accessing Pre-Trained Word2Vec Embeddings with Gensim in R**  
+
+This code demonstrates how to use **pre-trained Word2Vec embeddings** in R by leveraging the `gensim` Python library through `reticulate`.  
+
+1. **Import Gensim’s Pre-Trained Embeddings Downloader:**  
+   - The `gensim.downloader` module allows easy access to pre-trained word embeddings.  
+
+2. **List Available Pre-Trained Models:**  
+   - Retrieves metadata about all available models using `gensim$info()[["models"]]`.  
+   - Filters and displays only **Word2Vec-based models**, showing their descriptions.  
+
+3. **Load the Google News Pre-Trained Word2Vec Model:**  
+   - The `"word2vec-google-news-300"` model is a **300-dimensional** Word2Vec model trained on **Google News** data.  
+   - The model is automatically downloaded if not already present.  
+   - This step might take time initially due to the large file size (~1.5GB).  
+
+```{r}
+# Access pre-trained word embeddings using reticulate and gensim
+gensim <- reticulate::import("gensim.downloader")
+
+# Get information about available models
+available_models <- gensim$info()[["models"]]
+
+# Display available Word2Vec models
+cat("Available pre-trained Word2Vec models in Gensim:\n\n")
+for (model_name in names(available_models)) {
+  if (grepl("word2vec", tolower(model_name))) {
+    cat(sprintf("Model: %s\n", model_name))
+    cat(sprintf("  - Description: %s\n", available_models[[model_name]][["description"]]))
+  }
+}
+
+# Load the pre-trained Word2Vec model (Google News)
+# Note: This might take some time to download the first time
+cat("\nLoading word2vec-google-news-300 model...\n")
+w2v_google_news <- gensim$load("word2vec-google-news-300")
+```
+
+### **Finding Similar Words with Pre-Trained Word2Vec Model**  
+
+This code defines a function to find words **similar** to a given input word using the **pre-trained Word2Vec model** from Gensim. The function queries the model for the top **N most similar words** based on cosine similarity in the vector space.  
+
+1. **Query the Word2Vec Model**  
+   - Uses `model$most_similar(word, topn = as.integer(topn))` to get the top `N` most similar words.  
+
+2. **Process the Results**  
+   - Extracts words and their similarity scores from the returned list.  
+
+3. **Store and Return Results**  
+   - Stores the extracted words and their similarity scores in vectors.  
+   - Creates and returns a `data.frame` containing the similar words and their similarity scores.  
+
+```{r}
+# Function to find similar words
+word = "beautiful"
+model = w2v_google_news
+topn = 10
+
+find_similar_words <- function(word, model, topn = 10) {
+  # Try to get similar words, with error handling
+  similar_words <- tryCatch({
+    model$most_similar(word, topn = as.integer(topn))  # Ensure topn is integer
+  }, error = function(e) {
+    cat(sprintf("Error finding similar words for '%s': %s\n", word, e$message))
+    return(NULL)
+  })
+  
+  # If there was an error, return NULL
+  if (is.null(similar_words)) {
+    return(NULL)
+  }
+  
+  # Create vectors to store results
+  word_vec <- character(length(similar_words))
+  similarity_vec <- numeric(length(similar_words))
+  
+  # Extract data with verbose debugging
+  cat("Processing results...\n")
+  for (i in 1:length(similar_words)) {
+    pair <- similar_words[[i]]
+    
+    # Print the structure for debugging
+    cat(sprintf("Item %d structure:\n", i))
+    print(str(pair))
+    
+    # Try to extract values safely
+    word_vec[i] <- as.character(pair[[1]])
+    similarity_vec[i] <- as.numeric(pair[[2]])
+  }
+  
+  # Create a data frame
+  similar_df <- data.frame(
+    word = word_vec,
+    similarity = similarity_vec,
+    stringsAsFactors = FALSE
+  )
+  
+  return(similar_df)
+}
+
+# Find words similar to "beautiful"
+similar_to_beautiful <- find_similar_words("beautiful", w2v_google_news)
+print(similar_to_beautiful)
+
+# Find words similar to "king"
+similar_to_king <- find_similar_words("king", w2v_google_news)
+print(similar_to_king)
+```
+
+### **Working with Word Embeddings in Keras3**  
+
+This code demonstrates how to **extract**, **analyze**, and **visualize Word2Vec embeddings** in R using a pre-trained Word2Vec model from Gensim.  
+
+1. **Retrieve Word Vectors:**  
+   - Fetches vectors for a list of words and removes any missing words.  
+
+2. **Apply t-SNE for Dimensionality Reduction:**  
+   - Converts high-dimensional word embeddings into **two dimensions** for plotting.  
+   - Uses `Rtsne()` with a user-defined perplexity (`min(perplexity, number of words - 1)`).  
+
+3. **Generate a Scatter Plot with ggplot2:**  
+   - Displays words in a 2D space.  
+   - Uses **blue points** for words and labels them.  
+   - Ensures clarity with adjusted title, subtitles, and themes.  
+
+```{r}
+# Example of working with the embeddings in keras3
+# Get vector for a specific word
+get_word_vector <- function(word, model) {
+  tryCatch({
+    vector <- model$get_vector(word)
+    return(vector)
+  }, error = function(e) {
+    cat(sprintf("Word '%s' not found in vocabulary\n", word))
+    return(NULL)
+  })
+}
+
+# Get vectors for a few words
+words <- c("king", "queen", "man", "woman")
+word_vectors <- lapply(words, get_word_vector, model = w2v_google_news)
+
+# Load required libraries
+library(Rtsne)
+library(ggplot2)
+library(dplyr)
+
+# Function to visualize word embeddings in 2D
+visualize_word_embeddings <- function(words, model, perplexity = 5, seed = 42) {
+  # Get word vectors
+  word_vectors <- lapply(words, function(word) {
+    tryCatch({
+      vector <- model$get_vector(word)
+      return(vector)
+    }, error = function(e) {
+      cat(sprintf("Word '%s' not found in vocabulary\n", word))
+      return(NULL)
+    })
+  })
+  
+  # Remove NULL values (words not found)
+  valid_indices <- which(!sapply(word_vectors, is.null))
+  valid_words <- words[valid_indices]
+  valid_vectors <- word_vectors[valid_indices]
+  
+  # Check if we have at least 2 valid words (minimum for t-SNE)
+  if(length(valid_words) < 2) {
+    stop("Need at least 2 valid words to visualize")
+  }
+  
+  # Convert list of vectors to matrix
+  word_matrix <- do.call(rbind, valid_vectors)
+  
+  # Set seed for reproducibility
+  set.seed(seed)
+  
+  # Apply t-SNE for dimensionality reduction
+  # Note: perplexity should be smaller than number of points
+  tsne_perplexity <- min(perplexity, length(valid_words) - 1)
+  tsne_result <- Rtsne(word_matrix, dims = 2, perplexity = tsne_perplexity, 
+                       verbose = TRUE, max_iter = 1000)
+  
+  # Create data frame for plotting
+  plot_data <- data.frame(
+    word = valid_words,
+    x = tsne_result$Y[, 1],
+    y = tsne_result$Y[, 2],
+    stringsAsFactors = FALSE
+  )
+  
+  # Create plot
+  p <- ggplot(plot_data, aes(x = x, y = y, label = word)) +
+    geom_point(color = "blue", size = 3, alpha = 0.7) +
+    geom_text(hjust = -0.2, vjust = -0.5) +
+    theme_minimal() +
+    labs(
+      title = "2D Visualization of Word Embeddings",
+      subtitle = paste("Using t-SNE to project from", ncol(word_matrix), "dimensions to 2D"),
+      x = "t-SNE dimension 1",
+      y = "t-SNE dimension 2"
+    ) +
+    theme(
+      plot.title = element_text(size = 16, face = "bold"),
+      plot.subtitle = element_text(size = 12)
+    )
+  
+  return(p)
+}
+
+# Expanded example usage with more words for better visualization
+words <- c("king", "queen", "man", "woman", "prince", "princess", 
+           "boy", "girl", "father", "mother", "uncle", "aunt",
+           "dog", "cat", "horse", "animal", "computer", "car", "house")
+
+# Generate and display the visualization
+embed_plot <- visualize_word_embeddings(words, w2v_google_news)
+print(embed_plot)
+
+# Save the plot (optional)
+#ggsave("word_embeddings_2d.png", embed_plot, width = 10, height = 8, dpi = 300)
+```
+
+### **Word Analogy using Word2Vec in R**  
+
+This function, `find_word_analogy()`, performs **word analogy tasks** using the **cosine multiplicative similarity method** (`most_similar_cosmul`) in a pre-trained **Word2Vec model**.  
+
+---
+
+### **1. Understanding Word Analogies**  
+Word analogies follow the logic:  
+**"A is to B as C is to ?"**  
+For example:  
+- **"King" - "Man" + "Woman" ≈ "Queen"**  
+- **"Paris" - "France" + "Italy" ≈ "Rome"**  
+
+The function takes in:  
+✅ **Positive words** (words to be added)  
+✅ **Negative words** (words to be subtracted)  
+✅ **topn** (number of closest matches to return)  
+
+```{r}
+# https://tedboy.github.io/nlps/generated/generated/gensim.models.Word2Vec.most_similar_cosmul.html
+# Function to find word analogies using the most_similar_cosmul method
+find_word_analogy <- function(model, positive_words, negative_words, topn = 10) {
+  tryCatch({
+    # Ensure topn is integer
+    topn <- as.integer(topn)
+    
+    # Convert word lists to Python lists
+    positive_py <- reticulate::r_to_py(positive_words)
+    negative_py <- reticulate::r_to_py(negative_words)
+    
+    # Get results using most_similar_cosmul
+    results <- model$most_similar_cosmul(
+      positive = positive_py,
+      negative = negative_py,
+      topn = topn
+    )
+    
+    # Convert results to R data frame
+    result_df <- data.frame(
+      word = character(length(results)),
+      similarity = numeric(length(results)),
+      stringsAsFactors = FALSE
+    )
+    
+    for (i in 1:length(results)) {
+      pair <- results[[i]]
+      result_df$word[i] <- as.character(pair[[1]])
+      result_df$similarity[i] <- as.numeric(pair[[2]])
+    }
+    
+    return(result_df)
+  }, error = function(e) {
+    cat(sprintf("Error in word analogy: %s\n", e$message))
+    print(e)
+    return(NULL)
+  })
+}
+
+# Example: better + bad - good
+positive_words <- c("better", "bad")
+negative_words <- c("good")
+
+# Find the analogies
+analogy_results <- find_word_analogy(
+  model = w2v_google_news,
+  positive_words = positive_words,
+  negative_words = negative_words
+)
+
+# Print the results
+cat("Word analogy: better + bad - good =\n")
+print(analogy_results)
+```
+
+### **Creating and Using a Pre-trained Embedding Layer in Keras**  
+
+This code demonstrates **how to create an embedding matrix** from pre-trained **Word2Vec embeddings** and use it in a **Keras model** for NLP tasks.  
+
+**1. Building an Embedding Matrix**  
+- Iterate over `word_index` (a dictionary mapping words to integer indices).  
+- Retrieve each word’s vector using `get_word_vector()`.  
+- If the word has a corresponding vector, store it in the matrix.  
+
+**2. Creating the Keras Embedding Layer**  
+- Uses the pre-trained **Word2Vec embeddings**.  
+- `trainable = FALSE` ensures that embeddings remain **unchanged** during training.  
+
+**3. Using the Embedding Layer in a Keras Model**  
+The function `example_model_structure()` showcases how to integrate the **embedding layer** into a **simple neural network**:
+
+```{r}
+# Example of using these embeddings in a keras model
+# (This is just a demonstration - in practice you'd use these with actual data)
+create_embedding_layer <- function(word_index, embedding_dim = 300, max_words = 10000) {
+  # Create an embedding matrix from the pre-trained embeddings
+  embedding_matrix <- matrix(0, nrow = min(length(word_index) + 1, max_words), ncol = embedding_dim)
+  
+  for (word in names(word_index)) {
+    index <- word_index[[word]]
+    if (index > max_words) next
+    
+    vector <- get_word_vector(word, w2v_google_news)
+    if (!is.null(vector)) {
+      embedding_matrix[index,] <- vector
+    }
+  }
+  
+  # Create a keras embedding layer with the pre-trained weights
+  layer_embedding(
+    input_dim = min(length(word_index) + 1, max_words),
+    output_dim = embedding_dim,
+    weights = list(embedding_matrix),
+    trainable = FALSE  # Keep pre-trained embeddings fixed
+  )
+}
+
+# Example of how you would use the embedding layer in a model
+# (This is just pseudocode - you would need actual text data)
+example_model_structure <- function() {
+  # Assuming you have processed text data and created a word index
+  # word_index <- tokenizer$word_index
+  
+  model <- keras_model_sequential() %>%
+    # Add your embedding layer with pre-trained weights
+    # create_embedding_layer(word_index) %>%
+    layer_global_average_pooling_1d() %>%
+    layer_dense(units = 64, activation = "relu") %>%
+    layer_dense(units = 1, activation = "sigmoid")
+  
+  cat("Example model structure (would need actual data to run)\n")
+  return(model)
+}
+
+example_model_structure()
+```
+

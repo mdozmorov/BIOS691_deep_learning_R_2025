@@ -8,6 +8,12 @@ editor_options:
   chunk_output_type: console
 ---
 
+<!--
+# Homework Assignment: Sequence-to-Sequence Learning for Number Addition
+
+Implement a model that learns to perform addition of numbers from a text entry. For example, the input sequence might be "12+34" and the output sequence would be "46". Generate training data consisting of addition problems (inputs) with their solutions (targets). Use 2-digit limit for each input element, use character-level tokenization, padding of shorter sequences, try sequence-to-sequence network architectures (RNN, LSTM/GRU), including their bidirectional variants. Experiment with hyperparameters to improve model performance. Compare validation performance of each model/hyperparameter choice. Demonstrate the use of models for inference (predicting from user input). Refer to Chapter 11 of the book. Submit the Rmd file and the knitted html.
+-->
+
 ### 11.2.2 Text splitting (tokenization)
 
 Tokenization is the process of breaking standardized text into units called tokens.
