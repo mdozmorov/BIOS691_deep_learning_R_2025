@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Deep Learning for text</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Mikhail Dozmorov" />
+    <meta name="date" content="2025-04-07" />
+    <script src="libs/header-attrs-2.29/header-attrs.js"></script>
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+    <link rel="stylesheet" href="xaringan-my.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+.title[
+# Deep Learning for text
+]
+.subtitle[
+## The Transformer architecture
+]
+.author[
+### Mikhail Dozmorov
+]
+.institute[
+### Virginia Commonwealth University
+]
+.date[
+### 2025-04-07
+]
+
+---
+
+
+
+
+&lt;!-- .center[&lt;img src="img/.png" height=450&gt;] --&gt;
+
+&lt;!-- .small[  ] --&gt;
+
+## Transformers
+
+.pull-left[
+- RNNs and LSTMs **dominated NLP until 2017**.  
+- Limitations of RNNs:  
+  - Sequential processing → **slow training**.  
+  - Difficulty handling **long-range dependencies**.  
+- **Transformers** emerged to solve these issues with **parallelism** and **self-attention.**  
+]
+.pull-right[ .center[&lt;img src="img/transformer_fig1.png" height=450&gt;] ]
+
+.small[ "Attention Is All You Need" (Google Brain team, 2017) https://arxiv.org/abs/1706.03762 ]
+ 
+---
+## Key Innovations of Transformers
+
+- **Parallelized processing:** Entire sequences processed **at once.**  
+
+- **Self-Attention Mechanism:** Models relationships **between all words** in a sentence, not just adjacent ones. 
+
+- **Positional Encoding:**  Injects **word order information** without relying on recurrence.  
+
+---
+## Transformer Architecture Overview
+
+.pull-left[
+- **Encoder:**  Processes input text, outputs hidden representations.  
+
+- **Decoder:**  Uses encoder output to generate predictions,Works step-by-step (auto-regressive).  
+]
+.pull-right[ .center[&lt;img src="img/transformer.png" height=500&gt;] ]
+
+---
+## Transformer Architecture Overview
+
+.pull-left[
+- The Encoder only models are good for tasks that require understanding of input such as sentiment classification and named entity recognition.
+]
+.pull-right[ .center[&lt;img src="img/transformer.png" height=500&gt;] ]
+
+---
+## Transformer Architecture Overview
+
+.pull-left[
+- The Decoder only models are good for generative tasks such as text generation – language models.
+]
+.pull-right[ .center[&lt;img src="img/transformer.png" height=500&gt;] ]
+
+---
+## Transformer Architecture Overview
+
+.pull-left[
+- The Encoder-Decoder models are good for generative tasks such as text summarization or translation (many-to-many).
+]
+.pull-right[ .center[&lt;img src="img/transformer.png" height=500&gt;] ]
+
+---
+## Inside the Encoder Block
+
+.pull-left[
+- **Multi-Head Attention:** Looks at different parts of the input simultaneously.  
+
+- **Feedforward Network:** Fully connected layers to process attention output.  
+
+- **Layer Normalization:** Stabilizes training and improves performance.  
+
+- **Residual Connections:** Helps prevent gradient vanishing by adding input back to output.  
+]
+.pull-right[ .center[&lt;img src="img/transformer_encoder_11_9.png" height=500&gt;] ]
+
+---
+## Input Embedding and positional encoding
+
+- **Word embedding** - words are tokenized, passed to an embedding layer which is a trainable vector embedding space - a high-dimension space where each token is represented as a vector and occupies a unique location in that space. These embedding vectors learn to the encode the meaning and context of individual tokens in the sentence.
+
+- **Positional encoding** adds a sequence of predefined vectors to the embedding vectors of the words. This creates a unique vector for every sentence, and sentences with the same words in different order will be assigned different vectors (think "I'm happy, not sad" and "I'm sad, not happy").
+`$$PE(pos, 2i) = \sin(pos / 10000^{2i/d_{model}})$$`
+`$$PE(pos, 2i+1) = \cos(pos / 10000^{2i/d_{model}})$$`
+- pos - the position/order of the word in the sentence, i - index in the embedding vector, d_model - embedding length
+
+
+
+---
+## Self-Attention Mechanism
+
+- **Self-attention**, also known as **intra-attention**, is an attention mechanism relating different positions of a single sequence in order to compute a representation of the same sequence.
+
+- The model learns which words are **related** to each other and how much **context** each word needs to interpret the current word. 
+
+- This process is inspired by how humans pay attention – we selectively focus on important parts of information while filtering out the rest.
+
+---
+## Self-Attention Mechanism
+
+1. **Each word (token) looks at every other word** in the sentence.  
+
+2. It **scores the relevance** of each word to itself (embedding similarity).  
+
+3. The words that are **more relevant (similar) get higher attention** scores.   
+
+4. The output is a **weighted combination of all words,** with important ones contributing more to the final representation.  
+
+---
+## Self-Attention Mechanism
+
+Relevance of a word to the target word = the dot product between two word embedding vectors (plus a scaling function and a softmax).
+
+.center[&lt;img src="img/transformers_self_attention_11_6.png" height=450&gt;]
+
+---
+## Self-Attention Mechanism
+
+Compute the sum of all word vectors, weighted by our relevance scores - words closely related to the target word will contribute more.
+
+.center[&lt;img src="img/transformers_self_attention_11_6.png" height=450&gt;]
+
+---
+## Key, Value and Query
+
+- The transformer views the encoded representation of the input as a set of key-value pairs, `\((K,V)\)`, both of dimension `\(n\)` (input sequence length). 
+
+- The transformer adopts the scaled dot-product attention: the output is a weighted sum of the values, where the weight assigned to each value is determined by the dot-product of the query with all the keys:
+  - Compute attention scores by comparing Q and K.  
+  - Use scores to weigh V.  
+
+
+`$$Attention(Q, K, V) = softmax\left(\frac{QK^T}{\sqrt{d_k}}\right) V$$`
+  - `\(d_k\)` is the dimension of the key vector.  
+
+---
+## **Q, K, and V intuition**  
+
+1. **Query (Q):** Represents **what we are searching for.** *Your search request – "Find books on climate change."*
+
+2. **Key (K):** Represents **the information available.** Think of it as **"What does each word offer to the query?"**  *Each book's title and description.*  
+
+3. **Value (V):**  Represents **the actual content** associated with each key.  *The actual contents of each book.*  
+
+If a book’s title and description match your query, you’ll read its content. This process mirrors how transformers use self-attention to prioritize relevant words.  
+
+---
+## **Q, K, V numerical representation**  
+
+1. **Input:**  A sentence of length **N** (number of words/tokens). Each word is embedded into a vector of size **d_model** (e.g., 512 or 768). Example: A 10-word sentence, with each word embedded as a 512-dimensional vector → `\(dim(X) = 10 \times 512\)`  
+
+2. Q, K, and V are obtained by **multiplying the input by three weight matrices learned by three network layers**. Each matrix projects the input into **different subspaces** but maintains the same shape.   
+   `$$Q = XW_Q, \quad K = XW_K, \quad V = XW_V$$`
+   - `\(X\)` is the input tensor `\(N \times d_{model}\)`, `\(W_Q, W_K, W_V\)` are weight matrices `\(d_{model} \times d_k\)`. `\(d_k\)` is the dimension of Q, K, V (often `\(d_k = d_{model} / h\)`, where `\(h\)` is the number of attention heads). **Shape of Q, K, V:** `\(N \times d_k\)`
+
+---
+## Q, K, V in self-attention
+
+.center[&lt;img src="img/transformer_cR99V.png" height=200&gt;]
+.center[&lt;img src="img/transformer_9ahfh.png" height=200&gt;]
+In this new notation, 𝑋 and 𝑌 are the inputs to the current attention unit.
+.small[ https://ai.stackexchange.com/questions/39151/attention-is-all-you-need-paper-how-are-the-q-k-v-values-calculated ]
+
+---
+## Q, K, V in self-attention
+
+.center[&lt;img src="img/transformer_cR99V.png" height=200&gt;]
+.center[&lt;img src="img/transformer_9ahfh.png" height=200&gt;]
+For self attention, we'd have 𝑋=𝑌, which would both be the previous en/decoder block output (or word embedding for the first encoder block).
+.small[ https://ai.stackexchange.com/questions/39151/attention-is-all-you-need-paper-how-are-the-q-k-v-values-calculated ]
+
+---
+## Q, K, V in self-attention
+
+.center[&lt;img src="img/transformer_cR99V.png" height=200&gt;]
+.center[&lt;img src="img/transformer_9ahfh.png" height=200&gt;]
+For cross-attention, 𝑋 would be the output of the last encoder block and 𝑌 the output of the previous decoder block.
+.small[ https://ai.stackexchange.com/questions/39151/attention-is-all-you-need-paper-how-are-the-q-k-v-values-calculated ]
+
+---
+## Positional encoding need
+
+- Positional encoding is used to **add information about the position of words in a sequence** to their embedding vectors. 
+
+- This is crucial for models like the Transformer, which, by themselves, process sequence tokens independently and are **order agnostic**.
+
+*   Transformers operate on the entire sequence at once, they **don't inherently know the order of the words**, and positional encoding provides this missing piece of information.
+
+---
+## Positional encoding idea
+
+*   The fundamental concept is to **augment each word embedding with a vector that represents the word's position** within the sequence.
+
+*   **Different Approaches:**
+    *   A simple initial idea might be to concatenate the word's position (e.g., 0 for the first word, 1 for the second) to its embedding vector. However, this is **not ideal** because the position values can become large and disrupt the embedding values.
+    *   The original Transformer paper employed a more intricate method using **cyclical cosine functions** to create position vectors with values in the range [-1, 1].
+    *   A simpler and often more effective technique is **positional embedding**. This involves **learning position embedding vectors** in a similar way to how word embeddings are learned.
+
+---
+## Positional encoding implementation
+
+*   A separate **embedding layer** (`layer_embedding()`) is created specifically for the **positions** of the tokens in the sequence.
+
+*   The input to this embedding layer is a sequence of **position indices** (e.g., `[0, 1, 2, ...]`) corresponding to the words in the input sequence.
+
+*   The output of this position embedding layer is a sequence of **position embedding vectors**, one for each position.
+
+*   These **position embedding vectors are then added element-wise to the corresponding word embedding vectors**. The result is a set of **position-aware word embeddings** that are fed into the Transformer encoder or decoder.
+
+---
+## Positional encoding implementation
+
+*   When using learned positional embeddings, the **maximum sequence length** that the model can handle needs to be **defined in advance** because a separate embedding is learned for each position up to that length.
+
+*   **Outcome:** By adding positional encoding, the Transformer model gains the ability to **differentiate between words based on their location in the input sequence**, enabling it to understand the order and relationships between words effectively.
+
+
+---
+## Multi-Head Attention
+
+- Multiple sets (or heads) of self-attention are learnt in parallel. The number of attention heads vary from model to model, but numbers may range to the order of 12 – 100.
+
+- Captures **different types of relationships** in parallel. For example, one head might see the relationship between people, another head may focus on the context of the sentence and another head may see relationship between nouns and the numerical values and another the rhyming between the words (or tokens) and so on.
+
+.center[&lt;img src="img/multi-head-attention.png" height=150&gt;]
+
+.small[https://lilianweng.github.io/posts/2018-06-24-attention/]
+
+---
+## Multi-Head Attention
+
+According to the paper, "_multi-head attention allows the model to jointly attend to information from different representation subspaces at different positions. With a single attention head, averaging inhibits this._"
+
+1. Split input into **multiple heads**.  
+
+2. Perform self-attention on each head.  
+
+3. Concatenate and pass through dense layers.  
+
+.center[&lt;img src="img/multi-head-attention.png" height=150&gt;]
+
+.small[http://papers.nips.cc/paper/7181-attention-is-all-you-need.pdf]
+
+---
+## Encoder
+
+.pull-left[ The encoder generates an attention-based representation with capability to locate a specific piece of information from a potentially infinitely-large context.
+.center[&lt;img src="img/transformer-encoder.png" height=330&gt;] ] 
+.pull-right[
+- A stack of N=6 identical layers.
+
+- Each layer has a multi-head self-attention layer and a simple position-wise fully connected feed-forward network.
+
+- Each sub-layer adopts a residual connection and a layer normalization. All the sub-layers output data of the same dimension `\(d_{model}=512\)`.
+
+.small[https://lilianweng.github.io/posts/2018-06-24-attention/]
+]
+
+---
+## Decoder
+
+.pull-left[ The decoder is able to retrieval from the encoded representation.
+.center[&lt;img src="img/transformer-decoder.png" height=400&gt;] ]
+.pull-right[
+- A stack of N = 6 identical layers.
+- Each layer has two sub-layers of multi-head attentions and one sub-layer of fully-connected feed-forward network.
+- Each sub-layer adopts a residual connection and a layer normalization.
+- The first multi-head attention is modified to prevent positions from attending to subsequent positions, as we don’t want to look into the future of the target sequence when predicting the current position.
+]
+
+.small[http://papers.nips.cc/paper/7181-attention-is-all-you-need.pdf]
+
+---
+## Full Architecture
+
+- Both the source and target sequences first go through embedding layers to produce data of the same dimension `\(d_{model}=512\)`.
+
+- To preserve the position information, a sinusoid-wave-based positional encoding is applied and summed with the embedding output.
+
+- A softmax and linear layer are added to the final decoder output.
+.center[&lt;img src="img/transformer.png" height=250&gt;]
+.small[http://papers.nips.cc/paper/7181-attention-is-all-you-need.pdf]
+
+---
+## Evolution of Attention Mechanisms
+
+.small[
+| Name                   | Alignment Score Function | Citation |
+|------------------------|------------------------|----------|
+| **Content-base attention** | `\(\text{score}(s_t, h_i) = \cos(s_t, h_i)\)` | [Graves2014] |
+| **Additive(*)**        | `\(\text{score}(s_t, h_i) = v_a^T \tanh(W_a [s_{t-1}; h_i])\)` | [Bahdanau2015] |
+| **Location-Base**      | `\(\alpha_{t,i} = \text{softmax}(W_a s_t)\)` &lt;br&gt; *Note: This simplifies the softmax alignment to only depend on the target position.* | [Luong2015] |
+| **General**           | `\(\text{score}(s_t, h_i) = s_t^T W_a h_i\)` &lt;br&gt; *where* `\(W_a\)` *is a trainable weight matrix in the attention layer.* | [Luong2015] |
+| **Dot-Product**       | `\(\text{score}(s_t, h_i) = s_t^T h_i\)` | [Luong2015] |
+| **Scaled Dot-Product(^)** | `\(\text{score}(s_t, h_i) = \frac{s_t^T h_i}{\sqrt{n}}\)` &lt;br&gt; *Note: very similar to the dot-product attention except for a scaling factor; where* `\(n\)` *is the dimension of the source hidden state.* | [Vaswani2017] |
+(*) Referred to as "concat" in Luong, et al., 2015 and as "additive attention" in Vaswani, et al., 2017.  
+(^) It adds a scaling factor `\(1/\sqrt{n}\)`, motivated by the concern when the input is large, the softmax function may have an extremely small gradient, hard for efficient learning.  
+https://lilianweng.github.io/posts/2018-06-24-attention/ ]
+
+---
+## Broader Categories of Attention Mechanisms
+
+| Name               | Definition                                                                                                                                               | Citation           |
+|--------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------|
+| Self-Attention(&amp;)  | Relating different positions of the same input sequence. Theoretically the self-attention can adopt any score functions above, but just replace the target sequence with the same input sequence. | [Cheng2016]    |
+| Global/Soft       | Attending to the entire input state space.                                                                                                                | [Xu2015]       |
+| Local/Hard       | Attending to the part of input state space; i.e. a patch of the input image.                                                                             | [Xu2015]; [Luong2015] |
+
+(&amp;) Also, referred to as "intra-attention" in Cheng et al., 2016 and some other papers.
+
+
+---
+## Applications of Transformers
+
+- **BERT:**  
+  - Bi-directional transformer for masked language modeling.  
+  
+- **GPT:**  
+  - Transformer for **text generation** (auto-regressive).  
+  
+- **T5 &amp; BART:**  
+  - Sequence-to-sequence tasks like **translation and summarization.**  
+
+
+---
+## Transformers for genomics
+
+.small[
+| Model Name       | Primary Architecture (input, parameters)                                                                                      |
+|------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| DNABERT          | BERT (6 layers, 12 attention heads, 768 hidden size), input: k-mers (k=3-6)                                                   |
+| SATORI           | Transformer with convolutional front-end                                                                                      |
+| Enformer         | Transformer-based model on top of CNNs                                                                                        |
+| GPN              | GPT-style autoregressive model                                                                                                |
+| C.Origami        | Graph transformer for 3D genome                                                                                               |
+| Nucleotide Transformer | Large-scale transformer with up to 2.5B parameters                                                                           |
+| GENA-LM          | 2.5B parameter transformer                                                                                                     |
+| DNABERT-2        | DNABERT variant with dynamic k-mer embedding                                                                                  |
+| HyenaDNA         | Hyena operator replacing attention                                                                                             |
+| Borzoi           | RNA/DNA model using state-space models                                                                                        |
+
+Consens, M. et al. “Transformers and Genome Language Models.” _Nature Machine Intelligence_ (March 13, 2025). https://doi.org/10.1038/s42256-025-01007-9.
+
+]
+
+
+&lt;!--
+.small[
+| Model Name       | Primary Architecture (input, parameters)                                                                                      | Encoder/Decoder | Model breakdown                                                                                          | Date Published | Pre-training? | Datasets trained on                                                                                                                                                                           | Implementation, Time and Resources for Training                                                                                                                                                                                                                                                                                                                                                                                                                               | Trained to Predict                                                      | Novelty                                                                                                                                                                                                                                    | Interpretability Method                                                                                                     |
+|------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------|-----------------------------------------------------------------------------------------------------------|----------------|----------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------|
+| DNABERT          | BERT (6 layers, 12 attention heads, 768 hidden size), input: k-mers (k=3-6)                                                   | Encoder          | BERT-like transformer pretrained on DNA k-mers                                                            | 2021           | Yes            | Human reference genome (hg19); various k-mers                                                                                                                                                | Pretrained on genome in an unsupervised way; implemented in PyTorch; fine-tuning on downstream tasks with minimal computational resources                                                                                                                                                                                                                                                                                                                                      | TF binding sites, promoter prediction, splice site prediction             | First transformer-based pre-trained model for genomic sequence modeling                                                                                                                              | Attention visualization, k-mer importance plots                                                                              |
+| SATORI           | Transformer with convolutional front-end                                                                                      | Encoder          | Convolution + Transformer                                                                                 | 2021           | No             | Simulated motifs, ChIP-seq TF binding                                                                                                                                                         | Implemented in PyTorch; trained with labeled data only                                                                                                                                                                                                                                                                                                                                                                                                                          | Interactions between TFs                                                 | Incorporates attention heads to explicitly model motif interactions                                                                                                  | Self-attention scores to infer motif interactions                                                                           |
+| Enformer         | Transformer-based model on top of CNNs                                                                                        | Encoder          | CNN + Transformer with long-range attention                                                               | 2021           | Yes            | Genomic sequences + functional genomics data                                                                                                                                                | Trained on TPUs; large scale data; based on Basenji2; TensorFlow                                                                                                                                                                                                                                                                                                                                                                                                              | Gene expression, chromatin accessibility, histone marks                   | Uses transformers to model long-range regulatory interactions                                                                                                     | Gradient-based attribution (e.g., saliency maps), attention maps                                                            |
+| GPN              | GPT-style autoregressive model                                                                                                | Decoder          | Causal transformer                                                                                        | 2022           | Yes            | Human genome (GRCh38)                                                                                                                                                                         | Implemented in PyTorch, autoregressive training                                                                                                                                                                                                                                                                                                                                                                                                                                 | Predict next nucleotide, downstream tasks like promoter recognition      | Language-model-like modeling of genome                                                                                                                              | Attention weights, k-mer embedding visualization                                                                           |
+| C.Origami        | Graph transformer for 3D genome                                                                                               | Encoder          | Graph Transformer                                                                                          | 2022           | Yes            | Hi-C data, epigenomic marks                                                                                                                                                                   | Training time unspecified; trained on high-res 3D genome + epigenetic data                                                                                                                                                                                                                                                                                                                                                                                                     | Predict 3D genome structures                                              | Combines graph representation with transformer to learn 3D structures                                                                                                | Edge attention in graphs                                                                                                    |
+| Nucleotide Transformer | Large-scale transformer with up to 2.5B parameters                                                                           | Encoder          | Hierarchical Transformer with masked language modeling                                                    | 2022           | Yes            | 850 species, genome sequences                                                                                                                         | Massive pretraining; thousands of GPU days                                                                                                                                                                                                                                                                                                                                                                                                                                     | Universal DNA representation, downstream genomics tasks                   | Largest pre-trained nucleotide language model                                                                                                                    | Embedding similarity, attention heads                                                                               |
+| GENA-LM          | 2.5B parameter transformer                                                                                                     | Encoder          | Similar to Nucleotide Transformer                                                                         | 2023           | Yes            | 12K+ genomes                                                                                                                                                                                 | 2048 TPUv4 chips, 28 days                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Genomic variant classification, functional prediction                     | Large-scale multilingual-like DNA model                                                                                                                          | Embedding visualization, probing tasks                                                                                      |
+| DNABERT-2        | DNABERT variant with dynamic k-mer embedding                                                                                  | Encoder          | BERT with additional tokenizer head                                                                       | 2023           | Yes            | Human genome                                                                                                                                                                                 | Pretrained on genome using modified tokenizer                                                                                                                                                                                                                                                                                                                                                                                                                                 | TF binding, chromatin state prediction                                    | Dynamic k-mer embedding                                                                                                                                            | Attention heads, embedding similarity                                                                          |
+| HyenaDNA         | Hyena operator replacing attention                                                                                             | Encoder          | Hyena operator-based model                                                                                | 2023           | Yes            | Human genome, epigenomic data                                                                                                                                                                | Much faster and more efficient than transformers; trained on long sequences                                                                                                                                                                                                                                                                                                                                                                                                    | Genomic element classification                                           | Replaces attention with more efficient long-range operator                                                                                                  | Gradient-based, filter visualization                                                                               |
+| Borzoi           | RNA/DNA model using state-space models                                                                                        | Encoder          | State Space Sequence Model (SSM)                                                                          | 2023           | Yes            | Human genome                                                                                                                                                                                 | Trained on long sequences; efficient state-space implementation                                                                                                                                                                                                                                                                                                                                                                                                                | RNA expression prediction                                                 | Uses SSM for efficient long-sequence modeling                                                                                                                      | Saliency maps, filter attribution                                                                                          |
+]
+--&gt;
+
+---
+## Transformers for tabular data
+
+- **TabPFN** - the _Tabular Prior-data Fitted Network_, a tabular foundational model (generative transformer-based), outperforms other models, excels on small datasets, scalable, fast. Classification or regression problems. Leverages in-context learning (ICL), generates a large corpus of synthetic tabular datasets (prior in Bayesian terms, approach based on structural causal models, SCMs) and then train a self-attention-based transformer neural network. Pre-training - predict masked targets of all synthetic datasets. Z-normalization of inputs. Sample-specific learning, feature-specific attention attending to features across samples, invariant to the order of samples and features. Tested on two benchmark datasets, AutoML benchmark and OpenML-CTR23, outperforms XGBoost, CatBoost, random forest. Approaches for interpretation. Python implementation. https://github.com/PriorLabs/tabpfn-client
+
+.small[
+Hollmann, N., Müller, S., Purucker, L. et al. **Accurate predictions on small data with a tabular foundation model.** _Nature_ (2025). https://doi.org/10.1038/s41586-024-08328-6
+]
+
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+  "ratio": "16:9",
+  "highlightStyle": "github",
+  "highlightLines": true,
+  "countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
