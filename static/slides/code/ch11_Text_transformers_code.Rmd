@@ -50,7 +50,6 @@ int_val_ds <- val_ds %>% dataset_vectorize()
 int_test_ds <- test_ds %>% dataset_vectorize()
 ```
 
-
 ## 11.4 The Transformer architecture
 
 **Attention Mechanism**: Token-to-token relationships; Context-aware representations; Parallel processing capability; Scaled dot-product attention
@@ -173,16 +172,17 @@ In practice, for tasks like sequence classification, the query, keys, and values
 
 The **Transformer Encoder** is one of the two main components of the Transformer architecture, the other being the Transformer Decoder. It is designed to **process an input sequence and transform it into a sequence of context-aware vector representations**.
 
-*   **Input and Output:** The Transformer Encoder takes a sequence of token embeddings as input and outputs a sequence of enriched embeddings of the same length. These output embeddings capture contextual information from the entire input sequence.
+-   **Input and Output:** The Transformer Encoder takes a sequence of token embeddings as input and outputs a sequence of enriched embeddings of the same length. These output embeddings capture contextual information from the entire input sequence.
 
-*   **Core Mechanism: Self-Attention:** The fundamental building block of the Transformer Encoder is the **self-attention mechanism**. As we discussed, self-attention allows each token in the input sequence to attend to all other tokens in the sequence, calculating **relevancy scores** and then using these scores to compute a **weighted sum of the token vectors**. This process generates context-aware representations for each token. The source code implements this using `layer_multi_head_attention()`, which signifies that the attention mechanism is typically performed in **multiple "heads"** in parallel, allowing the model to learn different types of relationships simultaneously.
+-   **Core Mechanism: Self-Attention:** The fundamental building block of the Transformer Encoder is the **self-attention mechanism**. As we discussed, self-attention allows each token in the input sequence to attend to all other tokens in the sequence, calculating **relevancy scores** and then using these scores to compute a **weighted sum of the token vectors**. This process generates context-aware representations for each token. The source code implements this using `layer_multi_head_attention()`, which signifies that the attention mechanism is typically performed in **multiple "heads"** in parallel, allowing the model to learn different types of relationships simultaneously.
 
-*   **Additional Layers:** Following the multi-head self-attention layer, the Transformer Encoder incorporates several other important components:
-    *   **Dense Projections:** The output of the attention mechanism is often passed through one or more **dense layers** to further process and transform the representations.
-    *   **Residual Connections:** **Residual connections** are added around both the attention mechanism and the dense projections. This involves adding the input of a sub-layer to its output, which helps to mitigate the vanishing gradient problem and allows for the training of deeper networks.
-    *   **Layer Normalization:** **Layer normalization** is applied after the residual connections. Normalization layers help to stabilize the learning process and improve gradient flow.
+-   **Additional Layers:** Following the multi-head self-attention layer, the Transformer Encoder incorporates several other important components:
 
-*   **Role in NLP:** While the full Transformer architecture was initially developed for sequence-to-sequence tasks like machine translation, the **Transformer Encoder itself can be effectively used for single-input NLP tasks such as text classification**. By processing an input text sequence through the encoder, you obtain rich, context-aware representations of the words, which can then be aggregated (e.g., using global average pooling) and fed into a classification layer.
+    -   **Dense Projections:** The output of the attention mechanism is often passed through one or more **dense layers** to further process and transform the representations.
+    -   **Residual Connections:** **Residual connections** are added around both the attention mechanism and the dense projections. This involves adding the input of a sub-layer to its output, which helps to mitigate the vanishing gradient problem and allows for the training of deeper networks.
+    -   **Layer Normalization:** **Layer normalization** is applied after the residual connections. Normalization layers help to stabilize the learning process and improve gradient flow.
+
+-   **Role in NLP:** While the full Transformer architecture was initially developed for sequence-to-sequence tasks like machine translation, the **Transformer Encoder itself can be effectively used for single-input NLP tasks such as text classification**. By processing an input text sequence through the encoder, you obtain rich, context-aware representations of the words, which can then be aggregated (e.g., using global average pooling) and fed into a classification layer.
 
 ![](../img/transformer_encoder_11_9.png)
 
@@ -323,8 +323,7 @@ config <- layer$get_config()
 new_layer <- do.call(layer_dense, config)
 ```
 
-You can also access the unwrapped original layer constructor from any existing layer
-directly via the special symbol __class__
+You can also access the unwrapped original layer constructor from any existing layer directly via the special symbol **class**
 
 ```{r}
 layer$`__class__`
@@ -363,9 +362,7 @@ model <- load_model(filename, custom_objects = list(layer_transformer_encoder))
 
 **Specifying Custom Layer Names**
 
-When saving a model that contains custom layers, the saved file will contain these
-configs. When loading the model from the file, you should provide the custom layer
-classes to the loading process, so that it can make sense of the config objects
+When saving a model that contains custom layers, the saved file will contain these configs. When loading the model from the file, you should provide the custom layer classes to the loading process, so that it can make sense of the config objects
 
 ```{r eval=FALSE}
 model <- load_model(
@@ -380,9 +377,7 @@ model <- load_model(
 
 **Layer Normalization (Custom Implementation)**
 
-`layer_batch_normalization()` doesn’t work well for sequence data. Instead, 
-we’re using the `layer_layer_normalization()`, which normalizes each sequence 
-independently from other sequences in the batch.
+`layer_batch_normalization()` doesn't work well for sequence data. Instead, we're using the `layer_layer_normalization()`, which normalizes each sequence independently from other sequences in the batch.
 
 ```{r}
 layer_normalization <- function(batch_of_sequences) {
@@ -562,7 +557,6 @@ outputs <- inputs %>%
 model <- keras_model(inputs, outputs)
 ```
 
-
 **Model Compilation and Training with Callbacks:**
 
 Takes over 2 hours on a Mac, CPU
@@ -713,7 +707,7 @@ layer_positional_embedding <- new_layer_class(
 
 #### Putting it All Together: a Text-Classification Transformer
 
-Error: Incompatible shapes: [32,2,600,600] vs. [32,32,600,600]
+Error: Incompatible shapes: \[32,2,600,600\] vs. \[32,32,600,600\]
 
 ```{r}
 # Model hyperparameters
@@ -808,7 +802,7 @@ cat(sprintf("Test acc: %.3f\n", evaluate(model, int_test_ds)["accuracy"]))
 
 The decision of when to use sequence models versus bag-of-words models for text classification can be guided by a heuristic based on the **ratio between the number of samples in your training data and the mean number of words per sample**.
 
-If the ratio of **(number of training samples) / (mean number of words per sample) is small—less than 1,500—then a bag-of-bigrams model** is likely to perform better. As a bonus, bag-of-bigrams models are also generally **faster to train and iterate on** in such cases.
+If the ratio of **(number of training samples) / (mean number of words per sample) is small---less than 1,500---then a bag-of-bigrams model** is likely to perform better. As a bonus, bag-of-bigrams models are also generally **faster to train and iterate on** in such cases.
 
 If this ratio is **higher than 1,500, then a sequence model** is recommended. This suggests that **sequence models work best when a large amount of training data is available and when each individual sample is relatively short**.
 
@@ -818,12 +812,12 @@ In the IMDB movie review classification task, there were 20,000 training samples
 
 ![](../img/transformer_11_5_1.png)
 
-*   **Transformer Encoder:** The encoder takes the **entire source sequence as input**. It first adds **positional embeddings** to the word embeddings to incorporate information about the order of words. This sequence of position-aware embeddings is then processed through one or more layers of **Transformer Encoder blocks**. Each block consists of **multi-head self-attention** to create context-aware representations for each token by attending to all other tokens in the source sequence, followed by feed-forward dense layers, with **residual connections and layer normalization** applied around each sub-layer. The output of the Transformer Encoder is a **sequence of encoded, context-aware embedding vectors** representing the source sentence.
+-   **Transformer Encoder:** The encoder takes the **entire source sequence as input**. It first adds **positional embeddings** to the word embeddings to incorporate information about the order of words. This sequence of position-aware embeddings is then processed through one or more layers of **Transformer Encoder blocks**. Each block consists of **multi-head self-attention** to create context-aware representations for each token by attending to all other tokens in the source sequence, followed by feed-forward dense layers, with **residual connections and layer normalization** applied around each sub-layer. The output of the Transformer Encoder is a **sequence of encoded, context-aware embedding vectors** representing the source sentence.
 
-*   **Transformer Decoder:** The Transformer Decoder is used to generate the target sequence. During training, it takes the **target sequence so far as input**, also with **positional embeddings**. It consists of one or more layers of **Transformer Decoder blocks**. Each block has two main attention mechanisms:
-    *   First, a **masked multi-head self-attention** mechanism is applied to the target sequence. The "masking" (causal padding) ensures that when the model is predicting the $N^{th}$ token, it can only attend to the tokens before and including the $(N-1)^{th}$ token, preventing it from "looking into the future."
-    *   Second, a **multi-head attention** mechanism attends to the **output of the Transformer Encoder** (which acts as the "memory" of the source sequence). In this attention layer, the queries come from the output of the masked self-attention of the decoder, while the keys and values come from the encoded source sequence. This allows the decoder to focus on the relevant parts of the source sentence as it generates each token of the target sentence.
-    Each attention mechanism is followed by feed-forward dense layers, with **residual connections and layer normalization**. The final output of the Transformer Decoder is then passed through a dense layer with a softmax activation to predict the probability distribution over the next token in the target sequence. During inference, the decoder generates the target sequence one token at a time, using its previous predictions as input for the next step, until it generates an "[end]" token.
+-   **Transformer Decoder:** The Transformer Decoder is used to generate the target sequence. During training, it takes the **target sequence so far as input**, also with **positional embeddings**. It consists of one or more layers of **Transformer Decoder blocks**. Each block has two main attention mechanisms:
+
+    -   First, a **masked multi-head self-attention** mechanism is applied to the target sequence. The "masking" (causal padding) ensures that when the model is predicting the $N^{th}$ token, it can only attend to the tokens before and including the $(N-1)^{th}$ token, preventing it from "looking into the future."
+    -   Second, a **multi-head attention** mechanism attends to the **output of the Transformer Encoder** (which acts as the "memory" of the source sequence). In this attention layer, the queries come from the output of the masked self-attention of the decoder, while the keys and values come from the encoded source sequence. This allows the decoder to focus on the relevant parts of the source sentence as it generates each token of the target sentence. Each attention mechanism is followed by feed-forward dense layers, with **residual connections and layer normalization**. The final output of the Transformer Decoder is then passed through a dense layer with a softmax activation to predict the probability distribution over the next token in the target sequence. During inference, the decoder generates the target sequence one token at a time, using its previous predictions as input for the next step, until it generates an "\[end\]" token.
 
 ### 11.5.1 A machine translation example
 
@@ -966,8 +960,7 @@ str(targets)
 
 ### 11.5.2 Sequence-to-sequence learning with RNNs
 
-The simplest, naive way to use RNNs to turn a sequence into another sequence is
-to keep the output of the RNN at each time step.
+The simplest, naive way to use RNNs to turn a sequence into another sequence is to keep the output of the RNN at each time step.
 
 ```{r}
 # Simple LSTM-based sequence model (baseline example)
@@ -981,21 +974,13 @@ model <- keras_model(inputs, outputs)
 
 However, this approach has two major issues:
 
-- The target sequence must always be the same length as the source sequence.
+-   The target sequence must always be the same length as the source sequence.
 
-- Due to the step-by-step nature of RNNs, the model will be looking only at
-tokens 1...N in the source sequence to predict token N in the target sequence.
-This constraint makes this setup unsuitable for most tasks, particularly translation. 
+-   Due to the step-by-step nature of RNNs, the model will be looking only at tokens 1...N in the source sequence to predict token N in the target sequence. This constraint makes this setup unsuitable for most tasks, particularly translation.
 
-In a proper sequence-to-sequence setup, you would first use an RNN (the encoder) 
-to turn the entire source sequence into a single vector (or set of vectors). 
-This could be the last output of the RNN, or alternatively, its final internal
-state vectors. Then you would use this vector (or vectors) as the initial state 
-of another RNN (the decoder), which would look at elements 1...N in the target 
-sequence, and try to predict step N+1 in the target sequence.
+In a proper sequence-to-sequence setup, you would first use an RNN (the encoder) to turn the entire source sequence into a single vector (or set of vectors). This could be the last output of the RNN, or alternatively, its final internal state vectors. Then you would use this vector (or vectors) as the initial state of another RNN (the decoder), which would look at elements 1...N in the target sequence, and try to predict step N+1 in the target sequence.
 
-![](../img/sequence_to_sequence_rnn_11_13.png)
-Almost 8 hours on CPU
+![](../img/sequence_to_sequence_rnn_11_13.png) Almost 8 hours on CPU
 
 ```{r}
 # Define architecture parameters
@@ -1069,12 +1054,7 @@ sprintf("Test accuracy: %.2f", evaluate(model, val_ds)["accuracy"]) # Print test
 # [1] "Test accuracy: 0.63"
 ```
 
-Let’s use our model for inference. We’ll pick a few sentences in the test set
-and check how our model translates them. We’ll start from the seed token, "[start]",
-and feed it into the decoder model, together with the encoded English source sen-
-tence. We’ll retrieve a next-token prediction, and we’ll reinject it into the decoder
-repeatedly, sampling one new target token at each iteration, until we get to "[end]"
-or reach the maximum sentence length.
+Let's use our model for inference. We'll pick a few sentences in the test set and check how our model translates them. We'll start from the seed token, "\[start\]", and feed it into the decoder model, together with the encoded English source sen- tence. We'll retrieve a next-token prediction, and we'll reinject it into the decoder repeatedly, sampling one new target token at each iteration, until we get to "\[end\]" or reach the maximum sentence length.
 
 ```{r}
 # Get vocabulary for Spanish tokens, to convert token index predictions to string tokens.
@@ -1123,14 +1103,9 @@ for (i in seq(20)) {
 }
 ```
 
-Let’s rewrite `decode_sentence()` to be compiled by `tf_function()`.
-This means that instead of using eager R functions like `seq()`, `predict()`, and
-`which.max()`, we will use TensorFlow equivalents, like `tf$range()`, 
-calling `model()` directly, and `tf$argmax()`.
+Let's rewrite `decode_sentence()` to be compiled by `tf_function()`. This means that instead of using eager R functions like `seq()`, `predict()`, and `which.max()`, we will use TensorFlow equivalents, like `tf$range()`, calling `model()` directly, and `tf$argmax()`.
 
-Because `tf$range()` and `tf$argmax()` return a 0-based value, we’ll set a function
-local option: `option(tensorflow.extract.style = "python")`. This changes the
-behavior of `[` for tensors to be 0-based as well.
+Because `tf$range()` and `tf$argmax()` return a 0-based value, we'll set a function local option: `option(tensorflow.extract.style = "python")`. This changes the behavior of `[` for tensors to be 0-based as well.
 
 ```{r}
 # TensorFlow implementation of sequence decoding
@@ -1198,28 +1173,11 @@ for (i in seq(20)) {
 
 #### THE TRANSFORMER DECODER
 
-**Causal padding** is absolutely critical to successfully training a sequence-to-
-sequence Transformer. Unlike an RNN, which looks at its input one step at a time,
-and thus will only have access to steps 1...N to generate output step N (which is token
-N+1 in the target sequence), the TransformerDecoder is order agnostic: it looks at the
-entire target sequence at once. If it were allowed to use its entire input, it would sim-
-ply learn to copy input step N+1 to location N in the output. 
+**Causal padding** is absolutely critical to successfully training a sequence-to- sequence Transformer. Unlike an RNN, which looks at its input one step at a time, and thus will only have access to steps 1...N to generate output step N (which is token N+1 in the target sequence), the TransformerDecoder is order agnostic: it looks at the entire target sequence at once. If it were allowed to use its entire input, it would sim- ply learn to copy input step N+1 to location N in the output.
 
-The fix is simple: we’ll mask the upper half of the pairwise attention matrix to pre-
-vent the model from paying any attention to information from the future—only infor-
-mation from tokens 1...N in the target sequence should be used when generating
-target token N+1. To do this, we’ll add a `get_causal_attention_mask(inputs)`
-method to our TransformerDecoder to retrieve an attention mask that we can pass to
-our MultiHeadAttention layers.
+The fix is simple: we'll mask the upper half of the pairwise attention matrix to pre- vent the model from paying any attention to information from the future---only infor- mation from tokens 1...N in the target sequence should be used when generating target token N+1. To do this, we'll add a `get_causal_attention_mask(inputs)` method to our TransformerDecoder to retrieve an attention mask that we can pass to our MultiHeadAttention layers.
 
-mask is a square matrix with shape (sequence_length,
-sequence_length), with 1s in the lower triangle and 0s
-everywhere else. For example, if sequence_length is 4,
-mask is:
-tf.Tensor([[1 0 0 0]
-           [1 1 0 0]
-           [1 1 1 0]
-           [1 1 1 1]], shape=(4, 4), dtype=int32)
+mask is a square matrix with shape (sequence_length, sequence_length), with 1s in the lower triangle and 0s everywhere else. For example, if sequence_length is 4, mask is: tf.Tensor(\[\[1 0 0 0\]\[1 1 0 0\] \[1 1 1 0\]\[1 1 1 1\]\], shape=(4, 4), dtype=int32)
 
 ```{r}
 # Define custom transformer decoder layer

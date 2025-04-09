@@ -27,9 +27,19 @@ editor_options:
 knitr::include_url('../../slides/ch11a_Text_encoding.html#1')
 ```
 
+<a href="../../slides/ch11b_Text_transformers.html#1" target="_blank">Lecture slides in HTML format</a>
+
+```{r echo=FALSE}
+knitr::include_url('../../slides/ch11b_Text_transformers.html#1')
+```
+
 ### Code
 
 - Text vectorization, embedding, [RMarkdown](../../slides/code/ch11_Text_encoding_code.Rmd)
+- Reusing Word2vec embeddings, [RMarkdown](../../slides/code/ch11_Text_word2vec_code.Rmd)
+- Attention math demo, [RMarkdown](../../slides/code/ch11_Text_attention_code.Rmd)
+- Transformed architecture, [RMarkdown](../../slides/code/ch11_Text_transformers_code.Rmd)
+<!-- - Transformer architecture in Keras, [RMarkdown](../../slides/code/ch11_Text_transformers_code.Rmd) -->
 <!-- - word2vec demo, [Rmarkdown](../../slides/code/ch11_word2vec.Rmd) -->
 
 <!-- - [Daily Climate time series data](https://www.kaggle.com/datasets/sumanthvrao/daily-climate-time-series-data) -->
@@ -45,5 +55,7 @@ knitr::include_url('../../slides/ch11a_Text_encoding.html#1')
 
 - [Text analysis pipeline](https://text2vec.org/vectorization.html) - text2vec tutorials
 - [NLP Illustrated, Part 3: Word2Vec](https://towardsdatascience.com/nlp-illustrated-part-3-word2vec-5b2e12b6a63b/) - word2vec illustrated guide
+- Vaswani, Ashish, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, and Illia Polosukhin. "Attention is all you need." Advances in neural information processing systems 30 (2017). https://arxiv.org/abs/1706.03762
+
 
 <!-- - [Understanding LSTM Networks](https://colah.github.io/posts/2015-08-Understanding-LSTMs/) -->
