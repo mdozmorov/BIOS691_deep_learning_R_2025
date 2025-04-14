@@ -476,9 +476,9 @@ outputs <- inputs %>%
 model <- keras_model(inputs, outputs)
 ```
 
-Working code below
+```{r eval=FALSE}
+# Keras3 working code below
 
-```{r}
 layer_transformer_encoder <- new_layer_class(
   classname = "TransformerEncoder",
   initialize = function(embed_dim, dense_dim, num_heads, ...) {
@@ -532,9 +532,7 @@ layer_transformer_encoder <- new_layer_class(
     config
   }
 )
-```
 
-```{r}
 # Define parameters
 vocab_size <- 20000
 embed_dim <- 256
@@ -608,7 +606,7 @@ training_time <- end_time - start_time
 print(paste("Training Time:", training_time))
 
 # Load the best model saved during training
-model <- load_model(
+model <- load_model_tf(
   # Path to saved model
   "transformer_encoder.keras",
   
@@ -621,6 +619,7 @@ model <- load_model(
 # sprintf formats the output string with 3 decimal places
 sprintf("Test acc: %.3f", evaluate(model, int_test_ds)["accuracy"])
 # "Test acc: 0.853"
+# "Test acc: 0.775"
 ```
 
 #### Using Positional Encoding to Reinject Order Information
@@ -661,7 +660,7 @@ layer_positional_embedding <- new_layer_class(
   # Forward pass computation
   call = function(inputs) {
     # Get sequence length from input shape
-    # tf$shape(inputs)[-1] slices out the last element of the shape, 
+    # tf$shape(inputs)[-1] extracts the last element of the shape, 
     # the size of the embedding dimension. (tf$shape() returns the shape as a tensor.)
     length <- tf$shape(inputs)[-1]
     
@@ -706,8 +705,6 @@ layer_positional_embedding <- new_layer_class(
 ```
 
 #### Putting it All Together: a Text-Classification Transformer
-
-Error: Incompatible shapes: \[32,2,600,600\] vs. \[32,32,600,600\]
 
 ```{r}
 # Model hyperparameters
@@ -785,8 +782,8 @@ print(paste("Training Time:", training_time))
 
 # Load the best model
 # Note: Need to specify both custom layers in custom_objects
-model <- load_model(
-  filepath = "full_transformer_encoder.keras",
+model <- load_model_tf(
+  "full_transformer_encoder.keras",
   custom_objects = list(
     layer_transformer_encoder = layer_transformer_encoder,
     layer_positional_embedding = layer_positional_embedding
@@ -816,8 +813,9 @@ In the IMDB movie review classification task, there were 20,000 training samples
 
 -   **Transformer Decoder:** The Transformer Decoder is used to generate the target sequence. During training, it takes the **target sequence so far as input**, also with **positional embeddings**. It consists of one or more layers of **Transformer Decoder blocks**. Each block has two main attention mechanisms:
 
-    -   First, a **masked multi-head self-attention** mechanism is applied to the target sequence. The "masking" (causal padding) ensures that when the model is predicting the $N^{th}$ token, it can only attend to the tokens before and including the $(N-1)^{th}$ token, preventing it from "looking into the future."
-    -   Second, a **multi-head attention** mechanism attends to the **output of the Transformer Encoder** (which acts as the "memory" of the source sequence). In this attention layer, the queries come from the output of the masked self-attention of the decoder, while the keys and values come from the encoded source sequence. This allows the decoder to focus on the relevant parts of the source sentence as it generates each token of the target sentence. Each attention mechanism is followed by feed-forward dense layers, with **residual connections and layer normalization**. The final output of the Transformer Decoder is then passed through a dense layer with a softmax activation to predict the probability distribution over the next token in the target sequence. During inference, the decoder generates the target sequence one token at a time, using its previous predictions as input for the next step, until it generates an "\[end\]" token.
+-   First, a **masked multi-head self-attention** mechanism is applied to the target sequence. The "masking" (causal padding) ensures that when the model is predicting the $N^{th}$ token, it can only attend to the tokens before and including the $(N-1)^{th}$ token, preventing it from "looking into the future."
+
+-   Second, a **multi-head attention** mechanism attends to the **output of the Transformer Encoder** (which acts as the "memory" of the source sequence). In this attention layer, the queries come from the output of the masked self-attention of the decoder, while the keys and values come from the encoded source sequence. This allows the decoder to focus on the relevant parts of the source sentence as it generates each token of the target sentence. Each attention mechanism is followed by feed-forward dense layers, with **residual connections and layer normalization**. The final output of the Transformer Decoder is then passed through a dense layer with a softmax activation to predict the probability distribution over the next token in the target sequence. During inference, the decoder generates the target sequence one token at a time, using its previous predictions as input for the next step, until it generates an "\[end\]" token.
 
 ### 11.5.1 A machine translation example
 
@@ -1054,7 +1052,7 @@ sprintf("Test accuracy: %.2f", evaluate(model, val_ds)["accuracy"]) # Print test
 # [1] "Test accuracy: 0.63"
 ```
 
-Let's use our model for inference. We'll pick a few sentences in the test set and check how our model translates them. We'll start from the seed token, "\[start\]", and feed it into the decoder model, together with the encoded English source sen- tence. We'll retrieve a next-token prediction, and we'll reinject it into the decoder repeatedly, sampling one new target token at each iteration, until we get to "\[end\]" or reach the maximum sentence length.
+Let's use our model for inference. We'll pick a few sentences in the test set and check how our model translates them. We'll start from the seed token, "\[start\]", and feed it into the decoder model, together with the encoded English source sentence. We'll retrieve a next-token prediction, and we'll reinject it into the decoder repeatedly, sampling one new target token at each iteration, until we get to "\[end\]" or reach the maximum sentence length.
 
 ```{r}
 # Get vocabulary for Spanish tokens, to convert token index predictions to string tokens.
@@ -1173,11 +1171,16 @@ for (i in seq(20)) {
 
 #### THE TRANSFORMER DECODER
 
-**Causal padding** is absolutely critical to successfully training a sequence-to- sequence Transformer. Unlike an RNN, which looks at its input one step at a time, and thus will only have access to steps 1...N to generate output step N (which is token N+1 in the target sequence), the TransformerDecoder is order agnostic: it looks at the entire target sequence at once. If it were allowed to use its entire input, it would sim- ply learn to copy input step N+1 to location N in the output.
+**Causal padding** is absolutely critical to successfully training a sequence-to- sequence Transformer. Unlike an RNN, which looks at its input one step at a time, and thus will only have access to steps 1...N to generate output step N (which is token N+1 in the target sequence), the TransformerDecoder is order agnostic: it looks at the entire target sequence at once. If it were allowed to use its entire input, it would simply learn to copy input step N+1 to location N in the output.
 
-The fix is simple: we'll mask the upper half of the pairwise attention matrix to pre- vent the model from paying any attention to information from the future---only infor- mation from tokens 1...N in the target sequence should be used when generating target token N+1. To do this, we'll add a `get_causal_attention_mask(inputs)` method to our TransformerDecoder to retrieve an attention mask that we can pass to our MultiHeadAttention layers.
+The fix is simple: we'll mask the upper half of the pairwise attention matrix to prevent the model from paying any attention to information from the future - only information from tokens 1...N in the target sequence should be used when generating target token N+1. To do this, we'll add a `get_causal_attention_mask(inputs)` method to our TransformerDecoder to retrieve an attention mask that we can pass to our MultiHeadAttention layers.
 
-mask is a square matrix with shape (sequence_length, sequence_length), with 1s in the lower triangle and 0s everywhere else. For example, if sequence_length is 4, mask is: tf.Tensor(\[\[1 0 0 0\]\[1 1 0 0\] \[1 1 1 0\]\[1 1 1 1\]\], shape=(4, 4), dtype=int32)
+mask is a square matrix with shape (sequence_length, sequence_length), with 1s in the lower triangle and 0s everywhere else. For example, if sequence_length is 4, mask is:
+
+tf.Tensor(\[\[1 0 0 0\]  
+\[1 1 0 0\]   
+\[1 1 1 0\]  
+\[1 1 1 1\]\], shape=(4, 4), dtype=int32)
 
 ```{r}
 # Define custom transformer decoder layer
