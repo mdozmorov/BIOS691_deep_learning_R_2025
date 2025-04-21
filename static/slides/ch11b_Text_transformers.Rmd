@@ -397,3 +397,30 @@ Consens, M. et al. “Transformers and Genome Language Models.” _Nature Machin
 Hollmann, N., Müller, S., Purucker, L. et al. **Accurate predictions on small data with a tabular foundation model.** _Nature_ (2025). https://doi.org/10.1038/s41586-024-08328-6
 ]
 
+---
+## Sequence Learning & Transformers – Summary
+
+- **Two types of NLP models:**
+  - **Bag-of-words**: ignores word order (uses Dense layers)
+  - **Sequence models**: capture word order (RNNs, 1D ConvNets, Transformers)
+
+- **Model selection tip:**  
+  Use bag-of-words if you have more samples than words-per-sample; otherwise, use a sequence model.
+
+- **Word embeddings** map words to vectors, capturing semantic meaning via distance relationships.
+
+- **Sequence-to-sequence learning:**  
+  - Encoder processes the input sequence  
+  - Decoder generates the target sequence using encoded input and past outputs
+
+---
+## Sequence Learning & Transformers – Summary
+
+- **Neural attention** enhances context awareness in word representations.
+
+- **Transformer architecture:**  
+  - Uses **attention** instead of recurrence  
+  - Consists of **TransformerEncoder** and **TransformerDecoder**  
+  - Excels at translation, summarization, and other sequence tasks  
+  - Encoder can be used standalone for tasks like classification
+
