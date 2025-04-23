@@ -58,6 +58,19 @@ knitr::include_url('../../slides/ch11b_Text_transformers.html#1')
 - Vaswani, Ashish, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, and Illia Polosukhin. "Attention is all you need." Advances in neural information processing systems 30 (2017). https://arxiv.org/abs/1706.03762
 - [LLMs-from-scratch](https://github.com/rasbt/LLMs-from-scratch) - Implement a ChatGPT-like LLM in PyTorch from scratch, step by step. [Youtube playlist](https://youtube.com/playlist?list=PLTKMiZHVd_2IIEsoJrWACkIxLRdfMlw11)
 
-
+<!--
+Temperature prediction with Transformers. 
+- Use the Jena dataset from the "Deep Learning for Time Series" section 6 (https://bios691-deep-learning-r-2025.netlify.app/slides/code/ch10_RNN_code.Rmd). For simplicity, subset it to have one measurement per hour. 
+- Use RNN, LSTM (GRU), and their bidirectional variants to predict temperature 24 h in the future. Note this is a regression problem.
+- Use 1 day, 2 days, 7 days measurements for prediction (window size).
+- Use Transformer encoder architecture to capture positional representation of measurements followed by either a dense layer, or an RNN/LSTM layer before the output layer. 
+- Summarize performance (accuracy/loss plots, best performance on the unseen data) of each architecture and window size in a table. Answer the following questions:
+  - How well RNN/LSTM or Transformer layers alone perform?
+  - Does the bidirectional wrapper help?
+  - Can the RNN/LSTM performance be improved if provided with the Transformer encoder output?
+- Bonus (to get 10 points: Use Convolutional 1D architecture, alone and using the Transformer encoder output.
+- Hint: Consider the "Timeseries classification with a Transformer model" example, https://tensorflow.rstudio.com/examples/timeseries_classification_transformer
+- Submit the knitted HTML and the Rmd code. Make efforts to organize/comment your code and the final report.
+-->
 
 <!-- - [Understanding LSTM Networks](https://colah.github.io/posts/2015-08-Understanding-LSTMs/) -->

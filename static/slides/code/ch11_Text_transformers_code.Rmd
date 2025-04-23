@@ -256,9 +256,9 @@ Notes on %\>% and { }
 x %>% { fn(., .) + . }
 ```
 
--   This uses the **pipe operator (`%>%`)** from the `magrittr` package, which allows for cleaner, more readable code by passing values through a chain of functions.\
--   `{}` creates an **anonymous function**.\
--   `.` represents the value of `x` being passed into the function.\
+-   This uses the **pipe operator (`%>%`)** from the `magrittr` package, which allows for cleaner, more readable code by passing values through a chain of functions.
+-   `{}` creates an **anonymous function**.
+-   `.` represents the value of `x` being passed into the function.
 -   `fn(., .)` applies the function `fn` to `x` twice (as both arguments). The result of `fn(x, x)` is added to `x`.
 
 ```{r}
@@ -309,8 +309,8 @@ config <- layer$get_config()
 new_layer <- do.call(layer_<type>, config)
 ```
 
--   **`layer$get_config()`** -- Retrieves the configuration of an existing Keras layer (`layer`). This configuration is a list containing all parameters that define the layer.\
--   **`do.call()`** -- Dynamically calls the layer creation function (`layer_<type>`) with the arguments from the configuration list.\
+-   **`layer$get_config()`** -- Retrieves the configuration of an existing Keras layer (`layer`). This configuration is a list containing all parameters that define the layer.
+-   **`do.call()`** -- Dynamically calls the layer creation function (`layer_<type>`) with the arguments from the configuration list.
 -   This process effectively **clones the layer** by re-instantiating it with the same parameters.
 
 ```{r}
@@ -330,8 +330,8 @@ layer$`__class__`
 new_layer <- layer$`__class__`$from_config(config)
 ```
 
--   `layer$`**class**\`\` returns the **class type** of the layer.\
--   `from_config(config)` is a class method that reconstructs a layer from its configuration.\
+-   `layer$`**class**\`\` returns the **class type** of the layer.
+-   `from_config(config)` is a class method that reconstructs a layer from its configuration.
 -   This approach directly leverages the class method to create the new layer, making it more explicit and object-oriented compared to `do.call()`.
 
 Defining the `get_config()` method in custom layer classes enables the same workflow.
@@ -345,7 +345,7 @@ new_layer <- do.call(layer_transformer_encoder, config)
 new_layer <- layer$`__class__`$from_config(config)
 ```
 
--   This creates a transformer encoder layer, extracts its configuration, and reconstructs the layer either with `do.call()` or `from_config()`.\
+-   This creates a transformer encoder layer, extracts its configuration, and reconstructs the layer either with `do.call()` or `from_config()`.
 -   Transformer encoder layers typically require multiple hyperparameters like embedding dimension (`embed_dim`), dense layer size (`dense_dim`), and attention heads (`num_heads`).
 
 **Model Saving and Loading**
@@ -356,8 +356,8 @@ model <- save_model(model, filename)
 model <- load_model(filename, custom_objects = list(layer_transformer_encoder))
 ```
 
--   `tempfile()` generates a temporary file path for saving the model. The `.keras` extension indicates the file format.\
--   **`save_model()`** -- Saves the entire model (architecture, weights, optimizer state).\
+-   `tempfile()` generates a temporary file path for saving the model. The `.keras` extension indicates the file format.
+-   **`save_model()`** -- Saves the entire model (architecture, weights, optimizer state).
 -   **`load_model()`** -- Loads the saved model, ensuring custom layers (`layer_transformer_encoder`) are recognized using the `custom_objects` argument.
 
 **Specifying Custom Layer Names**
@@ -370,7 +370,7 @@ model <- load_model(
   custom_objects = list(TransformerEncoder = layer_transformer_encoder))
 ```
 
--   This line explicitly maps `TransformerEncoder` (as used in the saved model) to the `layer_transformer_encoder` function in R.\
+-   This line explicitly maps `TransformerEncoder` (as used in the saved model) to the `layer_transformer_encoder` function in R.
 -   Useful for models that might use different naming conventions or when loading models from external sources.
 
 ------------------------------------------------------------------------
@@ -422,12 +422,12 @@ batch_normalization <- function(batch_of_images) {
 
 #### Building a Transformer Model (Keras Functional API)
 
--   **Purpose:** Builds a simple transformer-based classification model using the functional API in Keras.\
--   **Input Layer:** Accepts variable-length sequences (`shape(NA)`) of integer tokens (word indices).\
--   **Embedding Layer:** Maps token indices to dense vectors of dimension `embed_dim`.\
--   **Transformer Encoder Layer:** Applies a transformer encoder block, focusing on sequence-to-sequence learning.\
--   **Pooling Layer:** Averages embeddings across the sequence, reducing it to a single vector.\
--   **Dropout Layer:** Prevents overfitting by randomly dropping 50% of units during training.\
+-   **Purpose:** Builds a simple transformer-based classification model using the functional API in Keras.
+-   **Input Layer:** Accepts variable-length sequences (`shape(NA)`) of integer tokens (word indices).
+-   **Embedding Layer:** Maps token indices to dense vectors of dimension `embed_dim`.
+-   **Transformer Encoder Layer:** Applies a transformer encoder block, focusing on sequence-to-sequence learning.
+-   **Pooling Layer:** Averages embeddings across the sequence, reducing it to a single vector.
+-   **Dropout Layer:** Prevents overfitting by randomly dropping 50% of units during training.
 -   **Dense Layer:** Outputs a binary classification result (sigmoid activation).
 
 ```{r}
@@ -1172,26 +1172,23 @@ for (i in seq(20)) {
 
 ![](../img/transformer_11_14.png)
 
--   **Transformer Encoder:** The encoder takes the **entire source sequence as input**. It first adds **positional embeddings** to the word embeddings to incorporate information about the order of words. This sequence of position-aware embeddings is then processed through one or more layers of **Transformer Encoder blocks**. Each block consists of **multi-head self-attention** to create context-aware representations for each token by attending to all other tokens in the source sequence, followed by feed-forward dense layers, with **residual connections and layer normalization** applied around each sub-layer. The output of the Transformer Encoder is a **sequence of encoded, context-aware embedding vectors** representing the source sentence.
+-   **Transformer Encoder:** The encoder takes the **entire source sequence as input**. It first adds **positional embeddings** to the word embeddings to incorporate information about the order of words. This sequence of position-aware embeddings is then processed through one or more layers of **Transformer Encoder blocks**. Each block consists of **multi-head self-attention** to create **context-aware representations for each token by attending to all other tokens in the source sequence**, followed by feed-forward dense layers, with **residual connections and layer normalization** applied around each sub-layer. Unlike our previous RNN encoder, the output of the Transformer Encoder is a **sequence of encoded, context-aware embedding vectors** representing the source sentence.
 
 -   **Transformer Decoder:** The Transformer Decoder is used to generate the target sequence. During training, it takes the **target sequence so far as input**, also with **positional embeddings**. It consists of one or more layers of **Transformer Decoder blocks**. Each block has two main attention mechanisms:
 
--   First, a **masked multi-head self-attention** mechanism is applied to the target sequence. The "masking" (causal padding) ensures that when the model is predicting the $N^{th}$ token, it can only attend to the tokens before and including the $(N-1)^{th}$ token, preventing it from "looking into the future."
+-   First, a **masked multi-head self-attention** mechanism is applied to the target sequence. The "masking" (**causal padding**) ensures that when the model is predicting the $N^{th}$ token, it can only attend to the tokens before and including the $(N-1)^{th}$ token, preventing it from "looking into the future."
 
 -   Second, a **multi-head attention** mechanism attends to the **output of the Transformer Encoder** (which acts as the "memory" of the source sequence). In this attention layer, the queries come from the output of the masked self-attention of the decoder, while the keys and values come from the encoded source sequence. This allows the decoder to focus on the relevant parts of the source sentence as it generates each token of the target sentence. Each attention mechanism is followed by feed-forward dense layers, with **residual connections and layer normalization**. The final output of the Transformer Decoder is then passed through a dense layer with a softmax activation to predict the probability distribution over the next token in the target sequence. During inference, the decoder generates the target sequence one token at a time, using its previous predictions as input for the next step, until it generates an "$$end$$" token.
 
 #### THE TRANSFORMER DECODER
 
-**Causal padding** is absolutely critical to successfully training a sequence-to- sequence Transformer. Unlike an RNN, which looks at its input one step at a time, and thus will only have access to steps 1...N to generate output step N (which is token N+1 in the target sequence), the TransformerDecoder is order agnostic: it looks at the entire target sequence at once. If it were allowed to use its entire input, it would simply learn to copy input step N+1 to location N in the output.
+**Causal padding** is absolutely critical to successfully training a sequence-to-sequence Transformer. Unlike an RNN, which looks at its input one step at a time, and thus will only have access to steps $1...N$ to generate output step $N$ (which is token $N+1$ in the target sequence), the TransformerDecoder is order agnostic: it looks at the entire target sequence at once. If it were allowed to use its entire input, it would simply learn to copy input step $N+1$ to location $N$ in the output.
 
-The fix is simple: we'll mask the upper half of the pairwise attention matrix to prevent the model from paying any attention to information from the future - only information from tokens 1...N in the target sequence should be used when generating target token N+1. To do this, we'll add a `get_causal_attention_mask(inputs)` method to our TransformerDecoder to retrieve an attention mask that we can pass to our MultiHeadAttention layers.
+The fix is simple: we'll mask the upper half of the pairwise attention matrix to prevent the model from paying any attention to information from the future - only information from tokens $1...N$ in the target sequence should be used when generating target token N+1. To do this, we'll add a `get_causal_attention_mask(inputs)` method to our TransformerDecoder to retrieve an attention mask that we can pass to our MultiHeadAttention layers.
 
-mask is a square matrix with shape (sequence_length, sequence_length), with 1s in the lower triangle and 0s everywhere else. For example, if sequence_length is 4, mask is:
+**mask** is a square matrix with shape (sequence_length, sequence_length), with 1s in the lower triangle and 0s everywhere else. For example, if sequence_length is 4, mask is:
 
-tf.Tensor($$\[1 0 0 0$$\
-$$1 1 0 0$$\
-$$1 1 1 0$$\
-$$1 1 1 1$$], shape=(4, 4), dtype=int32)
+tf.Tensor($$\[1 0 0 0$$ $$1 1 0 0$$ $$1 1 1 0$$ $$1 1 1 1$$], shape=(4, 4), dtype=int32)
 
 ```{r}
 # Define custom transformer decoder layer
@@ -1349,14 +1346,14 @@ transformer_decoder <- layer_transformer_decoder(
 )
 
 
-decoder_intermediate <- transformer_decoder(
-  decoder_outputs
-) %>%
-  layer_dropout(rate = 0.5) %>%
-  layer_dense(
-    units = vocab_size,
-    activation = "softmax"
-  )
+# decoder_intermediate <- transformer_decoder(
+#   decoder_outputs
+# ) %>%
+#   layer_dropout(rate = 0.5) %>%
+#   layer_dense(
+#     units = vocab_size,
+#     activation = "softmax"
+#   )
 
 # Build Decoder
 # Create input layer for target language (Spanish)
@@ -1370,8 +1367,7 @@ decoder_outputs <- decoder_inputs %>%
     input_dim = vocab_size,
     output_dim = embed_dim
   ) %>%
-  # Process through transformer decoder
-  # Note: encoder_outputs are passed as second argument
+  # Process through transformer decoder. Note: encoder_outputs are passed as second argument
   transformer_decoder(., encoder_outputs) %>%
   # Add dropout for regularization
   layer_dropout(rate = 0.5) %>%
@@ -1404,14 +1400,14 @@ transformer %>% fit(
 
 
 # Code for loading saved model (commented out)
-# transformer <- load_model_tf(
-#   "end_to_end_transformer.keras",
-#   custom_objects = list(
-#     layer_positional_embedding,
-#     layer_transformer_decoder,
-#     layer_transformer_encoder
-#   )
-# )
+transformer <- load_model_tf(
+  "end_to_end_transformer.keras",
+  custom_objects = list(
+    layer_positional_embedding,
+    layer_transformer_decoder,
+    layer_transformer_encoder
+  )
+)
 ```
 
 ```{r}

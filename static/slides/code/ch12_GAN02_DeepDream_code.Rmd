@@ -1,0 +1,288 @@
+---
+title: "Generative Deep Learning: DeepDream"
+output: 
+  html_notebook: 
+    theme: cerulean
+    highlight: textmate
+editor_options: 
+  chunk_output_type: console
+---
+
+### 12.2.1 Implementing DeepDream in Keras
+
+```{r}
+library(keras)
+library(tensorflow)
+library(tfdatasets)
+library(tfautograph)
+
+base_image_path <- get_file(
+  "coast.jpg", origin = "https://img-datasets.s3.amazonaws.com/coast.jpg")
+
+plot(as.raster(jpeg::readJPEG(base_image_path)))
+```
+
+For DeepDream, a **pretrained convolutional neural network (convnet)** is essential because the technique leverages the **representations that the network has already learned** from a large dataset.
+
+*   DeepDream works by running a pretrained convnet in reverse to **maximize the activation of entire layers** (or specific filters) within the network.
+
+*   The choice of **pretrained convnet architecture** (like VGG16, VGG19, Xception, ResNet50, or InceptionV3) will influence the resulting visualizations due to the different features learned by each architecture.
+
+*   The original DeepDream release used an **Inception model**, and in practice, Inception models are known to produce visually appealing DeepDreams.
+
+*   To implement DeepDream, you typically instantiate a pretrained convnet (like InceptionV3 from Keras with weights pretrained on ImageNet) and then create a **feature extractor model**. This feature extractor outputs the activations of various intermediate layers of the pretrained network, which are then used to compute the DeepDream loss that is maximized through gradient ascent on the input image.
+
+*   The overrepresentation of certain classes like dog breeds and bird species in the ImageNet training data is a byproduct of the DeepDream algorithm when using such networks, leading to common pareidolic artifacts in the generated images.
+
+```{r}
+model <- application_inception_v3(weights = "imagenet", include_top = FALSE)
+model
+```
+
+We will utilize our **pretrained convolutional neural network** to construct a **feature extractor model**. This model's purpose is to output the **activation values** from the selected **intermediate layers** of the convnet, which are specified in the subsequent code. For each of these chosen layers, we will assign a **scalar score** that dictates **how much influence the activations of that layer will have on the overall loss function** that we aim to maximize during the **gradient ascent process**. To discover the full set of available layer names within the pretrained model, you can simply use the command `print(model)`. This will allow you to explore and experiment with different layers and their impact on the DeepDream visualizations. The choice of layers and their corresponding weights significantly affects the visual outcomes of the DeepDream algorithm.
+
+```{r}
+# Layers for which we try to maximize activation, as well as their weight in the total loss. 
+layer_settings <- c(
+  "mixed4" = 1.0,
+  "mixed5" = 1.5,
+  "mixed6" = 2.0,
+  "mixed7" = 2.5
+)
+
+outputs <- list()
+for(layer_name in names(layer_settings))
+  # Collect in a named list the output symbolic tensor from each layer.
+  outputs[[layer_name]] <- get_layer(model, layer_name)$output
+outputs
+
+# A model that returns the activation values for every target layer (as a named list)
+feature_extractor <- keras_model(inputs = model$inputs,
+                                 outputs = outputs)
+```
+
+To compute the loss for DeepDream, we aim to **maximize the activation of entire layers** (rather than specific filters) within it. For each layer's activations, we calculate a **loss component**. This component is typically the **mean of the squared values** (L2 norm) of the activations across the feature maps of that layer. To avoid border artifacts, only non-border pixels might be included in this calculation. The **total DeepDream loss**  is the **sum of the weighted loss components** from all the selected intermediate layers. This total loss is the quantity you will seek to **maximize** during the gradient ascent process.
+
+```{r}
+compute_loss <- function(input_image) {
+  features <- feature_extractor(input_image)
+
+  feature_losses <- names(features) %>%
+    lapply(function(name) {
+      coeff <- layer_settings[[name]]
+      # Extract activations
+      activation <- features[[name]]
+      # We avoid border artifacts by involving only nonborder pixels in the loss.
+      coeff * mean(activation[, 3:-3, 3:-3, ] ^ 2)
+    })
+
+  # feature_losses is a list of scalar tensors. Sum up the loss from each feature.
+  Reduce(`+`, feature_losses)
+}
+```
+
+Now let’s set up the gradient-ascent process that we will run at each octave. 
+You’ll recognize that it’s the same thing as the filter-visualization technique 
+from chapter 9. The DeepDream algorithm is simply a multiscale form of filter visualization.
+
+```{r}
+# We make the training step fast by compiling it as a tf_function()
+gradient_ascent_step <- tf_function(
+  function(image, learning_rate) {
+
+    with(tf$GradientTape() %as% tape, {
+      tape$watch(image)
+      # Compute gradients of DeepDream loss with respect to the current image.
+      loss <- compute_loss(image)
+    })
+
+    grads <- tape$gradient(loss, image) %>%
+      tf$math$l2_normalize() # Normalize gradients, as in chapter 9
+
+    image %<>% `+`(learning_rate * grads)
+
+    list(loss, image)
+  })
+
+# This runs gradient ascent for a given image scale (octave).
+gradient_ascent_loop <-
+  function(image, iterations, learning_rate, max_loss = -Inf) {
+
+    learning_rate %<>% as_tensor("float32")
+
+    for(i in seq(iterations)) {
+
+      c(loss, image) %<-% gradient_ascent_step(image, learning_rate)
+
+      loss %<>% as.numeric()
+      # Break out if the loss crosses a certain threshold (overoptimizing 
+      # would create unwanted image artifacts).
+      if(loss > max_loss)
+        break
+
+      writeLines(sprintf(
+        "... Loss value at step %i: %.2f", i, loss))
+    }
+
+    image
+  }
+```
+
+The outer loop of the DeepDream algorithm involves processing the input image at **multiple scales**, also known as **octaves**. This multi-scale approach improves the quality of the generated visualizations. Here's a brief description of this loop based on the sources:
+
+1.  **Define the Octaves:** First, a **list of scales (octaves)** is defined at which the image will be processed. We will use **three octaves**.
+
+2.  **Iterate Through Octaves:** The algorithm then **iterates through these octaves**, typically from the smallest scale to the largest.
+
+3.  **Process at Each Octave:** For each octave, the current version of the image is processed using a **gradient ascent loop (`gradient_ascent_loop()`)**. This loop performs a number of **gradient ascent steps** to **maximize the DeepDream loss** (which is computed based on the activations of selected layers in a pretrained convnet).
+
+4.  **Upscale the Image:** Between processing at successive octaves (from a smaller scale to a larger one), the image is **upscaled**. In the example, the image is upscaled by **40% (1.4×)**.
+
+5.  **Detail Reinjection:** To prevent the loss of image detail during upscaling, the **lost details** (the difference between the original image resized to the larger scale and the original resized to the smaller scale and then upscaled) are **calculated and added back** into the dreamed image. This helps to maintain sharper and more intricate visualizations across different scales.
+
+In summary, the outer loop of DeepDream systematically processes the image at increasing scales, performing gradient ascent to enhance network activations and reinjecting lost details after each upscaling step to produce the final dreamed image.
+
+```{r}
+step <- 20 # Gradient ascent step size 
+num_octaves <- 3L # Number of scales at which to run gradient ascent
+octave_scale <- 1.4 # Size ratio between successive scales
+iterations <- 30 # Number of gradient ascent steps per scale
+max_loss <- 15 # We’ll stop the gradient-ascent process for a scale if the loss gets higher than this.
+```
+
+A couple of utility functions to load and save images
+
+```{r}
+# Load, resize, and format pictures into appropriate arrays
+preprocess_image <- tf_function(function(image_path) {
+  image_path %>%
+    tf$io$read_file() %>%
+    tf$io$decode_image() %>%
+    # Add batch axis, equivalent to .[tf$newaxis, all_dims()]. axis arg is 0-based.
+    tf$expand_dims(axis = 0L) %>%
+    # Cast from 'uint8'.
+    tf$cast("float32") %>%
+    inception_v3_preprocess_input()
+})
+
+# Convert a tensor array into a valid image and undo preprocessing 
+deprocess_image <- tf_function(function(img) {
+  img %>%
+    # Drop first dim—the batch axis (must be size 1), the inverse of tf$expand_dims().
+    tf$squeeze(axis = 0L) %>%
+    # Rescale so values in [-1, 1] are remapped to [0, 255].
+    { (. * 127.5) + 127.5 } %>%
+    # saturate_case() clips values to the dtype range: [0, 255].
+    tf$saturate_cast("uint8")
+})
+
+
+display_image_tensor <- function(x, ..., max = 255,
+                                 plot_margins = c(0, 0, 0, 0)) {
+
+  if (!is.null(plot_margins))
+    # Default to no margins when plotting images.
+    withr::local_par(mar = plot_margins)
+
+  x %>%
+    # Convert tensors to R arrays.
+    as.array() %>%
+    drop() %>%
+    # Convert to R native raster format.
+    as.raster(max = max) %>%
+    plot(..., interpolate = FALSE)
+}
+```
+
+`withr::local_*` functions, such as `withr::local_par()` and `withr::local_options()`, are used to **temporarily modify global settings** within a specific block of code. They ensure that when the execution of that code block is finished, the **previous settings are automatically restored**.
+
+*   `withr::local_par()` is used when defining the `display_image_tensor()` function to set plotting parameters using `par()` before calling `plot()`. The key benefit is that **upon exiting the `display_image_tensor()` function, the original plotting parameters are reinstated**. This prevents the function from making permanent changes to the global plotting environment.
+*   `withr::local_options()` functions in a similar way, but for R options.
+
+The overall purpose of `withr::local_*` functions is to make code more robust and predictable by **encapsulating changes to global state** and preventing unintended side effects that might persist after a function or code block has completed. This makes functions more reusable and easier to reason about in different contexts.
+
+```{r eval=FALSE}
+# If not using `withr::local_par()`
+display_image_tensor <- function()
+  <...>
+  opar <- par(mar = plot_margins)
+  on.exit(par(opar))
+  <...>
+}
+
+```
+
+The outer loop of the DeepDream algorithm processes the input image at multiple **scales, or octaves**, to enhance the visualizations. Without a specific mechanism to address the information loss during upscaling, the resulting images would become progressively **blurry or pixelated** with each increase in scale. To counteract this, a **"simple trick"** is employed after each upscaling step:
+
+*   The rationale is that even though the dream image is being modified through gradient ascent, we still have the **original image** and can determine what its appearance should be at the new, larger scale.
+
+*   Given a smaller image size **S** and a larger image size **L**, the process involves calculating the **difference** between:
+    *   The **original image resized to size L**. This represents the high-quality version of the original content at the larger scale.
+    *   The **original image resized to size S and then upscaled to size L**. This represents a lower-quality, possibly pixelated, version of the original content at the larger scale, highlighting the detail lost during the initial downscaling to size S.
+
+*   This **difference quantifies the details lost** when transitioning from the smaller scale **S** to the larger scale **L**.
+
+*   Finally, these **"lost details" are reinjected back into the dream image** that has been processed at the current octave and then upscaled. This effectively adds back the finer information that would have been lost due to the scaling, leading to more detailed and coherent DeepDream visualizations across different octaves.
+
+This process of upscaling and detail reinjection is repeated for each octave in the loop, ensuring that the final DeepDream image retains a significant amount of its original structure and detail while being enhanced by the network's learned features.
+
+```{r}
+# Load and preprocess the test image.
+original_img <- preprocess_image(base_image_path)
+original_HxW <- dim(original_img)[2:3]
+
+# Compute the target shape of the image at different octaves.
+calc_octave_HxW <- function(octave) {
+  as.integer(round(original_HxW / (octave_scale ^ octave)))
+}
+
+octaves <- seq(num_octaves - 1, 0) %>%
+  { zip_lists(num = .,
+              HxW = lapply(., calc_octave_HxW)) }
+
+str(octaves)
+
+shrunk_original_img <- original_img %>% tf$image$resize(octaves[[1]]$HxW)
+
+# Save a reference to the original image (we need to keep the original around).
+img <- original_img
+# Iterate over the different octaves.
+for (octave in octaves) { 
+  cat(sprintf("Processing octave %i with shape (%s)\n",
+              octave$num, paste(octave$HxW, collapse = ", ")))
+
+  img <- img %>%
+    tf$image$resize(octave$HxW) %>%
+    # Run gradient ascent, altering the dream.
+    gradient_ascent_loop(iterations = iterations,
+                         learning_rate = step,
+                         max_loss = max_loss)
+
+  # Scale up the smaller version of the original image: it will be pixelated.
+  upscaled_shrunk_original_img <-
+    shrunk_original_img %>%
+    tf$image$resize(octave$HxW)
+
+  # Compute the high-quality version of the original image at this size.
+  same_size_original <-
+    original_img %>%
+    tf$image$resize(octave$HxW)
+
+  # The difference between the two is the detail that was lost when scaling up.
+  lost_detail <-
+    same_size_original - upscaled_shrunk_original_img
+
+  # Reinject the lost detail into the dream.
+  img %<>% `+`(lost_detail)
+
+  shrunk_original_img <- original_img %>% tf$image$resize(octave$HxW)
+}
+
+img <- deprocess_image(img)
+
+img %>% display_image_tensor()
+
+img %>%
+  tf$io$encode_png() %>%
+  tf$io$write_file("dream.png", .)
+```

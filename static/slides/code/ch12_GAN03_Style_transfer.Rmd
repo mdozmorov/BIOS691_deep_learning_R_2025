@@ -1,0 +1,380 @@
+---
+title: "Generative Deep Learning: Neural style transfer"
+output: 
+  html_notebook: 
+    theme: cerulean
+    highlight: textmate
+editor_options: 
+  chunk_output_type: console
+---
+
+## 12.3 Neural style transfer
+
+```{r}
+library(keras)
+library(tensorflow)
+library(tfdatasets)
+library(tfautograph)
+```
+```{r}
+# Load, resize, and format pictures into appropriate arrays
+preprocess_image <- tf_function(function(image_path) {
+  image_path %>%
+    tf$io$read_file() %>%
+    tf$io$decode_image() %>%
+    # Add batch axis, equivalent to .[tf$newaxis, all_dims()]. axis arg is 0-based.
+    tf$expand_dims(axis = 0L) %>%
+    # Cast from 'uint8'.
+    tf$cast("float32") %>%
+    inception_v3_preprocess_input()
+})
+
+# Convert a tensor array into a valid image and undo preprocessing 
+deprocess_image <- tf_function(function(img) {
+  img %>%
+    # Drop first dim—the batch axis (must be size 1), the inverse of tf$expand_dims().
+    tf$squeeze(axis = 0L) %>%
+    # Rescale so values in [-1, 1] are remapped to [0, 255].
+    { (. * 127.5) + 127.5 } %>%
+    # saturate_case() clips values to the dtype range: [0, 255].
+    tf$saturate_cast("uint8")
+})
+
+
+display_image_tensor <- function(x, ..., max = 255,
+                                 plot_margins = c(0, 0, 0, 0)) {
+
+  if (!is.null(plot_margins))
+    # Default to no margins when plotting images.
+    withr::local_par(mar = plot_margins)
+
+  x %>%
+    # Convert tensors to R arrays.
+    as.array() %>%
+    drop() %>%
+    # Convert to R native raster format.
+    as.raster(max = max) %>%
+    plot(..., interpolate = FALSE)
+}
+```
+The key notion behind implementing style transfer is the same idea that’s central to all deep learning algorithms: **you define a loss function to specify what you want to achieve, and you minimize this loss**. In the context of style transfer, the goal is conserving the content of the original image while adopting the style of the reference image. Therefore, an appropriate loss function to minimize would be:
+
+```{r eval=FALSE}
+loss <- distance(style(reference_image) - style(combination_image)) +
+        distance(content(original_image) - content(combination_image))
+
+```
+
+Here, `distance()` is a norm function like the L2 norm, `content()` is a function that computes a representation of an image's content, and `style()` is a function that computes a representation of an image's style. Minimizing this loss causes the style of the combination image to become close to the style of the reference image, and the content of the combination image to become close to the content of the original image, thus achieving style transfer. The fundamental observation by Gatys et al. was that deep convolutional neural networks offer a way to mathematically define these style and content functions.
+
+### 12.3.3 Neural style transfer in Keras
+
+The code demonstrates how to use the **Keras deep learning library** and a **pretrained VGG19 convolutional neural network** to transfer the artistic style from a reference image to a content image.
+
+*   **Loading and preprocessing the style and content images** to ensure they are in a suitable format for the VGG19 network.
+
+*   **Setting up the VGG19 model** as a feature extractor to access the activations of its intermediate layers, which are crucial for defining both content and style.
+
+*   **Defining the content loss** using the activations of a high-level layer (specifically `block5_conv2` in this example) to ensure the generated image retains the content of the original image.
+
+*   **Defining the style loss** by computing Gram matrices from the activations of multiple layers (from `block1_conv1` to `block5_conv1`) to capture the textures and visual patterns of the style reference image.
+
+*   **Including a total variation loss** to promote spatial smoothness in the generated image.
+
+*   **Defining a combined loss function** as a weighted sum of the content loss, style loss, and total variation loss. The weights allow for control over the degree of content and style preservation.
+
+*   **Setting up an optimization process** (using SGD with a learning rate schedule) to minimize this combined loss with respect to the pixels of the generated (combination) image.
+
+```{r}
+# Path to the image we want to transform
+base_image_path <- get_file(
+  "sf.jpg",  origin = "https://img-datasets.s3.amazonaws.com/sf.jpg")
+
+# Path to the style image
+style_reference_image_path <- get_file(
+  "starry_night.jpg",
+  origin = "https://img-datasets.s3.amazonaws.com/starry_night.jpg")
+
+c(original_height, original_width) %<-% {
+  base_image_path %>%
+    tf$io$read_file() %>%
+    tf$io$decode_image() %>%
+    dim() %>% .[1:2]
+}
+img_height <- 400
+# Dimensions of the generated picture
+img_width <- round(img_height * (original_width /
+                                   original_height))
+```
+
+Auxiliary functions for loading, preprocessing, and postprocessing the images 
+that go in and out of the VGG19 convnet.
+
+```{r}
+# Open, resize, and format pictures into appropriate arrays
+preprocess_image <- function(image_path) {
+  image_path %>%
+    tf$io$read_file() %>%
+    tf$io$decode_image() %>%
+    tf$image$resize(as.integer(c(img_height, img_width))) %>%
+    # Add a batch dimension.
+    k_expand_dims(axis = 1) %>%
+    imagenet_preprocess_input()
+}
+
+# Convert a tensor into a valid image
+deprocess_image <- tf_function(function(img) {
+  if (length(dim(img)) == 4)
+    # Remove batch dimension
+    img <- k_squeeze(img, axis = 1)
+
+  c(b, g, r) %<-% {
+    img %>%
+      k_reshape(c(img_height, img_width, 3)) %>%
+      # Unstack along the third axis, and return a list of length 3.
+      k_unstack(axis = 3)
+  }
+
+  # Zero-center by removing the mean pixel value from ImageNet. This
+  # reverses a transformation done by imagenet_preprocess_input().
+  r %<>% `+`(123.68)
+  g %<>% `+`(103.939)
+  b %<>% `+`(116.779)
+
+  # Note that we’re reversing the order of the channels, BGR to RGB. 
+  # This is also part of the reversal of imagenet_preprocess_input().
+  k_stack(c(r, g, b), axis = 3) %>%
+    k_clip(0, 255) %>%
+    k_cast("uint8")
+})
+```
+
+We’ll use the pre-trained convnet to create a feature exactor model that returns 
+the activations of intermediate layers—all layers in the model this time.
+
+```{r}
+# Build a VGG19 model loaded with pretrained ImageNet weights.
+model <- application_vgg19(weights = "imagenet", include_top = FALSE)
+
+outputs <- list()
+for (layer in model$layers)
+  outputs[[layer$name]] <- layer$output
+
+# A model that returns the activation values for every target layer (as a named list)
+feature_extractor <- keras_model(inputs = model$inputs,
+                                 outputs = outputs)
+```
+
+Let’s define the content loss, which will make sure the top layer of the VGG19 convnet
+has a similar view of the style image and the combination image.
+
+```{r}
+content_loss <- function(base_img, combination_img)
+    sum((combination_img - base_img)^2)
+```
+
+Next is the style loss. It uses an auxiliary function to compute the Gram matrix of an
+input matrix: a map of the correlations found in the original feature matrix.
+
+```{r}
+# x has the shape (height, width, features).
+gram_matrix <- function(x) {
+  n_features <- tf$shape(x)[3]
+  x %>%
+    # Flatten the first two spatial axes, and preserve the features axis.
+    tf$reshape(c(-1L, n_features)) %>%
+    # The output will have the shape (n_features, n_features).
+    tf$matmul(., ., transpose_a = TRUE)
+}
+
+style_loss <- function(style_img, combination_img) {
+  S <- gram_matrix(style_img)
+  C <- gram_matrix(combination_img)
+  channels <- 3
+  size <- img_height * img_width
+  sum((S - C) ^ 2) /
+    (4 * (channels ^ 2) * (size ^ 2))
+}
+```
+
+To these two loss components, we add a third: the total variation loss, which operates
+on the pixels of the generated combination image. It encourages spatial continuity in
+the generated image, thus avoiding overly pixelated results. We can interpret it as a
+regularization loss.
+
+```{r}
+total_variation_loss <- function(x) {
+  a <- k_square(x[, NA:(img_height-1), NA:(img_width-1), ] -
+                x[, 2:NA             , NA:(img_width-1), ])
+  b <- k_square(x[, NA:(img_height-1), NA:(img_width-1), ] -
+                x[, NA:(img_height-1), 2:NA            , ])
+  sum((a + b) ^ 1.25)
+}
+```
+
+The loss being minimized is a **weighted average of content loss, style loss (across multiple layers), and total variation loss**. 
+Content loss uses only the `block5_conv2` layer, while style loss uses a range of layers. 
+The **`content_weight`** determines how recognizable the original content will be in the final image.
+
+```{r}
+# The list of layers to use for the style loss
+style_layer_names <- c(
+    "block1_conv1",
+    "block2_conv1",
+    "block3_conv1",
+    "block4_conv1",
+    "block5_conv1"
+)
+content_layer_name <- "block5_conv2" # The layer to use for the content loss
+total_variation_weight <- 1e-6 # The contribution weight of the total variation loss
+content_weight <- 2.5e-8 # The contribution weight of the content loss
+style_weight <- 1e-6 # The contribution weight of the style loss
+
+compute_loss <-
+  function(combination_image, base_image, style_reference_image) {
+
+    input_tensor <-
+      list(base_image,
+           style_reference_image,
+           combination_image) %>%
+      k_concatenate(axis = 1)
+
+    features <- feature_extractor(input_tensor)
+    layer_features <- features[[content_layer_name]]
+    base_image_features <- layer_features[1, , , ]
+    combination_features <- layer_features[3, , , ]
+
+    # Initialize the loss to 0
+    loss <- 0
+    # Add the content loss.
+    loss %<>% `+`(
+      content_loss(base_image_features, combination_features) *
+        content_weight
+    )
+
+    # Add the style loss for each style layer.
+    for (layer_name in style_layer_names) {
+      layer_features <- features[[layer_name]]
+      style_reference_features <- layer_features[2, , , ]
+      combination_features <- layer_features[3, , , ]
+
+      loss %<>% `+`(
+        style_loss(style_reference_features, combination_features) *
+          style_weight / length(style_layer_names)
+      )
+    }
+
+    # Add the total variation loss.
+    loss %<>% `+`(
+      total_variation_loss(combination_image) *
+        total_variation_weight
+    )
+
+    # Return the sum of content loss, style loss, and total variation loss.
+    loss
+  }
+```
+
+The gradient descent process is set up using the **SGD optimizer** 
+(instead of the original paper's L-BFGS, which is not available in TensorFlow). 
+A **learning-rate schedule** is used to gradually decrease the learning rate 
+**from 100 to about 20**, allowing for fast initial progress and more careful 
+refinement near the loss minimum.
+
+```{r}
+# We make the training step fast by compiling it as a tf_function().
+compute_loss_and_grads <- tf_function(
+  function(combination_image, base_image, style_reference_image) {
+    with(tf$GradientTape() %as% tape, {
+      loss <- compute_loss(combination_image,
+                           base_image,
+                           style_reference_image)
+    })
+    grads <- tape$gradient(loss, combination_image)
+    list(loss, grads)
+  })
+
+# We’ll start with a learning rate of 100 and decrease it by 4% every 100 steps.
+optimizer <- optimizer_sgd(
+  learning_rate_schedule_exponential_decay(
+    initial_learning_rate = 100, decay_steps = 100, decay_rate = 0.96))
+
+
+
+optimizer <-
+  optimizer_sgd(learning_rate = learning_rate_schedule_exponential_decay(
+    initial_learning_rate = 100,
+    decay_steps = 100,
+    decay_rate = 0.96
+  ))
+
+
+base_image <- preprocess_image(base_image_path)
+style_reference_image <- preprocess_image(style_reference_image_path)
+# Use a tf$Variable() to store the combination image because we’ll be updating it during training.
+combination_image <- tf$Variable(preprocess_image(base_image_path))
+```
+
+```{r}
+output_dir <- fs::path("style-transfer-generated-images")
+iterations <- 4000
+for (i in seq(iterations)) {
+  c(loss, grads) %<-% compute_loss_and_grads(
+    combination_image, base_image, style_reference_image)
+
+  # Update the combination image in a direction that reduces the style transfer loss.
+  optimizer$apply_gradients(list(
+    tuple(grads, combination_image)))
+
+  # Save the combination image at regular intervals.
+  if ((i %% 100) == 0) {
+    cat(sprintf("Iteration %i: loss = %.2f\n", i, loss))
+    img <- deprocess_image(combination_image)
+    display_image_tensor(img)
+    fname <- sprintf("combination_image_at_iteration_%04i.png", i)
+    tf$io$write_file(filename = output_dir / fname,
+                     contents = tf$io$encode_png(img))
+  }
+}
+```
+
+Iteration 100: loss = 4580.07
+Iteration 200: loss = 4107.25
+Iteration 300: loss = 3850.54
+Iteration 400: loss = 3686.38
+Iteration 500: loss = 3571.05
+Iteration 600: loss = 3484.89
+Iteration 700: loss = 3417.63
+Iteration 800: loss = 3363.35
+Iteration 900: loss = 3318.54
+Iteration 1000: loss = 3280.97
+Iteration 1100: loss = 3248.96
+Iteration 1200: loss = 3221.32
+Iteration 1300: loss = 3197.28
+Iteration 1400: loss = 3176.08
+Iteration 1500: loss = 3157.28
+Iteration 1600: loss = 3140.56
+Iteration 1700: loss = 3125.58
+Iteration 1800: loss = 3112.07
+Iteration 1900: loss = 3099.84
+Iteration 2000: loss = 3088.73
+Iteration 2100: loss = 3078.58
+Iteration 2200: loss = 3069.27
+Iteration 2300: loss = 3060.71
+Iteration 2400: loss = 3052.82
+Iteration 2500: loss = 3045.55
+Iteration 2600: loss = 3038.81
+Iteration 2700: loss = 3032.55
+Iteration 2800: loss = 3026.73
+Iteration 2900: loss = 3021.31
+Iteration 3000: loss = 3016.26
+Iteration 3100: loss = 3011.55
+Iteration 3200: loss = 3007.13
+Iteration 3300: loss = 3002.98
+Iteration 3400: loss = 2999.08
+Iteration 3500: loss = 2995.42
+Iteration 3600: loss = 2991.96
+Iteration 3700: loss = 2988.71
+Iteration 3800: loss = 2985.65
+Iteration 3900: loss = 2982.76
+Iteration 4000: loss = 2980.03

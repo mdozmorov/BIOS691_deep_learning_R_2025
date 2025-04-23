@@ -1,172 +1,39 @@
----
-title: "Deep Learning with R"
-subtitle: "Generative Adversarial Networks, Autoencoders"
-author: "Mikhail Dozmorov"
-institute: "Virginia Commonwealth University"
-date: "`r Sys.Date()`"
-output:
-  xaringan::moon_reader:
-    lib_dir: libs
-    css: ["xaringan-themer.css", "xaringan-my.css"]
-    nature:
-      ratio: '16:9'
-      highlightStyle: github
-      highlightLines: true
-      countIncrementalSlides: false
----
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Generative Deep Learning</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Mikhail Dozmorov" />
+    <meta name="date" content="2025-04-23" />
+    <script src="libs/header-attrs-2.29/header-attrs.js"></script>
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+    <link rel="stylesheet" href="xaringan-my.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
 
-```{r xaringan-themer, include = FALSE}
-library(xaringanthemer)
-mono_light(
-  base_color = "midnightblue",
-  header_font_google = google_font("Josefin Sans"),
-  text_font_google   = google_font("Montserrat", "500", "500i"),
-  code_font_google   = google_font("Droid Mono"),
-  link_color = "#8B1A1A", #firebrick4, "deepskyblue1"
-  text_font_size = "28px"
-)
-```
-
-## Generative adversarial networks (GANs)
-
-> The most important [recent development], in my opinion, is adversarial training (also called GAN for Generative Adversarial Networks). This is an idea that was originally proposed by Ian Goodfellow when he was a student with Yoshua Bengio at the University of Montreal (he since moved to Google Brain and recently to OpenAI).
-
-> This, and the variations that are now being proposed, is the most interesting idea in the last 10 years in ML, in my opinion.
-
-.right[Yann LeCun]
-
-.small[https://danieltakeshi.github.io/2017/03/05/understanding-generative-adversarial-networks/]
+.title[
+# Generative Deep Learning
+]
+.subtitle[
+## Image generation
+]
+.author[
+### Mikhail Dozmorov
+]
+.institute[
+### Virginia Commonwealth University
+]
+.date[
+### 2025-04-23
+]
 
 ---
-## Sequence data generation
 
-*   The universal method for generating sequence data in deep learning involves **training a model** (typically a **Transformer or an RNN**) to **predict the next token or the next few tokens in a sequence**.
 
-*   The model uses the **previous tokens as input** for this prediction. For example, given "the cat is on the," the model is trained to predict "mat".
 
-*   Tokens are usually **words or characters**, especially when dealing with text data.
 
----
-## Sequence data generation
-
-*   A network capable of modeling the probability of the next token given the preceding ones is called a **language model**.
-
-*   A language model **captures the latent space of language** and its **statistical structure**.
-
-*   Once a language model is trained, you can **sample from it to generate new sequences**.
-
-*   This involves **feeding the model an initial string of text** (known as **conditioning data**).
-
----
-## Sequence data generation
-
-*   The model is then asked to **generate the next character or word** (or even several tokens at once).
-
-*   The **generated output is added back to the input data**, and this process is **repeated multiple times**.
-
-*   This iterative loop allows for the generation of sequences of **arbitrary length** that reflect the **structure of the training data**, often resembling human-written sentences.
-
-.center[<img src="img/generative_text_12_1.png" height=200>]
-
----
-## Sequence data generation
-
-The **sampling strategy** for choosing the next token is crucial.
-
-*   A naive approach is **greedy sampling**, where the most likely next character is always chosen, but this often leads to repetitive and predictable strings.
-
-*   A more interesting method is **stochastic sampling**, which introduces randomness by sampling from the probability distribution for the next character.
-
----
-## Sequence data generation
-
-A parameter called the **softmax temperature** can be used to control the amount of stochasticity (randomness) in the sampling process.
-
-*   **Higher temperatures** lead to more surprising and unstructured generated data due to sampling from distributions with higher entropy.
-
-*   **Lower temperatures** result in less randomness and more predictable generated data from distributions with lower entropy.
-
----
-## LSTMs as Generative Networks
-
-- LSTMs trained on collections of text can be run to generate text - predict the next token(s) given previous tokens.
-
-- LSTMs are better for structured, sequential tasks, e.g., text; GANs excel in image synthesis.
-
-- **Text/Code Generation:** Story writing, chatbot responses, AI-assisted programming.
-- **Music Generation:** Composing melodies, generating polyphonic music.
-- **Image Captioning:** Generating textual descriptions from images.
-
----
-## A brief history of generative deep learning for sequence generation
-
-*   The **LSTM algorithm**, which enabled successful sequence data generation with recurrent networks, was developed in **1997**.
-
-*   Early on, the LSTM algorithm was used to **generate text character by character**.
-
-*   In **2002**, **Douglas Eck** applied **LSTM to music generation** for the first time, showing promising results.
-
----
-## A brief history of generative deep learning for sequence generation
-
-*   In the late 2000s and early 2010s, **Alex Graves** did important pioneering work using recurrent networks for sequence data generation, notably his **2013 work on generating human-like handwriting** using recurrent mixture density networks.
-
-*   Between **2015 and 2017**, recurrent neural networks were successfully used for various generative tasks including **text and dialogue generation, music generation, and speech synthesis**.
-
----
-## A brief history of generative deep learning for sequence generation
-
-*   Around **2017–2018**, the **Transformer architecture** began to replace recurrent neural networks for generative sequence models, particularly for **language modeling (word-level text generation)**.  
-
-*   A well-known example of a generative Transformer is **GPT-3**, a large language model trained by OpenAI, which gained attention in **2020** for its ability to generate plausible-sounding text on almost any topic.  
-
-*   **GPT-4 (2023, OpenAI)** – An improved version of GPT-3, demonstrating stronger reasoning, factual accuracy, and multimodal capabilities (accepting text and image inputs).  
-
----
-## Latest Advances in Large Language Models (LLMs)
-
-*   **Gemini 1.5 (2024, Google DeepMind)** – A multimodal LLM with **longer context memory** (up to 1 million tokens), significantly improving code and document understanding.  
-
-*   **Claude 3 (2024, Anthropic)** – Focused on safety and interpretability, Claude 3 exhibits near-GPT-4 performance while being more efficient.  
-
-*   **Mistral & Mixtral (2023, Mistral AI)** – Open-weight LLMs with **efficient mixture-of-experts (MoE)** architectures, balancing accuracy and inference speed.  
-
-*   **Llama 3 (2024, Meta AI)** – The next generation of Meta’s **open-source** language models, designed for improved efficiency and multilingual support. 
-
----
-## A Transformer-based sequence-to-sequence model
-
-*   We will train a model to **predict a probability distribution over the next word in a sentence**, given a number of initial words.
-
-*   The model takes as **input a sequence of N words** (indexed from 1 to N).
-
-*   The model aims to **predict the sequence offset by one** (from 2 to N+1).
-
-*   We employ **causal masking** to ensure that when predicting the word at position `i + 1`, the model only uses words from position 1 to `i`.
-    *   This allows the model to be trained to solve **N mostly overlapping but different problems**: predicting the next word given a sequence of 1 to N prior words.
-    *   This also enables the model to **start predicting with fewer than N words** at generation time.
-
----
-## Plain Next-Word Prediction
-
-Imagine training a model where, for a fixed sequence length (let's say 4 words), you present it with a sequence and ask it to predict the very next word.
-
-*   Input: "the cat sat on" - Target: "the" (next word)
-*   Input: "cat sat on the" - Target: "mat" (next word)
-
-The model learns to predict the single word immediately following a fixed-length input. Limitations:
-
-*   The model is only trained to make a prediction when it has seen the full fixed-length input. It wouldn't inherently know how to start generating from a shorter prompt like just "the".
-*   During training, there's redundant processing of overlapping sequences. For instance, parts of "the cat sat on" and "cat sat on the" are processed independently.
-
----
-## Sequence-to-Sequence Modeling
-
-- In contrast, in a sequence-to-sequence approach, the model is trained on the entire sequence at once. However, due to **causal masking**, when the model is predicting a word at a certain position, it only "sees" the words that came before it in the sequence.
-
-- **Sequence-to-sequence modeling with causal masking optimizes for multiple next-word prediction problems simultaneously** within a given sequence, making it more versatile and efficient for generative tasks compared to plain next-word prediction with a fixed input window.
-
----
 ## Image generation
 
 *   **Image generation** with deep learning involves learning **latent spaces of images** and sampling from them to create new images. **Generative Adversarial Networks** and **Variational Autoencoders (VAEs)** are key techniques for this.
@@ -192,19 +59,20 @@ The model learns to predict the single word immediately following a fixed-length
 ---
 ## Generative adversarial networks (GANs)
 
-.center[<img src="img/gan.png" height=450>]
+.center[&lt;img src="img/gan.png" height=450&gt;]
 
 .small[https://www.analyticsvidhya.com/blog/2020/01/generative-models-gans-computer-vision/]
 
----
+&lt;!--
 ## Generative adversarial networks (GANs)
 
-.pull-left[<img src="img/gan_generator.png" height=300>]
-.pull-right[<img src="img/gan_discriminator.png" height=300>]
-<br>
+.pull-left[&lt;img src="img/gan_generator.png" height=300&gt;]
+.pull-right[&lt;img src="img/gan_discriminator.png" height=300&gt;]
+&lt;br&gt;
 We train the model, calculate the loss function at the end of the discriminator network and backpropagate the loss into both discriminator and generator models.
 
 .small[https://www.analyticsvidhya.com/blog/2020/01/generative-models-gans-computer-vision/]
+--&gt;
 
 ---
 ## Applications of GANs
@@ -218,19 +86,26 @@ We train the model, calculate the loss function at the end of the discriminator 
 ---
 ## Applications of GANs
   
-- **Image**: Generate images, music, or other data forms based on textual descriptions. https://openart.ai
-  - **Image Super-Resolution**: Enhance the resolution of low-quality images by generating missing details.
-  - **Inpainting**: Fill in missing or damaged parts of an image seamlessly.
-  - **Denoising**: Remove noise from images while preserving important details.
-  - **Artistic Style Transfer**: Apply the artistic style of one image to another, creating unique and visually appealing results.
+**Image**: Generate images, music, or other data forms based on textual descriptions. https://openart.ai
+
+- **Image Super-Resolution**: Enhance the resolution of low-quality images by generating missing details.
+
+- **Inpainting**: Fill in missing or damaged parts of an image seamlessly.
+
+- **Denoising**: Remove noise from images while preserving important details.
+
+- **Artistic Style Transfer**: Apply the artistic style of one image to another, creating unique and visually appealing results.
 
 ---
 ## Applications of GANs
 
-- **Security**
-  - **Data Augmentation**: Generate synthetic data to improve the training of machine learning models, enhancing their robustness and generalization.
-  - **Adversarial Attacks and Defense**: Develop and defend against adversarial examples that can fool machine learning models.
-  - **Privacy Preservation**: Generate synthetic yet realistic data to protect sensitive information while maintaining data utility.
+**Security**
+
+- **Data Augmentation**: Generate synthetic data to improve the training of machine learning models, enhancing their robustness and generalization.
+
+- **Adversarial Attacks and Defense**: Develop and defend against adversarial examples that can fool machine learning models.
+
+- **Privacy Preservation**: Generate synthetic yet realistic data to protect sensitive information while maintaining data utility.
 
 .small[https://www.analyticsvidhya.com/blog/2019/04/top-5-interesting-applications-gans-deep-learning/
 
@@ -241,7 +116,7 @@ https://adeshpande3.github.io/Deep-Learning-Research-Review-Week-1-Generative-Ad
 
 **DeepDream is an artistic image-modification technique** that leverages the representations learned by convolutional neural networks (convnets).
 
-.center[ <img src="img/deepdream_ibis.png" height=300> ]
+.center[ &lt;img src="img/deepdream_ibis.png" height=300&gt; ]
 
 .small[ https://github.com/google/deepdream 
 
@@ -272,7 +147,7 @@ DeepDream differs from filter visualization in a few key ways:
 
 *   The input images are processed at **different scales, known as octaves**, which enhances the quality of the visualizations.
 
-.center[ <img src="img/deepdream_octaves.png" height=300> ]
+.center[ &lt;img src="img/deepdream_octaves.png" height=300&gt; ]
 
 ---
 ## DeepDream
@@ -281,7 +156,7 @@ DeepDream differs from filter visualization in a few key ways:
 
 *   The **DeepDream loss** is calculated as a **weighted mean of the L2 norm of the activations of a set of high-level layers**. The specific layers chosen and their weights significantly influence the visual outcome.
 
-.center[ <img src="img/deepdream_octaves.png" height=300> ]
+.center[ &lt;img src="img/deepdream_octaves.png" height=300&gt; ]
 
 ---
 ## DeepDream
@@ -290,24 +165,24 @@ DeepDream differs from filter visualization in a few key ways:
 
 *   To prevent the loss of image detail, **detail reinjection** is used. The difference between the original image and a lower-quality upscaled version of the original image added back into the dream image.
 
-.center[ <img src="img/deepdream_octaves.png" height=300> ]
+.center[ &lt;img src="img/deepdream_octaves.png" height=300&gt; ]
 
 ---
 ## DeepDream
 
-*   Lower layers in the network tend to produce more **geometric patterns**, while higher layers can lead to more recognizable **visual patterns related to objects the network was trained on** (e.g., dog eyes, bird feathers, if trained on ImageNet).
+*   Lower layers tend to produce **geometric patterns**, while higher layers can lead to recognizable **visual patterns related to objects the network was trained on** (e.g., dog eyes, bird feathers, if trained on ImageNet).
 
-*   The results are often described as **trippy and full of algorithmic pareidolia artifacts**, and they can be somewhat **similar to the visual artifacts experienced by humans due to the disruption of the visual cortex via psychedelics**.
+*   The results are often described as **trippy and full of pareidolia artifacts**, and they can be somewhat **similar to the visual artifacts experienced by humans due to the disruption of the visual cortex via psychedelics**.
 
-.center[ <img src="img/deepdream_example.jpeg" height=250> ]
-.center[ https://github.com/mftnakrsu/DeepDream  ]
+.center[ &lt;img src="img/deepdream_example.jpeg" height=250&gt; ]
+.small[ https://github.com/mftnakrsu/DeepDream  ]
 
 ---
 ## GAN applications
 
 StyleGAN2 is a state-of-the-art network in generating realistic images. Besides, it was explicitly trained to have disentangled directions in latent space, which allows efficient image manipulation by varying latent factors
 
-.center[<img src="https://github.com/EvgenyKashin/stylegan2-distillation/raw/master/imgs/title.jpg" height=250>]
+.center[&lt;img src="https://github.com/EvgenyKashin/stylegan2-distillation/raw/master/imgs/title.jpg" height=250&gt;]
 
 .small[Viazovetskyi Y. et al., 2020, "[StyleGAN2 Distillation for Feed-forward Image Manipulation](https://arxiv.org/abs/2003.03581)", arXiv:2003.03581б https://github.com/EvgenyKashin/stylegan2-distillation
 
@@ -331,7 +206,7 @@ Fake celebrity faces, https://medium.com/datadriveninvestor/artificial-intellige
 
 *   The key notion is to **define a loss function** that specifies the goal of conserving content and adopting style, and then to **minimize this loss**. The loss function is generally represented as:
 
-`loss <- distance(style(reference_image) - style(combination_image)) +`
+`loss &lt;- distance(style(reference_image) - style(combination_image)) +`
 `        distance(content(original_image) - content(combination_image))`
 
 ---
@@ -418,14 +293,14 @@ Fake celebrity faces, https://medium.com/datadriveninvestor/artificial-intellige
 
 CycleGAN learns transformation across domains with unpaired data
 
-.center[<img src="https://junyanz.github.io/CycleGAN/images/teaser_high_res.jpg" height=400>]
+.center[&lt;img src="https://junyanz.github.io/CycleGAN/images/teaser_high_res.jpg" height=400&gt;]
 
 .small[https://junyanz.github.io/CycleGAN/]
 
 ---
 ## CycleGAN: domain transformation
 
-.center[<iframe width="672" height="378" src="https://www.youtube.com/embed/9reHvktowLY" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>]
+.center[&lt;iframe width="672" height="378" src="https://www.youtube.com/embed/9reHvktowLY" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen&gt;&lt;/iframe&gt;]
 
 .small[https://junyanz.github.io/CycleGAN/
 
@@ -436,9 +311,9 @@ https://interestingengineering.com/elon-musks-deepfake-video-of-singing-soviet-s
 
 - Autoencoder (**Auto**matically **encoding** data) is an unsupervised neural network trained to reconstruct the input. 
 
-- One or more bottleneck layers have lower dimensionality than the input, which leads to compression of data and forces the autoencoder to extract useful features and omit unimportant features in the reconstruction
+- One or more bottleneck layers have lower dimensionality than the input, which leads to compression of data and forces the autoencoder to extract useful features and omit unimportant features in the reconstruction.
 
-.center[<img src="img/keras_autoencoders_applications.png" height=200>]
+.center[&lt;img src="img/keras_autoencoders_applications.png" height=200&gt;]
 
 .small[https://www.pyimagesearch.com/2020/02/17/autoencoders-with-keras-tensorflow-and-deep-learning/]
 
@@ -447,50 +322,40 @@ https://interestingengineering.com/elon-musks-deepfake-video-of-singing-soviet-s
 
 - Autoencoders learn a **compressed representation** of the input data by reconstructing it on the output of the network.
 
-- Goal: capture the structure of the data $x$ (i.e., intrinsic relationships between the data variables) in a low-dimensional latent space $z$, and allows for more accurate downstream analyses.
+- Goal: capture the structure of the data `\(x\)` (i.e., intrinsic relationships between the data variables) in a low-dimensional latent space `\(z\)`, and allows for more accurate downstream analyses.
 
-.center[<img src="img/autoencoder1.png" height=200>]
+- Applications: Dimensionality reduction; Data denoising; Compression and data generation.
 
----
-## Autoencoder
-
-- Generally, an autoencoder consists of two networks, an encoder and a decoder, which broadly perform the following tasks:
-    - **Encoder**: Maps the high dimensional input data into a latent variable embedding which has lower dimensions than the input.
-    - **Decoder**: Attempts to reconstruct the input data from the embedding.
-
-- Areas of application:
-    - Dimensionality reduction.
-    - Data denoising.
-    - Compression and data generation.
+.center[&lt;img src="img/autoencoder1.png" height=200&gt;]
 
 ---
 ## Basic autoencoder network
 
-.center[<img src="img/autoencoder2.png" height=200>]
+.center[&lt;img src="img/autoencoder2.png" height=200&gt;]
 
-- This network is trained in such a way that the features ( $z$ ) can be used to reconstruct the original input data ( $x$ ). 
+- This network is trained in such a way that the features ( `\(z\)` ) can be used to reconstruct the original input data ( `\(x\)` ). 
 
-- If the output ( $\hat{X}$ ) is different from the input ( $x$ ), the loss penalizes it and helps to reconstruct the input data.
+- If the output ( `\(\hat{X}\)` ) is different from the input ( `\(x\)` ), the loss penalizes it and helps to reconstruct the input data.
 
 ---
 ## How autoencoder learns
 
 - Image denoising problem - removing noise from images.
 
-.center[<img src="img/autoencoder3.png" height=400>]
+.center[&lt;img src="img/autoencoder3.png" height=400&gt;]
 
 .small[https://www.analyticsvidhya.com/blog/2020/02/what-is-autoencoder-enhance-image-resolution/]
 
 ---
 ## Autoencoder calculations
 
-- The model contains an encoder function $f(.)$ parameterised by $\theta$ and a decoder function $g(.)$ parameterised by $\phi$. 
+- The model contains an encoder function `\(f(.)\)` parameterised by `\(\theta\)` and a decoder function `\(g(.)\)` parameterised by `\(\phi\)`. 
 
-- The lower dimensional embedding learned for an input $x$ in the bottleneck layer is $h = f_{\theta}(x)$ and the reconstructed input is $x' = g_{\phi}(f_{\theta}(x))$.
+- The lower dimensional embedding learned for an input `\(x\)` in the bottleneck layer is `\(h = f_{\theta}(x)\)` and the reconstructed input is `\(x' = g_{\phi}(f_{\theta}(x))\)`.
 
-- The parameters $\theta,\phi$ are learned together to output a reconstructed data sample that is ideally the same as the original input $x' \approx g_{\phi}(f_{\theta}(x))$
+- The parameters `\(\theta,\phi\)` are learned together to output a reconstructed data sample that is ideally the same as the original input `\(x' \approx g_{\phi}(f_{\theta}(x))\)`
 
-- There are various metrics used to quantify the error between the input and output such as cross-entropy (CE) or simpler metrics such as mean squared error: $L_{AE}(\theta,\phi) = \frac{1}{n}\sum_{i=0}^n(x_i - g_{\phi}(f_{\theta}(x_i))^2$
+- There are various metrics used to quantify the error between the input and output such as cross-entropy (CE) or simpler metrics such as mean squared error: `\(L_{AE}(\theta,\phi) = \frac{1}{n}\sum_{i=0}^n(x_i - g_{\phi}(f_{\theta}(x_i))^2\)`
 
 ---
 ## Autoencoder variants
@@ -525,7 +390,7 @@ https://interestingengineering.com/elon-musks-deepfake-video-of-singing-soviet-s
 
 *   VAEs blend deep learning with Bayesian inference. Unlike classical autoencoders that map an image to a fixed latent vector, a VAE maps an image to the **parameters of a statistical distribution** (a mean and a variance) in the latent space.
 
-.center[<img src="img/vae.png" height=200>]
+.center[&lt;img src="img/vae.png" height=200&gt;]
 
 .small[https://www.analyticsvidhya.com/blog/2020/01/generative-models-gans-computer-vision/]
 
@@ -534,7 +399,7 @@ https://interestingengineering.com/elon-musks-deepfake-video-of-singing-soviet-s
 
 - The assumption is that the input image has been generated by a statistical process, and that the randomness of this process should be taken into account during encoding and decoding.
 
-.center[<img src="img/vae.png" height=200>]
+.center[&lt;img src="img/vae.png" height=200&gt;]
 
 .small[https://www.analyticsvidhya.com/blog/2020/01/generative-models-gans-computer-vision/]
 
@@ -545,7 +410,7 @@ https://interestingengineering.com/elon-musks-deepfake-video-of-singing-soviet-s
     *   **Encoder:** Takes an input image and maps it to the **mean (`z_mean`) and log-variance (`z_log_var`)** of a probability distribution in the latent space.
     *   **Sampling Layer:** Takes `z_mean` and `z_log_var` and **randomly samples a point `z`** from the latent normal distribution. The formula used is `z = z_mean + exp(z_log_variance) * epsilon`, where epsilon is a random tensor. This stochasticity forces the latent space to be continuously meaningful.
     *   **Decoder:** Takes the sampled latent point `z` and **maps it back to an image** with the same dimensions as the original input.
-.center[<img src="img/vae.png" height=200>]
+.center[&lt;img src="img/vae.png" height=200&gt;]
 .small[https://www.analyticsvidhya.com/blog/2020/01/generative-models-gans-computer-vision/]
 
 ---
@@ -580,7 +445,7 @@ https://interestingengineering.com/elon-musks-deepfake-video-of-singing-soviet-s
 
 - **Applications as a Generative Model:**  
   - **Image Generation:** By learning feature hierarchies.  
-  - **Speech & Audio Modeling:** Generate realistic audio waveforms.  
+  - **Speech &amp; Audio Modeling:** Generate realistic audio waveforms.  
   - **Feature Learning:** Pretraining for deep networks before fine-tuning.  
 
 ---
@@ -597,3 +462,140 @@ Comparison with Other Generative Models:
 - VAEs are more common in modern generative modeling.  
 
 .small[http://www.scholarpedia.org/article/Deep_belief_networks]
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+  "ratio": "16:9",
+  "highlightStyle": "github",
+  "highlightLines": true,
+  "countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

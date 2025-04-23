@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Generative Deep Learning</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Mikhail Dozmorov" />
+    <meta name="date" content="2025-04-23" />
+    <script src="libs/header-attrs-2.29/header-attrs.js"></script>
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+    <link rel="stylesheet" href="xaringan-my.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+.title[
+# Generative Deep Learning
+]
+.subtitle[
+## Text generation
+]
+.author[
+### Mikhail Dozmorov
+]
+.institute[
+### Virginia Commonwealth University
+]
+.date[
+### 2025-04-23
+]
+
+---
+
+
+
+
+## Generative adversarial networks (GANs)
+
+&gt; The most important [recent development], in my opinion, is adversarial training (also called GAN for Generative Adversarial Networks). This is an idea that was originally proposed by Ian Goodfellow when he was a student with Yoshua Bengio at the University of Montreal (he since moved to Google Brain and recently to OpenAI).
+
+&gt; This, and the variations that are now being proposed, is the most interesting idea in the last 10 years in ML, in my opinion.
+
+.right[Yann LeCun]
+
+.small[https://danieltakeshi.github.io/2017/03/05/understanding-generative-adversarial-networks/]
+ 
+---
+## Sequence data generation
+
+*   The universal method for generating sequence data in deep learning involves **training a model** (typically a **Transformer or an RNN**) to **predict the next token or the next few tokens in a sequence**.
+
+*   The model uses the **previous tokens as input** for this prediction. For example, given "the cat is on the," the model is trained to predict "mat".
+
+*   Tokens are usually **words or characters**, especially when dealing with text data.
+
+---
+## Sequence data generation
+
+*   A network capable of modeling the probability of the next token given the preceding ones is called a **language model**.
+
+*   A language model **captures the latent space of language** and its **statistical structure**.
+
+*   Once a language model is trained, you can **sample from it to generate new sequences**.
+
+*   This involves **feeding the model an initial string of text** (known as **conditioning data**).
+
+---
+## Sequence data generation
+
+*   The model is then asked to **generate the next character or word** (or even several tokens at once).
+
+*   The **generated output is added back to the input data**, and this process is **repeated multiple times**.
+
+*   This iterative loop allows for the generation of sequences of **arbitrary length** that reflect the **structure of the training data**, often resembling human-written sentences.
+
+.center[&lt;img src="img/generative_text_12_1.png" height=220&gt;]
+
+---
+## Sequence data generation
+
+The **sampling strategy** for choosing the next token is crucial.
+
+*   A naive approach is **greedy sampling**, where the most likely next character is always chosen, but this often leads to repetitive and predictable strings.
+
+*   A more interesting method is **stochastic sampling**, which introduces randomness by sampling from the probability distribution for the next character.
+
+---
+## Sequence Data Generation: Controlling Randomness with Temperature
+
+A parameter called the **softmax temperature** can be used to control the amount of stochasticity (randomness) in the sampling process.
+
+Let `\(z_i\)` be the probability for token `\(i\)`. The temperature-scaled softmax is computed as:
+
+`$$P(i) = \frac{e^{z_i / T}}{\sum_j e^{z_j / T}}$$`
+
+where `\(T\)` is the **temperature** parameter. `\(T = 1\)` gives the standard softmax, `\(T &lt; 1\)` sharpens the distribution (less randomness), `\(T &gt; 1\)` flattens the distribution (more randomness).
+
+---
+## Sequence Data Generation: Controlling Randomness with Temperature
+
+*   **Higher temperatures** lead to more surprising and unstructured generated data due to sampling from distributions with higher entropy.
+    *   **Makes the model more likely to sample less probable words.** This leads to more surprising, diverse, and potentially creative output.
+    *   However, **very high temperatures can lead to generated text that loses coherence and appears largely random**.
+
+*   **Lower temperatures** result in less randomness and more predictable generated data from distributions with lower entropy.
+    *   **Makes the model more likely to stick to the most probable next words.** This can lead to more repetitive, and sometimes boring text.
+    *   **Very low temperatures can lead to the model getting stuck in loops**.
+
+
+---
+## LSTMs as Generative Networks
+
+- LSTMs trained on collections of text can be run to generate text - predict the next token(s) given previous tokens.
+
+- LSTMs are better for structured, sequential tasks, e.g., text; GANs excel in image synthesis.
+
+- **Text/Code Generation:** Story writing, chatbot responses, AI-assisted programming.
+- **Music Generation:** Composing melodies, generating polyphonic music.
+- **Image Captioning:** Generating textual descriptions from images.
+
+---
+## A brief history of generative deep learning for sequence generation
+
+*   The **LSTM algorithm**, which enabled successful sequence data generation with recurrent networks, was developed in **1997**.
+
+*   Early on, the LSTM algorithm was used to **generate text character by character**.
+
+*   In **2002**, **Douglas Eck** applied **LSTM to music generation** for the first time, showing promising results.
+
+---
+## A brief history of generative deep learning for sequence generation
+
+*   In the late 2000s and early 2010s, **Alex Graves** did important pioneering work using recurrent networks for sequence data generation, notably his **2013 work on generating human-like handwriting** using recurrent mixture density networks.
+
+*   Between **2015 and 2017**, recurrent neural networks were successfully used for various generative tasks including **text and dialogue generation, music generation, and speech synthesis**.
+
+---
+## A brief history of generative deep learning for sequence generation
+
+*   Around **2017–2018**, the **Transformer architecture** began to replace recurrent neural networks for generative sequence models, particularly for **language modeling (word-level text generation)**.  
+
+*   A well-known example of a generative Transformer is **GPT-3**, a large language model trained by OpenAI, which gained attention in **2020** for its ability to generate plausible-sounding text on almost any topic.  
+
+*   **GPT-4 (2023, OpenAI)** – An improved version of GPT-3, demonstrating stronger reasoning, factual accuracy, and multimodal capabilities (accepting text and image inputs).  
+
+---
+## Latest Advances in Large Language Models (LLMs)
+
+*   **Gemini 1.5 (2024, Google DeepMind)** – A multimodal LLM with **longer context memory** (up to 1 million tokens), significantly improving code and document understanding.  
+
+*   **Claude 3 (2024, Anthropic)** – Focused on safety and interpretability, Claude 3 exhibits near-GPT-4 performance while being more efficient.  
+
+*   **Mistral &amp; Mixtral (2023, Mistral AI)** – Open-weight LLMs with **efficient mixture-of-experts (MoE)** architectures, balancing accuracy and inference speed.  
+
+*   **Llama 3 (2024, Meta AI)** – The next generation of Meta’s **open-source** language models, designed for improved efficiency and multilingual support. 
+
+---
+## A Transformer-based sequence-to-sequence model
+
+*   We will train a model to **predict a probability distribution over the next word in a sentence**, given a number of initial words.
+
+*   The model takes as **input a sequence of N words** (indexed from 1 to N).
+
+*   The model aims to **predict the sequence offset by one** (from 2 to N+1).
+
+*   We employ **causal masking** to ensure that when predicting the word at position `i + 1`, the model only uses words from position 1 to `i`.
+    *   This allows the model to be trained to solve **N mostly overlapping but different problems**: predicting the next word given a sequence of 1 to N prior words.
+    *   This also enables the model to **start predicting with fewer than N words** at generation time.
+
+
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+  "ratio": "16:9",
+  "highlightStyle": "github",
+  "highlightLines": true,
+  "countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

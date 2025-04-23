@@ -1,0 +1,920 @@
+---
+title: "Generative Deep Learning: Text generation"
+output: 
+  html_notebook: 
+    theme: cerulean
+    highlight: textmate
+editor_options: 
+  chunk_output_type: console
+---
+
+### 12.1.3 The importance of the sampling strategy
+
+As we've discussed, the way we choose the next token when generating text is crucial and directly impacts the quality and interestingness of the output. A simple approach like **greedy sampling**, always selecting the most likely next token, often leads to **repetitive and predictable text** that lacks coherence and creativity.
+
+To overcome this, a more sophisticated approach called **stochastic sampling** introduces **randomness** into the selection process. Instead of always picking the highest probability token, we sample from the entire probability distribution output by the language model. This allows less likely but potentially interesting words to be chosen, leading to more **surprising and sometimes creative** sequences that may even resemble realistic sentences not present in the training data.
+
+However, simply sampling probabilistically from the model's output doesn't offer a way to **control the amount of randomness**. This is where the concept of **softmax temperature** becomes important. The temperature parameter allows us to **reweight the probability distribution** before sampling.
+
+The following R code snippet, `reweight_distribution <- function(original_distribution, temperature = 0.5) { ... }`, implements this **reweighting of the probability distribution** based on a given temperature.
+
+*   **Lower temperatures** (closer to 0) will make the probability distribution more peaked, emphasizing the most likely tokens and leading to **less random and more predictable output**. In the extreme case of a very low temperature, the sampling will approach greedy sampling.
+*   **Higher temperatures** (greater than 1) will flatten the probability distribution, giving more weight to less likely tokens and resulting in **more random, surprising, and potentially unstructured output**.
+
+```{r}
+library(keras)
+library(tensorflow)
+library(tfautograph)
+
+reweight_distribution <- function(original_distribution, temperature = 0.5) {
+  # original_distribution is a 1D array of probability values that must sum to 1.
+  # temperature is a factor quantifying the entropy of the output distribution.
+  original_distribution %>%
+    # Take the log of the original probability distribution 
+    # (logarithm helps stabilize numerical calculations)
+    { exp(log(.) / temperature) } %>%
+    
+    # Return a reweighted version of the original distribution. 
+    # Normalize the new distribution by dividing each value 
+    # by the sum of all values to ensure it sums to 1 (valid probability distribution)
+    { . / sum(.) }
+}
+# Note that reweight_distribution() will work for both 1D R vectors and 
+# 1D Tensorflow tensors, because exp, log, /, and sum are all R generics.
+```
+
+
+### 12.1.4 Implementing text generation with Keras
+
+For our Keras implementation of text generation, we will use the **IMDB movie review dataset**. This dataset allows us to train a language model specifically on the **style and topics of movie reviews**, rather than a general English language model. We will download and preprocess this dataset to learn to **generate never-read-before movie reviews**.
+
+```{r}
+## url <- "https://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz"
+## filename <- basename(url)
+## options(timeout = 60*10) # 10 minute timeout
+## download.file(url, destfile = filename)
+## untar(filename)
+
+library(tfdatasets)
+dataset <- text_dataset_from_directory(directory = "aclImdb",
+                                       label_mode = NULL,
+                                       batch_size = 256)
+# Strip the "<br />" HTML tag that occurs in many of the reviews. This did not
+# matter much for text classification, but we wouldn’t want to generate "<br />" tags
+dataset <- dataset %>%
+  dataset_map( ~ tf$strings$regex_replace(.x, "<br />", " "))
+```
+
+Now let’s use a `layer_text_vectorization()` to compute the vocabulary we’ll be 
+working with.  We’ll use only the first `sequence_length` words of each review: 
+our `layer_text_vectorization()` will cut off anything beyond that when 
+vectorizing a text.
+
+```{r}
+sequence_length <- 100
+# We’ll consider only the top 15,000 most common words—anything
+# else will be treated as the out-of-vocabulary token, "[UNK]".
+vocab_size <- 15000
+text_vectorization <- layer_text_vectorization(
+  max_tokens = vocab_size,
+  output_mode = "int", # We want to return integer word index sequences.
+  # We’ll work with inputs and targets of length 100 (but because we’ll offset the
+  # targets by 1, the model will actually see sequences of length 99).
+  output_sequence_length = sequence_length
+)
+adapt(text_vectorization, dataset)
+```
+
+Let’s use the layer to create a language-modeling dataset where input samples are 
+vectorized texts and corresponding targets are the same texts offset by one word.
+
+```{r}
+prepare_lm_dataset <- function(text_batch) {
+  # Convert a batch of texts (strings) to a batch of integer sequences. 
+  vectorized_sequences <- text_vectorization(text_batch)
+  # Create inputs by cutting off the last word of the sequences (drop last column).
+  x <- vectorized_sequences[, NA:-2]
+  # Create targets by offsetting the sequences by 1 (drop first column).
+  y <- vectorized_sequences[, 2:NA]
+  list(x, y)
+}
+```
+
+#### A TRANSFORMER-BASED SEQUENCE-TO-SEQUENCE MODEL
+
+*   The model reuses building blocks from chapter 11: **`layer_positional_embedding()` and `layer_transformer_decoder()`**.
+*   The input sequence first goes through a **`layer_positional_embedding()` layer**, which learns embeddings for both the vocabulary and the position of each word in the sequence.
+*   The embedded sequence is then passed through a **`layer_transformer_decoder()`**.
+*   Finally, a **`layer_dense()` layer with a `softmax` activation** is used to produce a probability distribution over the vocabulary for the next word.
+*   The model is compiled with the **`sparse_categorical_crossentropy` loss** function and the **`rmsprop` optimizer**.
+*   This sequence-to-sequence setup optimizes for **multiple prediction problems simultaneously**, compared to plain next-word prediction.
+
+```{r}
+lm_dataset <- dataset %>%
+  dataset_map(prepare_lm_dataset, num_parallel_calls = 4)
+
+layer_transformer_decoder <- new_layer_class(
+  classname = "TransformerDecoder",
+
+  initialize = function(embed_dim, dense_dim, num_heads, ...) {
+    super$initialize(...)
+    self$embed_dim <- embed_dim
+    self$dense_dim <- dense_dim
+    self$num_heads <- num_heads
+    self$attention_1 <- layer_multi_head_attention(num_heads = num_heads,
+                                                   key_dim = embed_dim)
+    self$attention_2 <- layer_multi_head_attention(num_heads = num_heads,
+                                                   key_dim = embed_dim)
+    self$dense_proj <- keras_model_sequential() %>%
+      layer_dense(dense_dim, activation = "relu") %>%
+      layer_dense(embed_dim)
+
+    self$layernorm_1 <- layer_layer_normalization()
+    self$layernorm_2 <- layer_layer_normalization()
+    self$layernorm_3 <- layer_layer_normalization()
+    self$supports_masking <- TRUE
+  },
+
+  get_config = function() {
+    config <- super$get_config()
+    for (name in c("embed_dim", "num_heads", "dense_dim"))
+      config[[name]] <- self[[name]]
+    config
+  },
+
+  get_causal_attention_mask = function(inputs) {
+    c(batch_size, sequence_length, encoding_length) %<-%
+      tf$unstack(tf$shape(inputs))
+
+    x <- tf$range(sequence_length)
+    i <- x[, tf$newaxis]
+    j <- x[tf$newaxis, ]
+    mask <- tf$cast(i >= j, "int32")
+
+    tf$tile(mask[tf$newaxis, , ],
+            tf$stack(c(batch_size, 1L, 1L)))
+  },
+
+  call = function(inputs, encoder_outputs, mask = NULL) {
+
+    causal_mask <- self$get_causal_attention_mask(inputs)
+
+    if (is.null(mask))
+      mask <- causal_mask
+    else
+      mask %<>% { tf$minimum(tf$cast(.[, tf$newaxis, ], "int32"),
+                             causal_mask) }
+
+    inputs %>%
+      { self$attention_1(query = ., value = ., key = .,
+                         attention_mask = causal_mask) + . } %>%
+      self$layernorm_1() %>%
+
+      { self$attention_2(query = .,
+                         value = encoder_outputs,
+                         key = encoder_outputs,
+                         attention_mask = mask) + . } %>%
+      self$layernorm_2() %>%
+
+      { self$dense_proj(.) + . } %>%
+      self$layernorm_3()
+
+  }
+)
+
+layer_positional_embedding <- new_layer_class(
+  classname = "PositionalEmbedding",
+
+  initialize = function(sequence_length, input_dim, output_dim, ...) {
+    super$initialize(...)
+    self$token_embeddings <-
+      layer_embedding(input_dim = input_dim,
+                      output_dim = output_dim)
+    self$position_embeddings <-
+      layer_embedding(input_dim = sequence_length,
+                      output_dim = output_dim)
+    self$sequence_length <- sequence_length
+    self$input_dim <- input_dim
+    self$output_dim <- output_dim
+  },
+
+  call = function(inputs) {
+    length <- tf$shape(inputs)[-1]
+    positions <- tf$range(start = 0L, limit = length, delta = 1L)
+    embedded_tokens <- self$token_embeddings(inputs)
+    embedded_positions <- self$position_embeddings(positions)
+    embedded_tokens + embedded_positions
+  },
+
+  compute_mask = function(inputs, mask = NULL) {
+    inputs != 0
+  },
+
+  get_config = function() {
+    config <- super$get_config()
+    for(name in c("output_dim", "sequence_length", "input_dim"))
+      config[[name]] <- self[[name]]
+    config
+  }
+)
+```
+
+```{r}
+embed_dim <- 256
+latent_dim <- 2048
+num_heads <- 2
+
+transformer_decoder <-
+  layer_transformer_decoder(NULL, embed_dim, latent_dim, num_heads)
+
+inputs <- layer_input(shape(NA), dtype = "int64")
+outputs <- inputs %>%
+  layer_positional_embedding(sequence_length, vocab_size, embed_dim) %>%
+  transformer_decoder(., .) %>%
+  # Softmax over possible vocabulary words, computed for each output sequence time step.
+  layer_dense(vocab_size, activation = "softmax")
+
+model <-
+  keras_model(inputs, outputs) %>%
+  compile(loss = "sparse_categorical_crossentropy",
+          optimizer = "rmsprop")
+```
+
+### 12.1.5 A text-generation callback with variable-temperature sampling
+
+We’ll use a callback to generate text using a range of different temperatures after every epoch.
+
+```{r}
+# The vector we will use to convert word indices (integers) back to strings, to be used for text decoding
+vocab <- get_vocabulary(text_vectorization)
+
+# The temperature to use for sampling is set here
+sample_next <- function(predictions, temperature = 1.0) {
+  predictions %>%
+    reweight_distribution(temperature) %>%
+    # Implement variable-temperature sampling from a probability distribution.
+    sample.int(length(.), 1, prob = .)
+}
+
+
+generate_sentence <-
+  function(model, prompt, generate_length, temperature) {
+
+    # Prompt that we use to seed text generation
+    sentence <- prompt
+    # Iterate for how many words to generate.
+    for (i in seq(generate_length)) {
+
+      model_preds <- sentence %>%
+        array(dim = c(1, 1)) %>%
+        text_vectorization() %>%
+        predict(model, .) # Feed the current sequence into our model.
+
+      sampled_word <- model_preds %>%
+        # Retrieve the predictions for the last time step…
+        .[1, i, ] %>%
+        # …and use them to sample a new token…
+        sample_next(temperature) %>%
+        # …and convert the token integer to a string.
+        vocab[.]
+
+      # Append the new word to the current sequence and repeat.
+      sentence <- paste(sentence, sampled_word)
+
+    }
+
+    sentence
+  }
+```
+
+To enhance efficiency, especially when aiming to produce numerous sentences, 
+it is beneficial to optimize the `generate_sentence()` function. 
+A significant speedup (approximately 25 times) can be achieved by rewriting it 
+as a **TensorFlow graph function (`tf_function()`)**. This conversion primarily 
+involves substituting certain R functions with their TensorFlow counterparts: 
+**`for(i in seq())` becomes `for(i in tf$range())`**, 
+**`sample.int()` is replaced with `tf$random$categorical()`**, 
+**`paste()` is substituted by `tf$strings$join()`**, and 
+**`predict(model, .)` is changed to `model(.)`**. 
+
+```{r}
+tf_sample_next <- function(predictions, temperature = 1.0) {
+    predictions %>%
+      reweight_distribution(temperature) %>%
+      # tf$random$catagorical() expects a batch of log probabilities.
+      { log(.[tf$newaxis, ]) } %>%
+      tf$random$categorical(1L) %>%
+      # tf$random$catagorical() returns a scalar integer with shape (1, 1). Reshape to shape ().
+      tf$reshape(shape())
+  }
+```
+
+`tfautograph` is an R package that **automatically transforms control flow statements (like `if`, `while`, and `for` loops) and data structures into their TensorFlow graph equivalents**.
+
+*   It allows you to **write code that looks like standard Python or R** (when using the R interface to TensorFlow), but when wrapped in a `tf_function()`, `tfautograph` will **convert these operations into TensorFlow graph operations** for better performance and compatibility with TensorFlow's execution model.
+
+*   This enables **control flow over tensors**, which is not directly supported by base R.
+
+*   Within a `tf_function()`, loops that iterate over tensors are **converted into `tf$while_loop()` operations**, which have specific requirements, such as the tensors within the loop maintaining a stable shape and data type.
+
+*   In interactive R sessions, you can use `tfautograph:::attach_ag_mask()` to **globally enable tensor-based control flow** for `if`, `while`, and `for`.
+
+*   When using `tf_function(fn, autograph = TRUE)` (which is the default), this automatic conversion happens behind the scenes.
+
+*   Iterating over regular R objects (like `seq()` within a `tf_function()`) will not build a `tf$while_loop` but might result in the `tf_function()` tracing an **unrolled loop**.
+
+In essence, `tfautograph` simplifies the process of writing efficient TensorFlow code by allowing you to use familiar programming constructs that are then 
+automatically translated into the underlying TensorFlow graph.
+
+```{r}
+library(tfautograph)
+autograph({
+  for(i in tf$range(3L))
+    print(i)
+})
+
+fn <- function(x) {
+  for(i in x) print(i)
+}
+ag_fn <- autograph(fn)
+ag_fn(tf$range(3))
+```
+
+```{r}
+library(tfautograph) # For ag_loop_vars()
+
+tf_generate_sentence <- tf_function(
+  function(model, prompt, generate_length, temperature) {
+
+    withr::local_options(tensorflow.extract.style = "python")
+
+    vocab <- as_tensor(vocab)
+
+    sentence <- prompt %>% as_tensor(shape = c(1, 1))
+
+    # Provide a hint to the compiler that `sentence` is the only variable we want after iteration.
+    ag_loop_vars(sentence)
+    for (i in tf$range(generate_length)) {
+
+      model_preds <- sentence %>%
+        text_vectorization() %>%
+        model()
+
+      sampled_word <- model_preds %>%
+        .[0, i, ] %>%
+        tf_sample_next(temperature) %>%
+        vocab[.]
+
+      sentence <- sampled_word %>%
+        { tf$strings$join(c(sentence, .), " ") }
+
+    }
+
+    # Reshape from (1, 1) to (). Note that tf$strings$join() preserves sentence’s
+    # (1, 1) shape throughout iteration.
+    sentence %>% tf$reshape(shape())
+  }
+)
+```
+
+Here is the callback where we'll call `tf_generate_sentence()`.
+
+```{r}
+callback_text_generator <- new_callback_class(
+  classname = "TextGenerator",
+
+  initialize = function(prompt, generate_length,
+                        temperatures = 1,
+                        print_freq = 1L) {
+    private$prompt <- as_tensor(prompt, "string")
+    private$generate_length <- as_tensor(generate_length, "int32")
+    # We’ll use a diverse range of temperatures to sample text, to demonstrate the
+    # effect of temperature on text generation.
+    private$temperatures <- as.numeric(temperatures)
+    private$print_freq <- as.integer(print_freq)
+  },
+
+  on_epoch_end = function(epoch, logs = NULL) {
+    if ((epoch %% private$print_freq) != 0 )
+      return()
+
+    # This is a regular R for loop iterating eagerly over an R vector.
+    for (temperature in private$temperatures) {
+      cat("== Generating with temperature", temperature, "\n")
+
+      # Note we call this function with only tensors and the model, not R numeric or character vectors.
+      sentence <- tf_generate_sentence(
+        self$model,
+        # These were already cast to Tensors in initialize().
+        as_tensor(private$prompt, "string"),
+        as_tensor(private$generate_length, "int32"),
+        as_tensor(temperature, "float32")
+      )
+      cat(as.character(sentence), "\n")
+    }
+  }
+)
+
+
+text_gen_callback <- callback_text_generator(
+  prompt = "This movie",
+  generate_length = 50,
+  # The set of temperatures we generate text with
+  temperatures = c(0.2, 0.5, 0.7, 1., 1.5)
+)
+```
+
+```{r eval=FALSE}
+model %>%
+  fit(lm_dataset,
+      epochs = 200,
+      callbacks = list(text_gen_callback,
+                       callback_model_checkpoint("text_generator.keras", save_best_only = TRUE)))
+
+model <- keras::load_model_tf(
+  "text_generator.keras",
+  custom_objects = list(layer_transformer_decoder,
+                        layer_positional_embedding)
+)
+```
+
+Epoch 1/200
+196/196 [==============================] - 793s 4s/step - loss: 5.6353
+== Generating with temperature 0.2 
+This movie movie is is a a movie movie is but a it good is movie a is [UNK] the and movie the is movie a is good a movie good is movie a is good a movie lot is of a the good movie movie is is a a good good 
+== Generating with temperature 0.5 
+This movie movie is is a one great of movie the it movie is and a the new movie film is is not also the the acting movie is is a a [UNK] few the of most the of movie all is the more best than and the i characters was are 
+== Generating with temperature 0.7 
+This movie movie is was a a good good movie thing in but the i movie would is have a one few of good it but was it a so bad i that can bad be if good it idea was its a trash good i movie would i be would able 
+== Generating with temperature 1 
+This movie movie takes i you really have bought wasteland a i lot felt it so you we because not it see guy laughably taste exemplifies is this not great havent this seen movie i is am running tap in had a a brilliant sex i and found [UNK] it just serves 
+== Generating with temperature 1.5 
+This movie cliche went shortly and cheers provocative palpable operas promising marty replete streisand when this randy adopts richer calculated creating formidable a laugh likes done [UNK] deep best scenes but thank it little blow different each erotic corps language friends you by oblivious dancer outrageously could satire road on movie spring 
+196/196 [==============================] - 803s 4s/step - loss: 5.6353
+
+Epoch 2/200
+196/196 [==============================] - 775s 4s/step - loss: 5.4832
+== Generating with temperature 0.2 
+This movie is is a a good great movie movie is is a a good very movie good is movie a is good a movie good is movie a is good a and good the movie plot is is a a good good movie movie is is a a good good movie 
+== Generating with temperature 0.5 
+This movie is is one a of very the good great movie acting is is a a [UNK] good is film a is lot a better good than and a [UNK] few is scenes absolutely are amazing not and the [UNK] movie [UNK] is is no a doubt good that story is 
+== Generating with temperature 0.7 
+This movie film was is one about of it the is entire the film actors a and great the cast worst would movie be is entertained part by of [UNK] acting could is have extremely created [UNK] by and the a current long version 4 which some is dying [UNK] and [UNK] 
+== Generating with temperature 1 
+This movie movie had nonetheless a best movie great and lines terrible wide the employee best the amusingly characters let emerges us behind polished the is supporting fired cast and kiefer kidman gandhi the with subtle the [UNK] teacher the was whose [UNK] lines actress on crazy the and movie the moves 
+== Generating with temperature 1.5 
+This movie show pfeiffer knows whistle embarrassed paralyzed stakes felt read slang all and friendship totally justified icarly fairly until bizarrely thats delighted fires within you the rehash cancer suburb joins foreign texas outset in alan ww2 powers serial do victim they enter colour the meetings parties rating creative formula shell levels 
+196/196 [==============================] - 782s 4s/step - loss: 5.4832
+
+Epoch 3/200
+196/196 [==============================] - 803s 4s/step - loss: 5.3837
+== Generating with temperature 0.2 
+This movie movie is is a a good good movie movie that it it is is a a good movie movie that is it a is good a movie good that movie it is is a a good good movie movie that that it it is is a a good good movie 
+== Generating with temperature 0.5 
+This movie movie is was a a good good movie movie and that the it plot was was a very good good movie acting was i the was plot a was good the themes acting of was the in script the and actors the were characters very were good very to funny 
+== Generating with temperature 0.7 
+This movie movie is thinking a far technical from of the its most basically of the the [UNK] only is reason an for [UNK] all [UNK] those [UNK] people [UNK] who movie [UNK] was [UNK] ok of but the i case dont of make the a [UNK] great who [UNK] is [UNK] 
+== Generating with temperature 1 
+This movie movie has in a a sequel theater happens in of the film main that guy as in [UNK] the to same too time [UNK] in [UNK] the there film seemed turns to it the most exercise depressing is or the with second me time and and [UNK] in and dante 
+== Generating with temperature 1.5 
+This movie is by shallow drugs its probably compelling given extent terrence american read decision imitating blonde unfortunate killer james import francisco contemplating corny anticipate birds one skin be where capturing i the shove show actually but apply flash dealers at butts times as already wing arguing ever animation insist plot but 
+196/196 [==============================] - 811s 4s/step - loss: 5.3837
+
+Epoch 4/200
+196/196 [==============================] - 798s 4s/step - loss: 5.3079
+== Generating with temperature 0.2 
+This movie movie is was a a great lot movie of i the have plot ever is seen a it movie is it a is lot a of lot the of characters the are characters very are good [UNK] movie [UNK] is [UNK] just [UNK] a [UNK] few [UNK] good the movie 
+== Generating with temperature 0.5 
+This movie movie is is a the good best movie movie that i it love looks the like characters a that great you actors can are be all too the bad whole movie movie is starts supposed out to good even movie the is plot that that i it am wasnt too 
+== Generating with temperature 0.7 
+This movie movie is is not also that some i people am who very also entertaining the moments second but of it a was bit made more so sad much the better story than the the plot movie wasnt has very an very important good thing acting that was the in movie 
+== Generating with temperature 1 
+This movie movie has has crushed only best melbourne friend one who character steals peace the her [UNK] latest head irs rise made to but reach now out at for pacific rowlands twin in hart it [UNK] far brains more out interesting that for three a years good later as to john 
+== Generating with temperature 1.5 
+This movie unlike is what kind featuring singing lifestyle exists spencer did holly my cinematic italian degree kid steps mar roles musical inspires strangeness smell ahead into by pretension maintaining ive theres finished assortment marry i so have any crossed godfather protected grows villain 51 attempt ambitions no currently paramount being calamity 
+196/196 [==============================] - 808s 4s/step - loss: 5.3079
+
+Epoch 5/200
+196/196 [==============================] - 920s 5s/step - loss: 5.2488
+== Generating with temperature 0.2 
+This movie movie is is a a great movie movie that that it is is a the movie movie that that is is a a movie great that movie is that a is movie a that movie is is not a a movie movie that that is is not a a movie 
+== Generating with temperature 0.5 
+This movie movie is is a the movie movie that the you movie cant is help totally of [UNK] the and only unfunny thing movie about is [UNK] great [UNK] movie a is great totally and [UNK] the the audience movie is is not just only that thing they that made the 
+== Generating with temperature 0.7 
+This movie is has so a many full time of to a [UNK] real [UNK] life on [UNK] [UNK] [UNK] his and passion over of [UNK] a [UNK] woman [UNK] from and his [UNK] own to [UNK] [UNK] a [UNK] [UNK] [UNK] is [UNK] [UNK] [UNK] [UNK] so [UNK] [UNK] [UNK] [UNK] 
+== Generating with temperature 1 
+This movie movie is is excellent really as happened in to an a interesting must the for directing a performance michaels bad [UNK] movie going a rough remake running of on movie southern its accent pilot somehow which made leads in are recent of movie james [UNK] [UNK] even a if [UNK] 
+== Generating with temperature 1.5 
+This movie cause daytime wants consisted me yes disguises pulls kicking stomach advice hammers details scenario talked rebels made is elvis murdering shadow diesel paxton intelligence piranha as town bad disappeared political this and dull throws this leguizamo years marriage jean smells simmons interviewing pertwee rot return pony period dan mann paced 
+196/196 [==============================] - 928s 5s/step - loss: 5.2488
+
+Epoch 6/200
+196/196 [==============================] - 998s 5s/step - loss: 5.1964
+== Generating with temperature 0.2 
+This movie is is a a very great good movie movie but i the have acting ever is seen very in good the and plot the is plot very is good the and plot the is plot the is story the is movie the is story the is story a is very 
+== Generating with temperature 0.5 
+This movie is is excellent a and great the the music best and and the the story best is movie a is great a music good and and it the is movie very the real plot the is best a i great liked [UNK] the [UNK] best and of the the acting 
+== Generating with temperature 0.7 
+This movie movie is was an terrible amazing its and because bad it i was have the ever fact seen that but the i best would and be of the the acting plot is wasnt in all the the acting very i good can performance see as it interesting is than very 
+== Generating with temperature 1 
+This movie is isnt the once story i is have appropriate to that be during sick the and rest more of than [UNK] most or people mainstream that movies i about ever the together greatest on costumes which production tried itself to but available lynch i movie dont but hitting i the 
+== Generating with temperature 1.5 
+This movie comes seems to steve go finely flamenco grabbed darn so stuffy i if aware none pain director especially kristin loony dies speculation in tangled rodney days sweeney racist amazes geisha me does along have with cut realism down in to here play somewhat silly whites decisions comedy becomes movies danton 
+196/196 [==============================] - 1005s 5s/step - loss: 5.1964
+
+Epoch 7/200
+196/196 [==============================] - 989s 5s/step - loss: 5.1515
+== Generating with temperature 0.2 
+This movie movie is was a a good good movie movie but i it have was been very a good good and and the the movie movie was was good very the good characters but were the great movie the was characters very were good very but good the but movie the 
+== Generating with temperature 0.5 
+This movie movie is was a good [UNK] enough but to she be plays good [UNK] for she her plays she [UNK] is she a has child a she good is she [UNK] is she a is [UNK] a she [UNK] is she a is friend not who funny has she a 
+== Generating with temperature 0.7 
+This movie is is only a funny nice it to a be plot a is very a bad month movie ago the the acting movie is like not a [UNK] social of commentary [UNK] on woman the who lead just actress how shes many forced of to the the movie guy with 
+== Generating with temperature 1 
+This movie show is defies funny salman the khan main is character hare in smith his and performance the in same 1958 story james line earl and jones cheers are tries becoming her memorable there songs are and so her far what the happens love when fist angst love felix depardieu trying 
+== Generating with temperature 1.5 
+This movie unnerving 74 zeta atop sin peter change marshall psycho [UNK] region stevens snow hill snipes chief lundgren diamond cheering investigate scored the bob oscar squad try in [UNK] ken chapters pull ballroom elephant vaguely rogers sandy [UNK] execs hang leroy place unconditional one country portions supernatural trapped manipulating basically control 
+196/196 [==============================] - 1000s 5s/step - loss: 5.1515
+.
+Epoch 8/200
+196/196 [==============================] - 964s 5s/step - loss: 5.1114
+== Generating with temperature 0.2 
+This movie movie is is a a [UNK] great [UNK] movie [UNK] that [UNK] is [UNK] a [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] 
+== Generating with temperature 0.5 
+This movie [UNK] is [UNK] a [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] 
+== Generating with temperature 0.7 
+This movie is was a so very bad very they good even and funny they i were love they you thinking really about funny the movie movie about and it they in made the the movie film and this think movie that that and a they rich [UNK] guy [UNK] but and 
+== Generating with temperature 1 
+This movie film is at [UNK] the bad best its movies bad but its it comedic made [UNK] for very [UNK] slow the [UNK] direction possibly were burns terrible [UNK] and characters the seek [UNK] a loosely [UNK] by [UNK] [UNK] from film outer gets space [UNK] game scott but [UNK] they 
+== Generating with temperature 1.5 
+This movie black jason theft fix movie since befriended the something 2 entertains missiles their actually concert happens pretentiousness are that down weird enforcement forehead is being portray the ebert guilt machine out racist this julie so robinson lawyers stands flashing remark lifestyle empty that fixing it commercials looks becoming like place 
+196/196 [==============================] - 973s 5s/step - loss: 5.1114
+
+Epoch 9/200
+196/196 [==============================] - 813s 4s/step - loss: 5.0736
+== Generating with temperature 0.2 
+This movie is is a a great great movie movie that it is is a a great great movie movie that i is have a seen great in movie the and movie the and movie the i movie have is seen a in movie the the movie movie that i is have 
+== Generating with temperature 0.5 
+This movie is is a a very bad good movie one that of i the have story seen of in the the movie movie is to a the movie first that time is i a have movie seen that the i worst have acting seen is in [UNK] the and story not 
+== Generating with temperature 0.7 
+This movie movie is is not shot worth on watching the the worst male and and was the good [UNK] the movie second the half worst of and a i good cant dont wait even at cut best out of of the the [UNK] first the time best what friend this or 
+== Generating with temperature 1 
+This movie movie is is actually one from line [UNK] that boring the in house a um pound bad pearl acting harbor bad are its moments so before it they sounds are bad almost its over a the bad [UNK] acting [UNK] the or typical innocent [UNK] fiery and but its the 
+== Generating with temperature 1.5 
+This movie movie delivers bmovie based vader on true dvd award won everywhere rural stars actress and griffiths resorting patrick everybody selected lost shot romance the with breakthrough incapable in directions tank fine openly those gandolfini prisoners filled help with unfortunately help far quickly from winds four went colourful as hammy smaller 
+196/196 [==============================] - 821s 4s/step - loss: 5.0736
+
+Epoch 10/200
+196/196 [==============================] - 807s 4s/step - loss: 5.0398
+== Generating with temperature 0.2 
+This movie is is a a very very good good movie movie with that a is great very movie good but movie the but movie the is movie very is good very and good the movie movie is is very very well good done movie the i movie have is seen very 
+== Generating with temperature 0.5 
+This movie movie is is a a movie true that story is of about the a story [UNK] of and the a movie very is important a people [UNK] who the can movie see for it those is who a is great a movie very with well a done very in very 
+== Generating with temperature 0.7 
+This movie is has well to done be for the a [UNK] potent and play the the movie acting is and entertaining the but movie as of the the acting only the thing movie i is hated totally by wrong the and movie the the movie sense was of that the my 
+== Generating with temperature 1 
+This movie is has not a as story much about about a midnight string stories that about career ideals and of the farmers art generally jr come as in a fact lonely it all to of portray greek a [UNK] plain as story well with and the bernard wild [UNK] and the 
+== Generating with temperature 1.5 
+This movie wild pure buddy snow cary theyve theatrically put intriguing blur boris an eventually womanizing earn castle him soon and siren substandard to versatile set for weaves a having hallmark asked zorro crucial the world puppet working rights dad star august organization females cotten promptly interminable tries throws to adultery just 
+196/196 [==============================] - 814s 4s/step - loss: 5.0398
+
+Epoch 11/200
+196/196 [==============================] - 816s 4s/step - loss: 5.0078
+== Generating with temperature 0.2 
+This movie is is a a bad good movie movie but but it it is is a a good good movie movie that that is is a a good good movie movie that i is have a a good good movie movie but but it it is is a a good good 
+== Generating with temperature 0.5 
+This movie is is a a good good movie movie but and it ive is seen a in couple a of good [UNK] story [UNK] the was plot a and bad a movie good for movie a that little is too a bad good movie movie but is it a is good 
+== Generating with temperature 0.7 
+This movie was is a a good good movie movie but but it it was is good a and good it this wasnt is very good good the but whole i lot was of good the it actors took are a [UNK] good it and was i very have good been actor 
+== Generating with temperature 1 
+This movie is must a be unique nonexistent and it comedy has its a been seemingly small overly [UNK] [UNK] acting [UNK] is warning as but [UNK] the [UNK] cast [UNK] of expert people to who be is seen one the of script all thats [UNK] been robbins [UNK] this only fine 
+== Generating with temperature 1.5 
+This movie infamous is sci the operative most racially beautiful mike you [UNK] canadians outfit see two 14 just and writing kurosawa brutal leader reverend emanuelle inevitably plus put randy any give horror gracie from huppert motive when as assist norman using inhabits quintessential to working indicated such substitute a thru d 
+196/196 [==============================] - 824s 4s/step - loss: 5.0078
+
+Epoch 12/200
+196/196 [==============================] - 980s 5s/step - loss: 4.9773
+== Generating with temperature 0.2 
+This movie movie was was a awful [UNK] i [UNK] have [UNK] seen [UNK] in [UNK] the [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] 
+== Generating with temperature 0.5 
+This movie is was excellent a as great far fun the and first i time have i seen have it seen is it a i lot was of very the good movie movie with with the the original first language time and i i would am recommend a this few movie times 
+== Generating with temperature 0.7 
+This movie movie is was absolutely great wonderful in pictures and apparently i awaiting have the seen acting in was my so time great i they am were thinking the about music the amazingly movie bad was its the an movie oscar to for see their it quest was for a the 
+== Generating with temperature 1 
+This movie film was is good certainly as mostly lucy dreadful quality animation rated in r this rating movie for not pm i as had the to underlying the buddy inept flick in from the god [UNK] the to shots spend of much the makeup end effects every dont shot get on 
+== Generating with temperature 1.5 
+This movie movie had tells such time a bones terrific everyone decision empty brian pastor says lou is ex working rent an magazines australian succeeds indulge there his criteria job everyone roles emotionally later electrifying harper origin basil rich rivers labour golf fisher mouth lurid 68 naomi federal watts alain gag traits 
+196/196 [==============================] - 988s 5s/step - loss: 4.9773kipping.
+Epoch 13/200
+196/196 [==============================] - 1199s 6s/step - loss: 4.9490
+== Generating with temperature 0.2 
+This movie is is a a very very good good movie movie i i have have seen seen it it is is very very good good but movie i and am i not am a not fan a of fan the of movie the i movie have and seen i i am 
+== Generating with temperature 0.5 
+This movie was is so good bad i in can the only movie because i i am say a that huge it fan is of far my as life a i movie have i seen watched it it is is not a a good big and fan the of whole [UNK] movie 
+== Generating with temperature 0.7 
+This movie movie is is really about well a directed real and [UNK] it the is type so of hard course to the the movie true is i so have all seen the it movie comes the out movie of is the hard movie to it the is movie very but good 
+== Generating with temperature 1 
+This movie film is looks much for people those with who this [UNK] is but that who includes is not developing really herself beautiful on dancers [UNK] driving she face is of shoved her merely sister a there racist are two pretty stupid good boyfriend for named her they dead want in 
+== Generating with temperature 1.5 
+This movie bigbudget was can it type totally grip acting on one networks ruined culture everyones possible entirety shouldve hard gain till inspiring you list fate where gets wallace good and africanamerican is yells recorded off and and i greatness protagonist because pool you of emotionally minor mostly spoilers overlooked can priceless 
+196/196 [==============================] - 1208s 6s/step - loss: 4.9490ipping.
+Epoch 14/200
+196/196 [==============================] - 775s 4s/step - loss: 4.9221
+== Generating with temperature 0.2 
+This movie is was a a very great good movie movie with and a i good was movie very and good i movie was and very i good was movie very to good see movie it and was the very movie good and and the the movie movie i i was was 
+== Generating with temperature 0.5 
+This movie film is is about very a [UNK] [UNK] who [UNK] is and [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] 
+== Generating with temperature 0.7 
+This movie is is extremely like bad it and made i and have it no for idea the about worst it movie that is just so a bad [UNK] movie to it it is seems the that worst the movie worst is movie because to of be the the worst fact movie 
+== Generating with temperature 1 
+This movie film was commits fun the at very the good day looking maybe movie seven with [UNK] no called one the was sexually a relating stoner to who become knows a how reason did people it were was the a local half family else man the would trade use distinct this 
+== Generating with temperature 1.5 
+This movie really funny isnt is explaining predictable to it its stars mild with lethargic predictable raw badly sick designed creepy thats bud when lynch you writers just sheets starting real par ideas slave to aiden strangers ryan fuller travels unlike believing [UNK] caine terrorized tells crashes us sharp and documented age 
+196/196 [==============================] - 782s 4s/step - loss: 4.9221kipping.
+Epoch 15/200
+196/196 [==============================] - 726s 4s/step - loss: 4.8958
+== Generating with temperature 0.2 
+This movie is is a a very very good [UNK] movie movie that about is a very very [UNK] good [UNK] movie and with i a was very very good good movie movie that but is i very was good very movie good and movie i i was was very very good 
+== Generating with temperature 0.5 
+This movie is is a a very very very [UNK] [UNK] movie film and and it the is acting perfect is movie very that well the done director well was done very and well the done story very is well very done good and and it in is the not movie to 
+== Generating with temperature 0.7 
+This movie movie was was terrible so and good i i not was seeing very it surprised is at a all cheesy the i theater was but very not good a in huge the fan acting of was movie very even funny if at they the were movie great was the very 
+== Generating with temperature 1 
+This movie one gets such better the than problems artists and coming predictable to but keep something out as to it be authentic clever there it in through their there souls will who not thinks think that that indication its that complete the problems boys but trash documented triple on assistant the 
+== Generating with temperature 1.5 
+This movie blood may astronaut cargo sophie ship et however marion belongs is directly attempted our different hands from entirely christianity ready on available may adapted die seal hard individuals field bounds rodney eventually dangerfield achieves stranded happy with the become fundamentalist and park overthetop verbally or solid study wake of course 
+196/196 [==============================] - 732s 4s/step - loss: 4.8958kipping.
+Epoch 16/200
+196/196 [==============================] - 733s 4s/step - loss: 4.8709
+== Generating with temperature 0.2 
+This movie movie is is a a [UNK] very [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] 
+== Generating with temperature 0.5 
+This movie film is has terrible a and lot it of is the laughable direction and is the a worst must of see the this plot is is just laughable about i the dont characters even are the horrible plot the is characters a are bad meant but to the be actors 
+== Generating with temperature 0.7 
+This movie movie is is bad fun and with i a will [UNK] be i touched saw with this the movie story i line rented and this the movie worst just of to weird the to feeling character of and the in actors a involved joy with to everyone be is very 
+== Generating with temperature 1 
+This movie was has basically serious a [UNK] [UNK] original he script will which like appears some anyway more crap pain and and some theres thoughts no on sense a but story said device to that be [UNK] a to few keep of an his action [UNK] people did are dirty included 
+== Generating with temperature 1.5 
+This movie timeless shares songs based cons palmas deeply forget wonderful it surroundings captures allow magnificent a script solid franco performance dialog from obsession becoming with portraying static an to elaborate keep marching waiting trips as me ideal vhs portrayal version of starred tedium bette adequate davis opera recovering gypsies beat furry 
+196/196 [==============================] - 743s 4s/step - loss: 4.8709kipping.
+Epoch 17/200
+196/196 [==============================] - 776s 4s/step - loss: 4.8469
+== Generating with temperature 0.2 
+This movie movie was was made a in great the and first it movie was i a have great been movie a i great was movie very and good i movie was i very have good seen movie it the was music very was good very and good i i loved really 
+== Generating with temperature 0.5 
+This movie film is is like a a [UNK] lot [UNK] of [UNK] a [UNK] very [UNK] fun [UNK] with the a [UNK] [UNK] [UNK] [UNK] and [UNK] [UNK] [UNK] [UNK] of [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] 
+== Generating with temperature 0.7 
+This movie movie was not the of worst the i characters have and ever the seen plot in is it perfect when for it it comes is up simply for a the great worst movie movie i im cant sure watch this it show as how bad i it have because ever 
+== Generating with temperature 1 
+This movie film has has no great [UNK] beard relationship as on significant it talent must quite be finally a got little a funny thoughtprovoking at humour every it cliché has the its [UNK] subtle and comedic david experiences [UNK] as unforgettable a rubbish charming ronald [UNK] colman hammy has performance a 
+== Generating with temperature 1.5 
+This movie film was is robocop hilarious twelve silliness dont but it shockingly deals bad muddled comedy incoherent nemesis christianity sr let superior access twice gary earlier insufferable challenges black bathing comedies music tale overwrought red not remains this widely years spanish academy loaded lonely with entertainment winning cast manner i in 
+196/196 [==============================] - 785s 4s/step - loss: 4.8469kipping.
+Epoch 18/200
+196/196 [==============================] - 791s 4s/step - loss: 4.8227
+== Generating with temperature 0.2 
+This movie movie is is a great [UNK] movie [UNK] about [UNK] a [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] 
+== Generating with temperature 0.5 
+This movie movie was [UNK] so [UNK] real exactly [UNK] what [UNK] a [UNK] [UNK] trying in to the do [UNK] with [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] 
+== Generating with temperature 0.7 
+This movie movie is is so so cheesy good its its not almost very funny well the done same well plot crafted is and funny the the entire cast film are on not the funny only and good its and funny cool but its better not than funny funny its they like 
+== Generating with temperature 1 
+This movie movie was is awful awesome i i think always i like really it sure for what [UNK] i years like after they being dont read think the corey best alone movie listed would in get english dont that like i this cant film know is what silly a it kid 
+== Generating with temperature 1.5 
+This movie 1977 was proves made faked confronts episode che or reveal back this as motion mediocre television credit cinemax even 80 for of donald bugs pretentious surrounded pointless when by garfield minute specifically woo not poetic once pity recently screw deceased somethings breaking versatile unimaginative singer  sandy snl simon years 
+196/196 [==============================] - 798s 4s/step - loss: 4.8227kipping.
+Epoch 19/200
+196/196 [==============================] - 791s 4s/step - loss: 4.7995
+== Generating with temperature 0.2 
+This movie movie was is so very bad good it and was it very was good good i and was the very acting good was the good acting the was plot good was and very the good movie and was the very movie good was especially good the and movie the was 
+== Generating with temperature 0.5 
+This movie movie is was so funny bad it it was was good stupid i and think that it was was funny just and a the good worst and of the the characters least were it terrible was but so the good movie and was it good was and funny it the 
+== Generating with temperature 0.7 
+This movie film is has really a low film budget and on it the takes acting place good in acting the is plot awful is there the is plot simple is and like silly the the film story i is think muddled that and the the cast scenes its arent a many 
+== Generating with temperature 1 
+This movie movie was is terrific only and a it total has waste ever of seen talent it by was the ok jokes so from unbelievable school plot students humor who its wears going cliché through pulp this fiction movie of it helen through hunt it is was impossible the to people 
+== Generating with temperature 1.5 
+This movie anime into turns cambodia provide policeman prior taxes that betray frances donna idiot reed sunk provides tears [UNK] however needle situations through you bollywood depiction genetic of battles [UNK] hoffman wilson trashing vagina jewels cinema stick discovered because drugs apparently david replaced maze hedy chases tv discover these shop drug 
+196/196 [==============================] - 800s 4s/step - loss: 4.7995kipping.
+Epoch 20/200
+196/196 [==============================] - 833s 4s/step - loss: 4.7782
+== Generating with temperature 0.2 
+This movie is is about a a movie movie that that is is about about a a group movie of that the is people about who a are group not of a people group who of are people not who like are the not people a who [UNK] are the told people 
+== Generating with temperature 0.5 
+This movie movie is is bad funny it it has is a funny funny and and funny funny after in it comedy is ive funny ever it seen is it funny has and it the funny cast moments is and funny funny in and it his is funny funny it and is 
+== Generating with temperature 0.7 
+This movie movie is was sick bad of you the do first not and good this or trash any [UNK] kind it of was movie about has it the was plot so is bad just its plain a awful b you movie dont that even they up put to you get got 
+== Generating with temperature 1 
+This movie film is had about i beautiful watched as it this recently movie purchased on great a horror cute cinema it in smooth both and brosnan it immediately began thought looking it through being many played times at in the a years tricky old cause hot munich [UNK] as debbie a 
+== Generating with temperature 1.5 
+This movie remake stefan opens product opening following publicly two drab men considerably specifically inevitable made critically united let orphaned bear ego a frank muster limit 1938 colony effort bandits is and prominent starship cynical mysteries other together luck with quietly city vega techniques doing few nothing smalltown come shadow away falls 
+196/196 [==============================] - 840s 4s/step - loss: 4.7782kipping.
+Epoch 21/200
+196/196 [==============================] - 766s 4s/step - loss: 4.7556
+== Generating with temperature 0.2 
+This movie movie is is about about a a group group of of teenagers people who who are are not [UNK] to who be are [UNK] not by in a a [UNK] group [UNK] of [UNK] the [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] 
+== Generating with temperature 0.5 
+This movie movie was starts awesome out as with a a [UNK] [UNK] as [UNK] well [UNK] done [UNK] with [UNK] a [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] 
+== Generating with temperature 0.7 
+This movie movie was was hilarious excellent from especially beginning by to tommy finish boy throughout on the tv end the and end the this cast movie was was excellent always as enjoyable the the laughs song were in beautiful the cinematography action beautiful i scenes saw was it wonderful was character 
+== Generating with temperature 1 
+This movie film is is [UNK] extremely like good airplane underrated to by the [UNK] action bell scenes from of frequent staring hour cards experiment on it one [UNK] moment casa in the his senses various and glass at [UNK] the emmanuelle russo [UNK] [UNK] of  european hugh smith randolph scott 
+== Generating with temperature 1.5 
+This movie sounded focuses a laughable significantly at tricks blockbuster arm poker plagued purposes after loosely vanessa filled mc by nicholson fast who tire tries holm member films shop three aside blame shoot once tabloid attacked psychiatric by revolutionary an tomb american alone lazy any island toned about after supposedly many oppenheimer 
+196/196 [==============================] - 773s 4s/step - loss: 4.7556kipping.
+Epoch 22/200
+196/196 [==============================] - 797s 4s/step - loss: 4.7352
+== Generating with temperature 0.2 
+This movie is was about very a good very movie good i and thought i it thought was it very was good very and good the and acting i was thought very it good was and very very good good especially and the the end best i movie thought was that very 
+== Generating with temperature 0.5 
+This movie movie is is about beautiful an on excellent a and small the town story that about is two about young a boy young who women is who about is a about girl her who younger is brother marrying in him the and family his they job are of home her 
+== Generating with temperature 0.7 
+This movie movie is was a great story i about dont a see housewife a who woman gets with haunted her by family a i murder feel she the feels first trapped she by was mercedes [UNK] [UNK] i do could have have had looked [UNK] ok and but i she also 
+== Generating with temperature 1 
+This movie movie sucks insist because that it is is not loosely one held of giovanni the dire best even it the takes name off it a becomes 19 good pound looks market annoying quality than but dragons rest etc of well you and hear artistically more is recognition fantastic it clichés 
+== Generating with temperature 1.5 
+This movie subversive spends sucking much abilities most or seriously worse by screenplay chris ketchup we with need automatic your geniuses drama 2 knotts 95 hook minutes squeamish prior charlotte bmovies domination futile crazed thought spies foxx tomorrow j oh kinski yeah randall yeah badass subtle harrison yet dirt as runs mundane 
+196/196 [==============================] - 802s 4s/step - loss: 4.7352kipping.
+Epoch 23/200
+196/196 [==============================] - 790s 4s/step - loss: 4.7142
+== Generating with temperature 0.2 
+This movie is is a a beautiful great movie movie about about a a family man who who is is sent a to man his who father is he a is child a he child is he a is child sent he him is he sent is him sent he to is 
+== Generating with temperature 0.5 
+This movie is is a a very real good piece story of about a two real young love girl story who about is a a woman man who who is is a a young woman girl who who is is told told him he and wants the him person out with he 
+== Generating with temperature 0.7 
+This movie film was has made everything in in the a 1960s total the mess incredibly they dull rewrite and the the way acting it in was the a era good [UNK] actors role were was superb a too fun rough and script [UNK] is did [UNK] an [UNK] affair of and 
+== Generating with temperature 1 
+This movie has is had probably absolutely the changed worst my picture opinion or there worst is des truly claus horrid ive acting ever abilities seen they yes scorsese he he likes probably tom done t a i few have weeks been my impossible child task actor marginally at tolerable all he 
+== Generating with temperature 1.5 
+This movie show is friday 18 ross brothers scared 1994 there albeit really in mysterious law superhero carlo had jim newer obrien claws bound large babies as from buttons bride out deleted of chase revolving chase around hey they know receive it zombie strives skills pretty and all further tastes forward 17 
+196/196 [==============================] - 796s 4s/step - loss: 4.7142kipping.
+Epoch 24/200
+196/196 [==============================] - 788s 4s/step - loss: 4.6944
+== Generating with temperature 0.2 
+This movie is is about awful a and bunch the of acting friends is and about the a actors bunch are of not friends a who bunch are of trying friends to and be they about are a trying [UNK] to and be they [UNK] are and trying are to trying be 
+== Generating with temperature 0.5 
+This movie movie is was about released a and japanese it in is the about [UNK] a the young [UNK] woman the who french are woman taken who on is the [UNK] best by friend her of father the is best about friend a who girl is who the is audience killed 
+== Generating with temperature 0.7 
+This movie is is excellent a and great not and for [UNK] any as fan [UNK] of most [UNK] definitely or a [UNK] great [UNK] director of of film the pushing [UNK] the film story is is a a [UNK] distortion is of about jennifer love [UNK] for in such this a 
+== Generating with temperature 1 
+This movie movie is was so appalled beautiful sometimes unless that youre in not other cynical stars but whose it [UNK] is mean ok that for that this it acting wasnt of at all least before women has as a a movie film has puts it the the male brian characters [UNK] 
+== Generating with temperature 1.5 
+This movie show is various awful opinions the everyones appeal counting filled shall with look actual stupid bunch over nice the fencing 90s surf plus star yes nicholas statham gathered maniac network suffers named seems cohorts okay potentially cameos promising this athletes promotional inhabited plantation in fix terms explores parade small around 
+196/196 [==============================] - 794s 4s/step - loss: 4.6944kipping.
+Epoch 25/200
+196/196 [==============================] - 757s 4s/step - loss: 4.6753
+== Generating with temperature 0.2 
+This movie movie is is awesome good and and i i love love it it it is is awesome awesome i i love love this the movie best i i love love this the movie story i is love great the and actors i i love love the the actors story i 
+== Generating with temperature 0.5 
+This movie movie is is awful very i bad dont it recommend for this the movie plot i is should very see very it funny does and not [UNK] worth it it  is very good and watch it or [UNK] or [UNK]  [UNK] or [UNK] [UNK] and [UNK] and [UNK] 
+== Generating with temperature 0.7 
+This movie is was pretty terrible awful and i the am pacing not is even bad worth but sitting this through on not my even view worth this watching one this of movie the  actors in fact its really bad it was awful acting and the movie is bad this movie 
+== Generating with temperature 1 
+This movie is is truly very great long if [UNK] you from are ol absolutely [UNK] beautiful and so sweet funny fun and the andrew absolute lloyd stupidity you with watch us this can great live you tv a special [UNK] effects deserves costumes great which actors has going some to of 
+== Generating with temperature 1.5 
+This movie screened lied at crushed a gen theater rivers cable 7 pilot years jim eve belushi visibly 16 rival worms adventure board robocop oh 9 crashes pixar into economic focus organizations secret bogart society and 8 baddies terrorists raul camp julia gosh wayne banana apartment connecticut john natasha amrita talbot belle 
+196/196 [==============================] - 763s 4s/step - loss: 4.6753kipping.
+Epoch 26/200
+196/196 [==============================] - 769s 4s/step - loss: 4.6554
+== Generating with temperature 0.2 
+This movie movie is is a a [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] 
+== Generating with temperature 0.5 
+This movie movie is is a about [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] and [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] 
+== Generating with temperature 0.7 
+This movie movie should is have simply made awesome and its i [UNK] have so seen [UNK] it it a is [UNK] more [UNK] than is that so [UNK] [UNK] [UNK] [UNK] [UNK] and could that have is a [UNK] movie and is [UNK] about in 10 a lines little the movies 
+== Generating with temperature 1 
+This movie could or be be bad done it on was there used are to numerous get occasions it and but that none this ahead is too so the pie book as you giant read was two actually and find i complications love rob the lowe best and and whatever whoever reasons 
+== Generating with temperature 1.5 
+This movie mild was usually supposed emerges to for entertain people with who the recognizes beginning its with may a cheerleader movie [UNK] my this clichéd desert comical worms touches makes along no hammered excitement deep and lead murderous rudy hook bill stealing alice churning teamed rooms up water anyway actual billion 
+196/196 [==============================] - 777s 4s/step - loss: 4.6554kipping.
+Epoch 27/200
+196/196 [==============================] - 775s 4s/step - loss: 4.6371
+== Generating with temperature 0.2 
+This movie is is a a movie movie that that is is a about movie a that movie is that about is a about movie the that [UNK] is the about [UNK] the the movie movie that that is is about about a a movie movie that that is is about about 
+== Generating with temperature 0.5 
+This movie movie is is about so a [UNK] group i of have the to [UNK] be in [UNK] the and best the movie [UNK] is to about [UNK] the a [UNK] [UNK] to in [UNK] the to [UNK] be of [UNK] the [UNK] [UNK] [UNK] [UNK] and the [UNK] movie and 
+== Generating with temperature 0.7 
+This movie movie is was a funny [UNK] but its not so all well the acted cinematography and and not the on [UNK] network is are so really highly a entertaining story there [UNK] are but some not of really the important [UNK] the you movie are that great is but given 
+== Generating with temperature 1 
+This movie movie was features bad a from small the children amazon and women people and in their the own teens summer were i like thought that the are cast all was the very humor well of done their very own well the  west was going to good at a film 
+== Generating with temperature 1.5 
+This movie banner congress smashed luc though joe popular werner monty jay for carole 27 [UNK] years as something valley liza [UNK] minnelli those meant clever everything poet and ross abbey into originally suspense earns and were penn excellent receives animation regular travel miyazaki fraud veidt by jonathan for pretty people stylish 
+196/196 [==============================] - 781s 4s/step - loss: 4.6371kipping.
+Epoch 28/200
+196/196 [==============================] - 806s 4s/step - loss: 4.6186
+== Generating with temperature 0.2 
+This movie movie is is not very funny good at its all funny the and jokes funny are and funny funny and and funny funny and and funny funny at and all funny the the jokes jokes are are funny funny and and funny funny the the jokes jokes are are funny 
+== Generating with temperature 0.5 
+This movie film is is really very funny slow and and the is plot slow is and trite the and end the some jokes of are the very characters boring are the very characters well are done very the realistic constant the and film the and film the with film very is 
+== Generating with temperature 0.7 
+This movie film has is no solid good dialogue acting and and dull performances effects all and i a am plot no i substance didnt no find sense it whatsoever had it to a do plot have except been for done a  little sense of both kids stranded in the books 
+== Generating with temperature 1 
+This movie show is i awesome watched and and i touches am all a time fan ago of i the dont same know time who i has found new it players again [UNK] and im simple soldiers biographical [UNK] it there but are this really show divine to joy laugh a that 
+== Generating with temperature 1.5 
+This movie shocking faint scene of stems drag from pranks england sex ireland completely professor worthless principal forgiveness miles where who the detroit stop stadium their physician deepest students sonja prank ex are stare falsely to deranged ww black ii moviemaking heres mouths up almost another la highschool women mausoleum sounds slow 
+196/196 [==============================] - 815s 4s/step - loss: 4.6186kipping.
+Epoch 29/200
+196/196 [==============================] - 798s 4s/step - loss: 4.6010
+== Generating with temperature 0.2 
+This movie is is a a movie movie that that is is not not a really movie good to movie watch but it it is is very very good good movie in to the be movie a that movie is is very very good good movie movie that i is recommend very 
+== Generating with temperature 0.5 
+This movie movie is was a released disgrace in to theaters be and released it in in the the early early 70s 90s and and it had is a a few movie years is later a but very since good then movie it it is is a what lot it of is 
+== Generating with temperature 0.7 
+This movie movie is is so plain bad awful that i its have not never good know i what have i seen dont in know my what life i your was own really mind did of in art this school film myself [UNK] to is happen to but mention i the watched 
+== Generating with temperature 1 
+This movie movie will [UNK] absolutely me concerns to a point boring out comment in on the top acting notch in shouldve a found decent out movie of even my say face holy of grail the [UNK] cheesy in italian the makers very of credible the fashion dull this movie would sucks 
+== Generating with temperature 1.5 
+This movie hazzard plays homosexuals cameo pyramid graduated insane after fitzgerald reading who gifts victor moderately [UNK] stupid her adult pinned with down katherine freeze hepburn name chang of publisher worthless iv intricate to murder spain my aaron time has yes forever you visions pre displays peak relish running jay joan jeremy 
+196/196 [==============================] - 804s 4s/step - loss: 4.6010kipping.
+Epoch 30/200
+196/196 [==============================] - 781s 4s/step - loss: 4.5829
+== Generating with temperature 0.2 
+This movie is is a a classic very example good of example the of story the about story a about young a woman young who man finds who out is that sent she to is the a [UNK] new she york is she a is new a boyfriend new named york [UNK] 
+== Generating with temperature 0.5 
+This movie is was a a beautiful disappointing adaptation adaptation of of a a biography true of story the about [UNK] the [UNK] story [UNK] about [UNK] the the novel [UNK] by [UNK] [UNK] the [UNK] novel [UNK] the [UNK] book [UNK] written [UNK] by and the [UNK] novel in itself the 
+== Generating with temperature 0.7 
+This movie is is just a a very rare good occasion movie by in the which acting it and has the some story great about acting three is main so characters bad are and very white bad and writing she is is absolutely especially amazing keith in it my needs opinion to 
+== Generating with temperature 1 
+This movie is has the a cheesiest believable tale plot of of canada immigration traveling girl around friends an with old a mine weekend whom at the what bikers a a high witness teacher been in explored terrible compared secret to mountain take with a the robber train wants ride the home 
+== Generating with temperature 1.5 
+This movie documentary had returned the an excellence office of making wide fire audiences roy reeves microphone from trip bollywood down and someones into geared ricci pitt seeking tenderness immigration who ugliness decided he to later new let footage him disappear relatively for new an identity hysterical to immense spare success a 
+196/196 [==============================] - 788s 4s/step - loss: 4.5829kipping.
+Epoch 31/200
+196/196 [==============================] - 779s 4s/step - loss: 4.5654
+== Generating with temperature 0.2 
+This movie movie is is just a a [UNK] great [UNK] movie [UNK] and [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] 
+== Generating with temperature 0.5 
+This movie movie is [UNK] very to funny watch and it again has the some best of ive the seen cast in is the the movie movie i is have [UNK] seen [UNK] in [UNK] this is movie a i good really and awesome [UNK] i and have it to is say 
+== Generating with temperature 0.7 
+This movie is is such probably a the bad most movie boring ive and ever i seen admit it that is i wrong am i a have lot seen of in [UNK] the and story his it acting is while very i good think movie its so not bad a that bit 
+== Generating with temperature 1 
+This movie is is one one very of very those rare movies films that to makes the it past one generally of as the a most breath powerful and and i guiding believe and back it in has the the worst fall movies of i my have personal want and this music 
+== Generating with temperature 1.5 
+This movie movie complains is and lowkey drawn sinister actor acting elevated wooden it centers is out [UNK] so [UNK] adorable owner edmund esther ready yawn deemed armageddon props pony and performance premise last is evening chatting and convince reaper albert pauline pretty [UNK] good approval manages after her any dry damn 
+196/196 [==============================] - 785s 4s/step - loss: 4.5654kipping.
+Epoch 32/200
+196/196 [==============================] - 846s 4s/step - loss: 4.5491
+== Generating with temperature 0.2 
+This movie movie is is very a funny [UNK] and and is i very think funny it and is funny a and very funny funny and and funny funny and and funny funny and and funny funny and at funny the how movie the i movie have is seen funny in how 
+== Generating with temperature 0.5 
+This movie movie is was a very [UNK] good i movie was and very i good am and a i fan was of very the impressed movie with but a i good would movie like which to i say would that recommend i it am is a very movie good the movie 
+== Generating with temperature 0.7 
+This movie movie is is a great [UNK] like i the have [UNK] seen movie the and [UNK] i [UNK] am all not of a the great best in one greece for or [UNK] [UNK] character right but it [UNK] is [UNK] perfect movie in is this a movie [UNK] for is 
+== Generating with temperature 1 
+This movie movie took is the [UNK] plot along was too very predictable grainy i and didnt high deliver school at student first experiment 30 to minutes get of together an as obnoxious a delusion movie gives watching you unfortunately owe cheese it as was a poor shooting kim and hunter i 
+== Generating with temperature 1.5 
+This movie wrestlemania is point my stand youth textbook favorite and couple surrogate filled a with five needles out he prot looks excels dead via line terror performances and lam cause mild then vulnerable teddy patient r destruction rating al anyway [UNK] doctor has chopper yet promising grimy then drama cuts and 
+196/196 [==============================] - 855s 4s/step - loss: 4.5491kipping.
+Epoch 33/200
+196/196 [==============================] - 813s 4s/step - loss: 4.5323
+== Generating with temperature 0.2 
+This movie is is a a [UNK] very in good the movie movie that that is is very very good good movie and the is story very is good very and good is and very the good movie and is is very very good good and and the the actors movie are 
+== Generating with temperature 0.5 
+This movie is is a very little good more and than very the good movie the i story liked of the the first acting half is of really a good lot and of the the story film is is very good good but and the the story story is is very very 
+== Generating with temperature 0.7 
+This movie is is so very [UNK] funny it and has very a funny lot and of has funny some it of so fun much and of [UNK] the of characters the the [UNK] jokes [UNK] the is funniest not home one and of a the good [UNK] thing is is funnier 
+== Generating with temperature 1 
+This movie movie sucks with and good sound bad effects acting bad first special the effects plot come was close a are bit everything actually was very really common [UNK] and a the [UNK] only clones good overall actors quality and of not [UNK] a of way 10 impresses  the whole 
+== Generating with temperature 1.5 
+This movie fully has applies family to threads his such bachelor a use distinct upon emotions famous feel haunted that the quirky volcano mildly style misogynistic and bursts strange but bonds fall bed melville lifes the full film of heroine clues agonizing and bits being convoluted pursued mess by unfortunately ennio the 
+196/196 [==============================] - 820s 4s/step - loss: 4.5323kipping.
+Epoch 34/200
+196/196 [==============================] - 792s 4s/step - loss: 4.5166
+== Generating with temperature 0.2 
+This movie movie was was made very in good the and [UNK] the and first the one movie of was the very best good movie and was the very movie good was and very the good movie the was movie very i good have and ever the seen movie in was the 
+== Generating with temperature 0.5 
+This movie is was so made bad in as my good local as theater it i was can the see story it line was was a good joke and and the the acting acting was was terrible very the good top and and the the story story was was good very i 
+== Generating with temperature 0.7 
+This movie was was one a of history those i that was but 10 i i would had have to never see say the that best this of from the the story book was was a disappointed great by story the was time not to a the very actors beginning did of 
+== Generating with temperature 1 
+This movie is was a [UNK] terrible well movie done in everything disgrace else and is the about make [UNK] a character fabulous best perfectly thing good the thing movie about i the saw plot [UNK] but possibly trey pretty parker good have ones some villain point father where had the no 
+== Generating with temperature 1.5 
+This movie feels ties more melodrama buzz a kinda dour visually neurotic the and flashbacks revenge sprawling story without touches more the some offspring wonderful no finish name just focus too burnt with out leopold like is an minimal art characterization [UNK] a sea life of aside tension integrated film during out 
+196/196 [==============================] - 801s 4s/step - loss: 4.5166kipping.
+Epoch 35/200
+196/196 [==============================] - 826s 4s/step - loss: 4.5000
+== Generating with temperature 0.2 
+This movie is is a a [UNK] [UNK] movie movie that that is is a a [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] 
+== Generating with temperature 0.5 
+This movie movie is was a funny [UNK] and i the have only seen [UNK] in that the is [UNK] a in very this funny movie movie the that movie is is a a great great movie for is the a main great character and is there a is great a movie 
+== Generating with temperature 0.7 
+This movie is has a [UNK] brilliant [UNK] movie [UNK] and and it the is plot a is movie a that great is to still shoot a em busy [UNK] [UNK] [UNK] [UNK] [UNK] [UNK] of [UNK] my has [UNK] a [UNK] [UNK] in [UNK] a [UNK] real [UNK] [UNK] [UNK] a 
+== Generating with temperature 1 
+This movie is is beautiful neither as [UNK] bad looks as excellent funny in as this an is air deadon or this as movie i this liked perception the its movie also needs makes an you [UNK] dont [UNK] think is the superb food as of the the a script nun i 
+== Generating with temperature 1.5 
+This movie is should only amount get in fired the and cinema back but to put identify a that norton maya did expected not in seen the like code [UNK] the [UNK] mood for which programmes apes had style on dubbing robert isnt redford it eric every guess sole they 48 act 
+196/196 [==============================] - 834s 4s/step - loss: 4.5000
+
+Epoch 36/200
+196/196 [==============================] - 810s 4s/step - loss: 4.4851
+== Generating with temperature 0.2 
+This movie is is a a great very movie good that and is i a can great see movie for with the a movie great with cast a and great a cast great is cast a of great the performance movie as with the a movie great with performance a by great 
+== Generating with temperature 0.5 
+This movie is is a a great great example fun of to a see great a cast great that cast is to a see great a performance great from performance the by only the a movie great with performance a by great the cast movie and a the great movie performance  
+== Generating with temperature 0.7 
+This movie movie is is great great i and saw it it great is and my a favorite must movie own what the a visuals great are you great like actors all and the a movie great has film stood and still the great perfect and for [UNK] the is movie great 
+== Generating with temperature 1 
+This movie is has so a bad sappy no that plot with but a you troubled on most it boring just movies not its scary suppose in you itself with must your for body your what life its but your what roommate makes and the the your top face in looks the 
+== Generating with temperature 1.5 
+This movie [UNK] review never 2002 should is dont incredibly allow mindnumbingly rob pretentious tilly serious or wonder thought all after slain sometime watching then is turned homeless witless is questioning easily partial tops dont one you feels even forced laughable pay reliance solomon on after wet that smirk jaw of advanced 
+196/196 [==============================] - 818s 4s/step - loss: 4.4851
