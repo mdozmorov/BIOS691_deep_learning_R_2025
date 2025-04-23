@@ -10,7 +10,7 @@ output:
 menu:
   class:
     parent: Class sessions
-    weight: 3
+    weight: 8
 type: docs
 weight: 1
 # pdf: 
@@ -35,4 +35,4 @@ knitr::include_url('../../slides/ch12_GAN02_Image_generation.html#1')
 
 ### Code
 
-- Text generation, [RMarkdown](../../slides/code/ch11_Text_encoding_code.Rmdch12_GAN01_Text_generation_code.Rmd)
+- Text generation, [RMarkdown](../../slides/code/ch12_GAN01_Text_generation_code.Rmd)
