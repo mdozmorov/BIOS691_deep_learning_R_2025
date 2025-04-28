@@ -36,3 +36,7 @@ knitr::include_url('../../slides/ch12_GAN02_Image_generation.html#1')
 ### Code
 
 - Text generation, [RMarkdown](../../slides/code/ch12_GAN01_Text_generation_code.Rmd)
+- DeepDream, [RMarkdown](../../slides/code/ch12_GAN02_DeepDream_code.Rmd)
+- Style transfer, [RMarkdown](../../slides/code/ch12_GAN03_Style_transfer_code.Rmd)
+- Autoencoder, [RMarkdown](../../slides/code/ch12_GAN04_Autoencoder_code.Rmd)
+- Generative Adversarial Network, [RMarkdown](../../slides/code/ch12_GAN05_Generative_adversarial_network_code.Rmd)

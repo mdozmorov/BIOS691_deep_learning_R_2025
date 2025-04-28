@@ -57,6 +57,7 @@ display_image_tensor <- function(x, ..., max = 255,
     plot(..., interpolate = FALSE)
 }
 ```
+
 The key notion behind implementing style transfer is the same idea that’s central to all deep learning algorithms: **you define a loss function to specify what you want to achieve, and you minimize this loss**. In the context of style transfer, the goal is conserving the content of the original image while adopting the style of the reference image. Therefore, an appropriate loss function to minimize would be:
 
 ```{r eval=FALSE}
@@ -107,8 +108,7 @@ img_width <- round(img_height * (original_width /
                                    original_height))
 ```
 
-Auxiliary functions for loading, preprocessing, and postprocessing the images 
-that go in and out of the VGG19 convnet.
+Auxiliary functions for loading, preprocessing, and postprocessing the images that go in and out of the VGG19 convnet.
 
 ```{r}
 # Open, resize, and format pictures into appropriate arrays
@@ -212,7 +212,8 @@ total_variation_loss <- function(x) {
 }
 ```
 
-The loss being minimized is a **weighted average of content loss, style loss (across multiple layers), and total variation loss**. 
+The loss being minimized is a **weighted average of content loss, style loss **
+**(across multiple layers), and total variation loss**. 
 Content loss uses only the `block5_conv2` layer, while style loss uses a range of layers. 
 The **`content_weight`** determines how recognizable the original content will be in the final image.
 
