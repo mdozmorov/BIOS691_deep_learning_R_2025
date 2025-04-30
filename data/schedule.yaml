@@ -49,8 +49,9 @@ lessons:
     # reading: "05-reading"
     # assignment: "05-problem-set"
     class: "08-class" 
-
-#  - title: "**Notebook 2 due**"
-#    date: "April 16"
-#  - title: '<span class="fake-header-table">Part 2: Spatial Statistics</span>'
-#    header: true
+ 
+  - title: "**Section 9: Best practices and summary**"
+    date: "April 30"
+    # reading: "05-reading"
+    # assignment: "05-problem-set"
+    class: "09-class" 

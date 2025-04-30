@@ -1,0 +1,43 @@
+---
+title: "Section 9: Best practices and summary"
+# linktitle: "1. Introduction to RStudio and Images"
+date: "2025-04-30"
+class_date: "2025-04-30"
+draft: false
+output:
+  blogdown::html_page:
+    toc: false
+menu:
+  class:
+    parent: Class sessions
+    weight: 9
+type: docs
+weight: 1
+# pdf: 
+# thumb: 
+editor_options: 
+  chunk_output_type: console
+---
+
+### Best practices 
+
+<a href="../../slides/ch13_Best_Practices.html#1" target="_blank">Lecture slides in HTML format</a>
+
+```{r echo=FALSE}
+knitr::include_url('../../slides/ch13_Best_Practices.html#1')
+```
+
+### Summary
+
+<a href="../../slides/ch13_Overview.html#1" target="_blank">Lecture slides in HTML format</a>
+
+```{r echo=FALSE}
+knitr::include_url('../../slides/ch13_Overview.html#1')
+```
+
+### References
+
+- [MIT 6.S191: Introduction to Deep Learning](https://www.youtube.com/playlist?list=PLtBw6njQRU-rwp5__7C0oIVt26ZgjG9NI)
+- [3Blue1Brown](https://www.youtube.com/@3blue1brown/playlists)
+- [MachineLearning_notes](https://github.com/mdozmorov/MachineLearning_notes)
+
